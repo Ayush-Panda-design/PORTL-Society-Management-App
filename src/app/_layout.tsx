@@ -1,16 +1,101 @@
+import '@/global.css';
+
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import React from 'react';
-import { useColorScheme } from 'react-native';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { type ReactNode, useEffect } from 'react';
+import { ActivityIndicator, useColorScheme, View } from 'react-native';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { queryClient } from '@/lib/query-client';
+import { useAuthStore } from '@/stores/authStore';
+import type { UserRole } from '@/types/database';
 
-export default function TabLayout() {
+function roleHome(role: UserRole | null): '/(resident)' | '/(guard)' | '/(admin)' | '/(auth)/login' {
+  switch (role) {
+    case 'resident':
+      return '/(resident)';
+    case 'guard':
+      return '/(guard)';
+    case 'admin':
+      return '/(admin)';
+    default:
+      return '/(auth)/login';
+  }
+}
+
+function AuthGate({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const segments = useSegments();
+  const { session, role, isLoading, isInitialized, initialize } = useAuthStore();
+
+  useEffect(() => {
+    void initialize();
+  }, [initialize]);
+
+  useEffect(() => {
+    if (!isInitialized || isLoading) return;
+
+    const inAuthGroup = segments[0] === '(auth)';
+
+    if (!session) {
+      const authScreen = segments[1];
+      const allowedAuthScreens = ['login', 'signup', 'callback'];
+
+      if (!inAuthGroup) {
+        router.replace('/(auth)/login');
+      } else if (authScreen && !allowedAuthScreens.includes(authScreen)) {
+        router.replace('/(auth)/login');
+      }
+      return;
+    }
+
+    const home = roleHome(role);
+
+    const isRoot = !segments[0];
+
+    if (inAuthGroup || isRoot) {
+      router.replace(home);
+      return;
+    }
+
+    const currentGroup = segments[0];
+    const expectedGroup =
+      role === 'resident' ? '(resident)' : role === 'guard' ? '(guard)' : role === 'admin' ? '(admin)' : null;
+
+    if (expectedGroup && currentGroup !== expectedGroup) {
+      router.replace(home);
+    }
+  }, [session, role, isLoading, isInitialized, segments, router]);
+
+  if (!isInitialized || isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white">
+        <ActivityIndicator size="large" color="#0F766E" />
+      </View>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+export default function RootLayout() {
   const colorScheme = useColorScheme();
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <AuthGate>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(resident)" />
+            <Stack.Screen name="(guard)" />
+            <Stack.Screen name="(admin)" />
+          </Stack>
+        </AuthGate>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }

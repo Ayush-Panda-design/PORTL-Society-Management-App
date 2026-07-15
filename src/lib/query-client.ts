@@ -1,0 +1,24 @@
+import { QueryClient } from '@tanstack/react-query';
+
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      gcTime: 5 * 60_000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+export const queryKeys = {
+  notices: (societyId: string) => ['notices', societyId] as const,
+  polls: (societyId: string) => ['polls', societyId] as const,
+  pollVotes: (pollId: string) => ['poll-votes', pollId] as const,
+  complaints: (key: string) => ['complaints', key] as const,
+  amenities: (societyId: string) => ['amenities', societyId] as const,
+  amenityBookings: (amenityId: string, date: string) =>
+    ['amenity-bookings', amenityId, date] as const,
+  staff: (societyId: string) => ['staff', societyId] as const,
+  societyProfiles: (societyId: string) => ['society-profiles', societyId] as const,
+};
