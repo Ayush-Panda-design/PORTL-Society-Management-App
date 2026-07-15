@@ -4,6 +4,8 @@ import { ChevronLeft } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { FontFamily } from '@/constants/theme';
+
 type Props = {
   title: string;
   subtitle?: string;
@@ -16,23 +18,27 @@ export function ScreenHeader({ title, subtitle, children, right, showBack }: Pro
   const router = useRouter();
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
       <View className="flex-row items-start justify-between gap-3 px-4 pb-2 pt-3">
         <View className="min-w-0 flex-1 flex-row items-start gap-2">
           {showBack ? (
             <Pressable
               onPress={() => router.back()}
-              className="mt-0.5 h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white"
+              className="mt-0.5 h-9 w-9 items-center justify-center rounded-full border border-surface-border bg-white"
             >
               <ChevronLeft color="#475569" size={20} />
             </Pressable>
           ) : null}
           <View className="min-w-0 flex-1">
-            <Text className="text-2xl font-bold text-slate-900" numberOfLines={1}>
+            <Text
+              className="text-2xl text-ink"
+              numberOfLines={1}
+              style={{ fontFamily: FontFamily.display }}
+            >
               {title}
             </Text>
             {subtitle ? (
-              <Text className="text-sm text-slate-500" numberOfLines={2}>
+              <Text className="text-sm text-ink-muted" numberOfLines={2}>
                 {subtitle}
               </Text>
             ) : null}

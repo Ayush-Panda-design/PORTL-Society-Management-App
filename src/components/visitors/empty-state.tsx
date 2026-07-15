@@ -1,25 +1,69 @@
+import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
-import { Inbox } from 'lucide-react-native';
-import type { ComponentType } from 'react';
 
-type IconProps = { color: string; size: number };
+import {
+  BallotBoxIllustration,
+  CalendarIllustration,
+  EmptyMailboxIllustration,
+  EmptyVisitorsIllustration,
+  NotConnectedIllustration,
+  QuietGateIllustration,
+  ToolboxIllustration,
+} from '@/components/illustrations';
+import { FontFamily } from '@/constants/theme';
+
+export type EmptyVisual =
+  | 'default'
+  | 'notices'
+  | 'visitors'
+  | 'polls'
+  | 'helpdesk'
+  | 'amenities'
+  | 'gate'
+  | 'disconnected';
 
 type Props = {
   title: string;
   subtitle?: string;
-  Icon?: ComponentType<IconProps>;
+  visual?: EmptyVisual;
+  action?: ReactNode;
 };
 
-export function EmptyState({ title, subtitle, Icon = Inbox }: Props) {
+function Visual({ kind }: { kind: EmptyVisual }) {
+  switch (kind) {
+    case 'notices':
+      return <EmptyMailboxIllustration />;
+    case 'visitors':
+      return <EmptyVisitorsIllustration />;
+    case 'polls':
+      return <BallotBoxIllustration />;
+    case 'helpdesk':
+      return <ToolboxIllustration />;
+    case 'amenities':
+      return <CalendarIllustration />;
+    case 'gate':
+      return <QuietGateIllustration />;
+    case 'disconnected':
+      return <NotConnectedIllustration />;
+    default:
+      return <NotConnectedIllustration />;
+  }
+}
+
+export function EmptyState({ title, subtitle, visual = 'default', action }: Props) {
   return (
-    <View className="flex-1 items-center justify-center px-8 py-16">
-      <View className="mb-4 h-14 w-14 items-center justify-center rounded-full bg-slate-100">
-        <Icon color="#64748B" size={28} />
-      </View>
-      <Text className="mb-2 text-center text-lg font-semibold text-slate-800">{title}</Text>
+    <View className="flex-1 items-center justify-center px-8 py-12">
+      <Visual kind={visual} />
+      <Text
+        className="mt-4 text-center text-lg text-ink"
+        style={{ fontFamily: FontFamily.heading }}
+      >
+        {title}
+      </Text>
       {subtitle ? (
-        <Text className="text-center text-sm leading-5 text-slate-500">{subtitle}</Text>
+        <Text className="mt-2 text-center text-sm leading-5 text-ink-muted">{subtitle}</Text>
       ) : null}
+      {action ? <View className="mt-4">{action}</View> : null}
     </View>
   );
 }

@@ -3,13 +3,18 @@ import '@/global.css';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { type ReactNode, useEffect } from 'react';
 import { ActivityIndicator, useColorScheme, View } from 'react-native';
 
+import { Brand } from '@/constants/theme';
+import { usePortlFonts } from '@/hooks/use-portl-fonts';
 import { queryClient } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
 import type { UserRole } from '@/types/database';
+
+void SplashScreen.preventAutoHideAsync();
 
 function roleHome(role: UserRole | null): '/(resident)' | '/(guard)' | '/(admin)' | '/(auth)/login' {
   switch (role) {
@@ -70,8 +75,8 @@ function AuthGate({ children }: { children: ReactNode }) {
 
   if (!isInitialized || isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#0F766E" />
+      <View className="flex-1 items-center justify-center bg-surface">
+        <ActivityIndicator size="large" color={Brand.primary} />
       </View>
     );
   }
@@ -81,6 +86,21 @@ function AuthGate({ children }: { children: ReactNode }) {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const { fontsLoaded } = usePortlFonts();
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      void SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return (
+      <View className="flex-1 items-center justify-center bg-surface">
+        <ActivityIndicator size="large" color={Brand.primary} />
+      </View>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

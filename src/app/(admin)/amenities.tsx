@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Image } from 'expo-image';
 import { Plus, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import {
@@ -13,10 +14,12 @@ import {
   View,
 } from 'react-native';
 
+import { AppCard } from '@/components/ui/brand';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
-import { ScreenHeader } from '@/components/ui/screen-header';
+import { amenityImageForName } from '@/constants/theme';
 import { deleteAmenity, fetchAmenities, upsertAmenity } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
@@ -94,7 +97,7 @@ export default function AdminAmenitiesScreen() {
   if (!societyId) {
     return (
       <ScreenHeader title="Amenities" showBack>
-        <EmptyState title="No society linked" subtitle="Assign a society to your admin profile." />
+        <EmptyState visual="disconnected" title="No society linked" subtitle="Assign a society to your admin profile." />
       </ScreenHeader>
     );
   }
@@ -107,7 +110,7 @@ export default function AdminAmenitiesScreen() {
       right={
         <Pressable
           onPress={openCreate}
-          className="h-10 w-10 items-center justify-center rounded-full bg-teal-700"
+          className="h-10 w-10 items-center justify-center rounded-full bg-brand-700"
         >
           <Plus color="#fff" size={20} />
         </Pressable>
@@ -128,33 +131,45 @@ export default function AdminAmenitiesScreen() {
           refreshing={listQuery.isRefetching}
           onRefresh={() => void listQuery.refetch()}
           ListEmptyComponent={
-            <EmptyState title="No amenities" subtitle="Tap + to add gym, clubhouse, etc." />
+            <EmptyState
+              visual="amenities"
+              title="No amenities"
+              subtitle="Tap + to add gym, clubhouse, etc."
+            />
           }
           renderItem={({ item }) => (
-            <View className="rounded-2xl border border-slate-200 bg-white p-4">
-              <Text className="mb-1 text-base font-semibold text-slate-900">{item.name}</Text>
-              <Text className="mb-2 text-sm text-slate-600">
-                {item.description || 'No description'}
-              </Text>
-              <Text className="mb-3 text-xs text-slate-400">
-                {item.slots.length} slot{item.slots.length === 1 ? '' : 's'}
-              </Text>
-              <View className="flex-row gap-2">
-                <Pressable
-                  onPress={() => openEdit(item)}
-                  className="flex-1 items-center rounded-xl border border-slate-200 py-2.5"
-                >
-                  <Text className="text-sm font-semibold text-slate-700">Edit</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => deleteMutation.mutate(item.id)}
-                  className="flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-red-50 py-2.5"
-                >
-                  <Trash2 color="#B91C1C" size={14} />
-                  <Text className="text-sm font-semibold text-red-700">Delete</Text>
-                </Pressable>
+            <AppCard className="overflow-hidden p-0">
+              <Image
+                source={{ uri: amenityImageForName(item.name) }}
+                style={{ width: '100%', height: 110 }}
+                contentFit="cover"
+                transition={200}
+              />
+              <View className="p-4">
+                <Text className="mb-1 text-base font-semibold text-ink">{item.name}</Text>
+                <Text className="mb-2 text-sm text-ink-muted">
+                  {item.description || 'No description'}
+                </Text>
+                <Text className="mb-3 text-xs text-ink-faint">
+                  {item.slots.length} slot{item.slots.length === 1 ? '' : 's'}
+                </Text>
+                <View className="flex-row gap-2">
+                  <Pressable
+                    onPress={() => openEdit(item)}
+                    className="flex-1 items-center rounded-xl border border-surface-border py-2.5"
+                  >
+                    <Text className="text-sm font-semibold text-ink-soft">Edit</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => deleteMutation.mutate(item.id)}
+                    className="flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-status-rejectedSoft py-2.5"
+                  >
+                    <Trash2 color="#B91C1C" size={14} />
+                    <Text className="text-sm font-semibold text-status-rejected">Delete</Text>
+                  </Pressable>
+                </View>
               </View>
-            </View>
+            </AppCard>
           )}
         />
       )}
@@ -203,7 +218,7 @@ export default function AdminAmenitiesScreen() {
               <Pressable
                 onPress={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending}
-                className="flex-1 items-center rounded-xl bg-teal-700 py-3"
+                className="flex-1 items-center rounded-xl bg-brand-700 py-3"
               >
                 {saveMutation.isPending ? (
                   <ActivityIndicator color="#fff" />

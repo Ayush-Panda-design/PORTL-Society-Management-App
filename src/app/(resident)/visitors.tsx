@@ -54,9 +54,9 @@ export default function ResidentVisitorsScreen() {
 
   if (!profile?.flat_id) {
     return (
-      <SafeAreaView className="flex-1 bg-slate-50">
+      <SafeAreaView className="flex-1 bg-surface">
         <EmptyState
-          title="No flat linked"
+          visual="disconnected" title="No flat linked"
           subtitle="Ask your society admin to link your profile to a flat to approve visitors."
         />
       </SafeAreaView>
@@ -64,7 +64,7 @@ export default function ResidentVisitorsScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
       <View className="flex-row items-start justify-between px-4 pb-2 pt-3">
         <View className="flex-1 pr-3">
           <Text className="text-2xl font-bold text-slate-900">Visitor requests</Text>
@@ -111,6 +111,7 @@ export default function ResidentVisitorsScreen() {
           }
           ListEmptyComponent={
             <EmptyState
+              visual="visitors"
               title="No pending requests"
               subtitle="When the guard registers a visitor for your flat, you can approve them here instantly."
             />

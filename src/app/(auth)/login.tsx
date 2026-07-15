@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -11,6 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { GateAuthIllustration } from '@/components/illustrations';
+import { Brand, FontFamily, Gradients } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { UserRole } from '@/types/database';
@@ -56,18 +59,39 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
+    <View className="flex-1 bg-surface">
+      <LinearGradient
+        colors={[...Gradients.auth]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ paddingTop: 12, paddingBottom: 28 }}
+      >
+        <SafeAreaView edges={['top']}>
+          <View className="items-center px-6 pt-2">
+            <Text
+              className="mb-1 text-4xl text-white"
+              style={{ fontFamily: FontFamily.display }}
+            >
+              Portl
+            </Text>
+            <Text className="mb-4 text-center text-sm text-teal-50/90">
+              Your society gate, in your pocket
+            </Text>
+            <GateAuthIllustration width={260} height={150} />
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1 justify-center px-6"
+        className="-mt-4 flex-1 rounded-t-3xl bg-surface px-6 pt-8"
       >
-        <Text className="mb-2 text-4xl font-bold tracking-tight text-teal-800">Portl</Text>
-        <Text className="mb-8 text-base text-slate-600">Sign in to your society account</Text>
+        <Text className="mb-6 text-base text-ink-soft">Sign in to your society account</Text>
 
         <View className="mb-4 gap-2">
-          <Text className="text-sm font-medium text-slate-700">Email</Text>
+          <Text className="text-sm font-medium text-ink-soft">Email</Text>
           <TextInput
-            className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
+            className="rounded-xl border border-surface-border bg-white px-4 py-3 text-base text-ink"
             autoCapitalize="none"
             autoComplete="email"
             keyboardType="email-address"
@@ -79,9 +103,9 @@ export default function LoginScreen() {
         </View>
 
         <View className="mb-6 gap-2">
-          <Text className="text-sm font-medium text-slate-700">Password</Text>
+          <Text className="text-sm font-medium text-ink-soft">Password</Text>
           <TextInput
-            className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
+            className="rounded-xl border border-surface-border bg-white px-4 py-3 text-base text-ink"
             secureTextEntry
             autoComplete="password"
             placeholder="••••••••"
@@ -91,10 +115,10 @@ export default function LoginScreen() {
           />
         </View>
 
-        {error ? <Text className="mb-4 text-sm text-red-600">{error}</Text> : null}
+        {error ? <Text className="mb-4 text-sm text-status-rejected">{error}</Text> : null}
 
         <Pressable
-          className={`items-center rounded-xl bg-teal-700 py-3.5 ${submitting ? 'opacity-70' : ''}`}
+          className={`items-center rounded-xl bg-accent-600 py-3.5 ${submitting ? 'opacity-70' : ''}`}
           disabled={submitting}
           onPress={onLogin}
         >
@@ -106,12 +130,12 @@ export default function LoginScreen() {
         </Pressable>
 
         <View className="mt-6 flex-row justify-center gap-1">
-          <Text className="text-slate-600">New here?</Text>
-          <Link href="/(auth)/signup" className="font-semibold text-teal-700">
+          <Text className="text-ink-muted">New here?</Text>
+          <Link href="/(auth)/signup" className="font-semibold" style={{ color: Brand.primary }}>
             Create account
           </Link>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }

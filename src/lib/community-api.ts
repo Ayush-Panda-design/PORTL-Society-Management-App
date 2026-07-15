@@ -30,11 +30,16 @@ export async function upsertNotice(input: {
   title: string;
   body: string;
   postedBy: string;
+  coverUrl?: string | null;
 }): Promise<void> {
   if (input.id) {
     const { error } = await supabase
       .from('notices')
-      .update({ title: input.title, body: input.body })
+      .update({
+        title: input.title,
+        body: input.body,
+        cover_url: input.coverUrl ?? null,
+      })
       .eq('id', input.id);
     if (error) throw new Error(error.message);
     return;
@@ -45,6 +50,7 @@ export async function upsertNotice(input: {
     title: input.title,
     body: input.body,
     posted_by: input.postedBy,
+    cover_url: input.coverUrl ?? null,
   });
   if (error) throw new Error(error.message);
 }
@@ -297,7 +303,8 @@ export async function fetchSocietyProfiles(societyId: string): Promise<Profile[]
   return (data as Profile[]) ?? [];
 }
 
-export async function uploadStaffPhoto(
+async function uploadPublicImage(
+  bucket: string,
   societyId: string,
   uri: string,
 ): Promise<string | null> {
@@ -306,17 +313,31 @@ export async function uploadStaffPhoto(
     const path = `${societyId}/${Date.now()}.${ext}`;
     const response = await fetch(uri);
     const blob = await response.blob();
-    const { error } = await supabase.storage.from('staff-photos').upload(path, blob, {
+    const { error } = await supabase.storage.from(bucket).upload(path, blob, {
       contentType: blob.type || 'image/jpeg',
       upsert: false,
     });
     if (error) {
-      console.warn('Staff photo upload failed:', error.message);
+      console.warn(`${bucket} upload failed:`, error.message);
       return null;
     }
-    return supabase.storage.from('staff-photos').getPublicUrl(path).data.publicUrl;
+    return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
   } catch (e) {
-    console.warn('Staff photo upload error:', e);
+    console.warn(`${bucket} upload error:`, e);
     return null;
   }
+}
+
+export async function uploadStaffPhoto(
+  societyId: string,
+  uri: string,
+): Promise<string | null> {
+  return uploadPublicImage('staff-photos', societyId, uri);
+}
+
+export async function uploadNoticeCover(
+  societyId: string,
+  uri: string,
+): Promise<string | null> {
+  return uploadPublicImage('notice-covers', societyId, uri);
 }

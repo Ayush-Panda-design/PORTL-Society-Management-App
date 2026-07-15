@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -12,8 +13,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { supabase } from '@/lib/supabase';
+import { GateAuthIllustration } from '@/components/illustrations';
+import { Brand, FontFamily, Gradients } from '@/constants/theme';
 import { getAuthRedirectUrl } from '@/lib/auth-redirect';
+import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { UserRole } from '@/types/database';
 
@@ -60,10 +63,7 @@ export default function SignupScreen() {
         password,
         options: {
           emailRedirectTo: getAuthRedirectUrl(),
-          data: {
-            full_name: fullName.trim(),
-            role,
-          },
+          data: { full_name: fullName.trim(), role },
         },
       });
 
@@ -96,22 +96,43 @@ export default function SignupScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
+    <View className="flex-1 bg-surface">
+      <LinearGradient
+        colors={[...Gradients.auth]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ paddingTop: 12, paddingBottom: 20 }}
+      >
+        <SafeAreaView edges={['top']}>
+          <View className="items-center px-6 pt-2">
+            <Text
+              className="mb-1 text-4xl text-white"
+              style={{ fontFamily: FontFamily.display }}
+            >
+              Portl
+            </Text>
+            <Text className="mb-3 text-center text-sm text-teal-50/90">
+              Join your society at the gate
+            </Text>
+            <GateAuthIllustration width={220} height={120} />
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1"
+        className="-mt-4 flex-1 rounded-t-3xl bg-surface"
       >
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 32 }}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 28, paddingBottom: 40 }}
           keyboardShouldPersistTaps="handled"
         >
-          <Text className="mb-2 text-4xl font-bold tracking-tight text-teal-800">Portl</Text>
-          <Text className="mb-8 text-base text-slate-600">Create your society account</Text>
+          <Text className="mb-5 text-base text-ink-soft">Create your society account</Text>
 
           <View className="mb-4 gap-2">
-            <Text className="text-sm font-medium text-slate-700">Full name</Text>
+            <Text className="text-sm font-medium text-ink-soft">Full name</Text>
             <TextInput
-              className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
+              className="rounded-xl border border-surface-border bg-white px-4 py-3 text-base text-ink"
               autoComplete="name"
               placeholder="Alex Kumar"
               placeholderTextColor="#94A3B8"
@@ -121,9 +142,9 @@ export default function SignupScreen() {
           </View>
 
           <View className="mb-4 gap-2">
-            <Text className="text-sm font-medium text-slate-700">Email</Text>
+            <Text className="text-sm font-medium text-ink-soft">Email</Text>
             <TextInput
-              className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
+              className="rounded-xl border border-surface-border bg-white px-4 py-3 text-base text-ink"
               autoCapitalize="none"
               autoComplete="email"
               keyboardType="email-address"
@@ -134,10 +155,10 @@ export default function SignupScreen() {
             />
           </View>
 
-          <View className="mb-6 gap-2">
-            <Text className="text-sm font-medium text-slate-700">Password</Text>
+          <View className="mb-5 gap-2">
+            <Text className="text-sm font-medium text-ink-soft">Password</Text>
             <TextInput
-              className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
+              className="rounded-xl border border-surface-border bg-white px-4 py-3 text-base text-ink"
               secureTextEntry
               autoComplete="new-password"
               placeholder="••••••••"
@@ -147,8 +168,8 @@ export default function SignupScreen() {
             />
           </View>
 
-          <Text className="mb-3 text-sm font-medium text-slate-700">I am a…</Text>
-          <View className="mb-6 gap-2">
+          <Text className="mb-3 text-sm font-medium text-ink-soft">I am a…</Text>
+          <View className="mb-5 gap-2">
             {ROLES.map((item) => {
               const selected = role === item.value;
               return (
@@ -157,27 +178,27 @@ export default function SignupScreen() {
                   onPress={() => setRole(item.value)}
                   className={`rounded-xl border px-4 py-3 ${
                     selected
-                      ? 'border-teal-700 bg-teal-50'
-                      : 'border-slate-200 bg-white'
+                      ? 'border-brand-700 bg-brand-50'
+                      : 'border-surface-border bg-white'
                   }`}
                 >
                   <Text
                     className={`text-base font-semibold ${
-                      selected ? 'text-teal-800' : 'text-slate-800'
+                      selected ? 'text-brand-800' : 'text-ink'
                     }`}
                   >
                     {item.label}
                   </Text>
-                  <Text className="text-sm text-slate-500">{item.hint}</Text>
+                  <Text className="text-sm text-ink-muted">{item.hint}</Text>
                 </Pressable>
               );
             })}
           </View>
 
-          {error ? <Text className="mb-4 text-sm text-red-600">{error}</Text> : null}
+          {error ? <Text className="mb-4 text-sm text-status-rejected">{error}</Text> : null}
 
           <Pressable
-            className={`items-center rounded-xl bg-teal-700 py-3.5 ${submitting ? 'opacity-70' : ''}`}
+            className={`items-center rounded-xl bg-accent-600 py-3.5 ${submitting ? 'opacity-70' : ''}`}
             disabled={submitting}
             onPress={onSignup}
           >
@@ -189,13 +210,13 @@ export default function SignupScreen() {
           </Pressable>
 
           <View className="mt-6 flex-row justify-center gap-1">
-            <Text className="text-slate-600">Already have an account?</Text>
-            <Link href="/(auth)/login" className="font-semibold text-teal-700">
+            <Text className="text-ink-muted">Already have an account?</Text>
+            <Link href="/(auth)/login" className="font-semibold" style={{ color: Brand.primary }}>
               Sign in
             </Link>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }

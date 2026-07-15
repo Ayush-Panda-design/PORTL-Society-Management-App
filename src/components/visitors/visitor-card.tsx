@@ -1,7 +1,9 @@
 import { Image } from 'expo-image';
-import { Check, User, X } from 'lucide-react-native';
+import { Check, CheckCircle2, Clock3, LogIn, LogOut, X, XCircle } from 'lucide-react-native';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
+import { VisitorSilhouette } from '@/components/illustrations';
+import { FontFamily } from '@/constants/theme';
 import {
   flatLabel,
   formatRelativeTime,
@@ -9,7 +11,7 @@ import {
   statusLabel,
   typeLabel,
 } from '@/lib/visitors';
-import type { VisitorWithFlat } from '@/types/database';
+import type { VisitorStatus, VisitorWithFlat } from '@/types/database';
 
 type Action = {
   label: string;
@@ -25,13 +27,39 @@ type Props = {
   showStatus?: boolean;
 };
 
+function StatusIcon({ status, color }: { status: VisitorStatus; color: string }) {
+  switch (status) {
+    case 'pending':
+      return <Clock3 color={color} size={12} />;
+    case 'approved':
+      return <CheckCircle2 color={color} size={12} />;
+    case 'rejected':
+      return <XCircle color={color} size={12} />;
+    case 'checked_in':
+      return <LogIn color={color} size={12} />;
+    case 'checked_out':
+      return <LogOut color={color} size={12} />;
+    default:
+      return null;
+  }
+}
+
 export function VisitorCard({ visitor, actions, showStatus = true }: Props) {
   const colors = statusColor(visitor.status);
 
   return (
-    <View className="rounded-2xl border border-slate-200 bg-white p-4">
+    <View
+      className="rounded-2xl border border-surface-border bg-white p-4"
+      style={{
+        shadowColor: '#0F172A',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
+        elevation: 2,
+      }}
+    >
       <View className="flex-row gap-3">
-        <View className="h-14 w-14 overflow-hidden rounded-xl bg-slate-100">
+        <View className="h-14 w-14 overflow-hidden rounded-xl bg-brand-50">
           {visitor.photo_url ? (
             <Image
               source={{ uri: visitor.photo_url }}
@@ -39,19 +67,24 @@ export function VisitorCard({ visitor, actions, showStatus = true }: Props) {
               contentFit="cover"
             />
           ) : (
-            <View className="h-full w-full items-center justify-center">
-              <User color="#94A3B8" size={24} />
-            </View>
+            <VisitorSilhouette size={56} />
           )}
         </View>
 
         <View className="flex-1">
           <View className="mb-1 flex-row items-start justify-between gap-2">
-            <Text className="flex-1 text-base font-semibold text-slate-900" numberOfLines={1}>
+            <Text
+              className="flex-1 text-base text-ink"
+              style={{ fontFamily: FontFamily.heading }}
+              numberOfLines={1}
+            >
               {visitor.name}
             </Text>
             {showStatus ? (
-              <View className={`rounded-full border px-2 py-0.5 ${colors.bg} ${colors.border}`}>
+              <View
+                className={`flex-row items-center gap-1 rounded-full border px-2 py-0.5 ${colors.bg} ${colors.border}`}
+              >
+                <StatusIcon status={visitor.status} color={colors.icon} />
                 <Text className={`text-xs font-medium ${colors.text}`}>
                   {statusLabel(visitor.status)}
                 </Text>
@@ -59,15 +92,15 @@ export function VisitorCard({ visitor, actions, showStatus = true }: Props) {
             ) : null}
           </View>
 
-          <Text className="text-sm text-slate-600">
+          <Text className="text-sm text-ink-soft">
             {typeLabel(visitor.type)} · {flatLabel(visitor)}
           </Text>
           {visitor.purpose ? (
-            <Text className="mt-0.5 text-sm text-slate-500" numberOfLines={2}>
+            <Text className="mt-0.5 text-sm text-ink-muted" numberOfLines={2}>
               {visitor.purpose}
             </Text>
           ) : null}
-          <Text className="mt-1 text-xs text-slate-400">
+          <Text className="mt-1 text-xs text-ink-faint">
             {formatRelativeTime(visitor.created_at)}
             {visitor.phone ? ` · ${visitor.phone}` : ''}
           </Text>
@@ -80,11 +113,11 @@ export function VisitorCard({ visitor, actions, showStatus = true }: Props) {
             const isPrimary = action.variant === 'primary' || !action.variant;
             const isDanger = action.variant === 'danger';
             const bg = isDanger
-              ? 'bg-red-600'
+              ? 'bg-status-rejected'
               : isPrimary
-                ? 'bg-teal-700'
-                : 'bg-slate-100';
-            const text = isDanger || isPrimary ? 'text-white' : 'text-slate-800';
+                ? 'bg-brand-700'
+                : 'bg-surface-muted';
+            const text = isDanger || isPrimary ? 'text-white' : 'text-ink';
 
             return (
               <Pressable

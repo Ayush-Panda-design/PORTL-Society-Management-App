@@ -12,10 +12,11 @@ import {
   View,
 } from 'react-native';
 
+import { ChipSelector } from '@/components/ui/chip-selector';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
-import { ScreenHeader } from '@/components/ui/screen-header';
 import { complaintStatusTone } from '@/lib/community';
 import { createComplaint, fetchComplaintsForFlat } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
@@ -66,7 +67,7 @@ export default function ResidentHelpdeskScreen() {
     return (
       <ScreenHeader title="Helpdesk" showBack>
         <EmptyState
-          title="No flat linked"
+          visual="disconnected" title="No flat linked"
           subtitle="Ask an admin to link your flat before filing complaints."
         />
       </ScreenHeader>
@@ -98,30 +99,13 @@ export default function ResidentHelpdeskScreen() {
               {success ? <Text className="mb-2 text-sm text-teal-700">{success}</Text> : null}
 
               <Text className="mb-2 text-sm font-medium text-slate-700">Category</Text>
-              <View className="mb-3 flex-row flex-wrap gap-2">
-                {COMPLAINT_CATEGORIES.map((item) => {
-                  const selected = category === item;
-                  return (
-                    <Pressable
-                      key={item}
-                      onPress={() => setCategory(item)}
-                      className={`rounded-full border px-3 py-1.5 ${
-                        selected
-                          ? 'border-teal-700 bg-teal-50'
-                          : 'border-slate-200 bg-slate-50'
-                      }`}
-                    >
-                      <Text
-                        className={`text-xs font-semibold ${
-                          selected ? 'text-teal-800' : 'text-slate-600'
-                        }`}
-                      >
-                        {item}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+              <ChipSelector
+                className="mb-3"
+                title="Category"
+                options={COMPLAINT_CATEGORIES.map((c) => ({ value: c, label: c }))}
+                value={category}
+                onChange={setCategory}
+              />
 
               <TextInput
                 className="mb-3 min-h-[90px] rounded-xl border border-slate-200 px-4 py-3 text-base text-slate-900"
@@ -157,7 +141,7 @@ export default function ResidentHelpdeskScreen() {
                 onRetry={() => void listQuery.refetch()}
               />
             ) : (
-              <EmptyState title="No complaints yet" subtitle="Submitted tickets will show here." />
+              <EmptyState visual="helpdesk" title="No complaints yet" subtitle="Submitted tickets will show here." />
             )
           }
           renderItem={({ item }) => {

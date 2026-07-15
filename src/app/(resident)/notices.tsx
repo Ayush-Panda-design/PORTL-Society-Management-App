@@ -1,10 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
+import { Image } from 'expo-image';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
 
+import { AppCard } from '@/components/ui/brand';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
-import { ScreenHeader } from '@/components/ui/screen-header';
+import { Brand } from '@/constants/theme';
 import { fetchNotices } from '@/lib/community-api';
 import { formatNoticeDate } from '@/lib/community';
 import { queryKeys } from '@/lib/query-client';
@@ -22,7 +25,7 @@ export default function ResidentNoticesScreen() {
   if (!societyId) {
     return (
       <ScreenHeader title="Notices" subtitle="Society announcements">
-        <EmptyState title="No society linked" subtitle="Ask an admin to link your profile." />
+        <EmptyState visual="disconnected" title="No society linked" subtitle="Ask an admin to link your profile." />
       </ScreenHeader>
     );
   }
@@ -45,21 +48,32 @@ export default function ResidentNoticesScreen() {
             <RefreshControl
               refreshing={isRefetching}
               onRefresh={() => void refetch()}
-              tintColor="#0F766E"
+              tintColor={Brand.primary}
             />
           }
           ListEmptyComponent={
             <EmptyState
+              visual="notices"
               title="No notices yet"
               subtitle="When the society posts an update, it will appear here."
             />
           }
           renderItem={({ item }) => (
-            <View className="rounded-2xl border border-slate-200 bg-white p-4">
-              <Text className="mb-1 text-base font-semibold text-slate-900">{item.title}</Text>
-              <Text className="mb-3 text-sm leading-5 text-slate-600">{item.body}</Text>
-              <Text className="text-xs text-slate-400">{formatNoticeDate(item.created_at)}</Text>
-            </View>
+            <AppCard className="overflow-hidden p-0">
+              {item.cover_url ? (
+                <Image
+                  source={{ uri: item.cover_url }}
+                  style={{ width: '100%', height: 140 }}
+                  contentFit="cover"
+                  transition={200}
+                />
+              ) : null}
+              <View className="p-4">
+                <Text className="mb-1 text-base font-semibold text-ink">{item.title}</Text>
+                <Text className="mb-3 text-sm leading-5 text-ink-soft">{item.body}</Text>
+                <Text className="text-xs text-ink-faint">{formatNoticeDate(item.created_at)}</Text>
+              </View>
+            </AppCard>
           )}
         />
       )}

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ChipSelector } from '@/components/ui/chip-selector';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { supabase } from '@/lib/supabase';
@@ -148,30 +149,12 @@ export default function PreApproveGuestScreen() {
           />
 
           <Text className="mb-2 text-sm font-medium text-slate-700">Type</Text>
-          <View className="mb-6 flex-row flex-wrap gap-2">
-            {VISITOR_TYPES.map((item) => {
-              const selected = type === item.value;
-              return (
-                <Pressable
-                  key={item.value}
-                  onPress={() => setType(item.value)}
-                  className={`rounded-full border px-3.5 py-2 ${
-                    selected
-                      ? 'border-teal-700 bg-teal-50'
-                      : 'border-slate-200 bg-white'
-                  }`}
-                >
-                  <Text
-                    className={`text-sm font-medium ${
-                      selected ? 'text-teal-800' : 'text-slate-700'
-                    }`}
-                  >
-                    {item.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <ChipSelector
+            className="mb-6"
+            options={VISITOR_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+            value={type}
+            onChange={setType}
+          />
 
           <Pressable
             disabled={submitting}

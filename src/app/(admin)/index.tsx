@@ -1,7 +1,12 @@
 import { useRouter } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { Bell, Building2, ClipboardList, Phone, Users } from 'lucide-react-native';
+import { Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { EmptyMailboxIllustration } from '@/components/illustrations';
+import { HeroBanner } from '@/components/ui/brand';
+import { PressableActionTile } from '@/components/ui/brand';
+import { Brand } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
 
 export default function AdminHome() {
@@ -10,31 +15,48 @@ export default function AdminHome() {
   const name = profile?.full_name?.split(' ')[0] ?? 'Admin';
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
-      <View className="flex-1 justify-center px-6">
-        <Text className="mb-2 text-3xl font-bold text-slate-900">Dashboard</Text>
-        <Text className="mb-8 text-base leading-6 text-slate-600">
-          Welcome, {name}. Post notices, run polls, and manage helpdesk from the tabs below.
+    <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
+      <View className="flex-1 px-4 pt-3">
+        <HeroBanner
+          title={`Welcome, ${name}`}
+          subtitle="Post notices, run polls, and keep the society running"
+          illustration={<EmptyMailboxIllustration width={110} height={78} />}
+        />
+        <View className="mt-5">
+          <PressableActionTile
+            title="Post a notice"
+            subtitle="Reach every resident"
+            icon={<Bell color={Brand.primary} size={20} />}
+            onPress={() => router.push('/(admin)/notices')}
+          />
+          <PressableActionTile
+            title="Complaints queue"
+            subtitle="Triage helpdesk tickets"
+            icon={<ClipboardList color={Brand.primary} size={20} />}
+            onPress={() => router.push('/(admin)/complaints')}
+          />
+          <PressableActionTile
+            title="Amenities"
+            subtitle="Facilities and booking slots"
+            icon={<Building2 color={Brand.primary} size={20} />}
+            onPress={() => router.push('/(admin)/amenities')}
+          />
+          <PressableActionTile
+            title="Staff directory"
+            subtitle="Contacts residents can call"
+            icon={<Phone color={Brand.primary} size={20} />}
+            onPress={() => router.push('/(admin)/staff')}
+          />
+          <PressableActionTile
+            title="Residents"
+            subtitle="Society member overview"
+            icon={<Users color={Brand.primary} size={20} />}
+            onPress={() => router.push('/(admin)/residents')}
+          />
+        </View>
+        <Text className="mt-2 text-center text-sm text-ink-muted">
+          More tools live under the Manage tab
         </Text>
-
-        <Pressable
-          onPress={() => router.push('/(admin)/notices')}
-          className="mb-3 items-center rounded-xl bg-teal-700 py-3.5"
-        >
-          <Text className="text-base font-semibold text-white">Post a notice</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => router.push('/(admin)/complaints')}
-          className="mb-3 items-center rounded-xl border border-slate-200 bg-white py-3.5"
-        >
-          <Text className="text-base font-semibold text-slate-800">Open complaints</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => router.push('/(admin)/settings')}
-          className="items-center rounded-xl border border-slate-200 bg-white py-3.5"
-        >
-          <Text className="text-base font-semibold text-slate-800">All management tools</Text>
-        </Pressable>
       </View>
     </SafeAreaView>
   );

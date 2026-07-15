@@ -1,12 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
+import { Image } from 'expo-image';
 import { Phone } from 'lucide-react-native';
 import { useMemo } from 'react';
-import { FlatList, Image, Linking, Pressable, RefreshControl, Text, View } from 'react-native';
+import { FlatList, Linking, Pressable, RefreshControl, Text, View } from 'react-native';
 
+import { AppCard, InitialsAvatar } from '@/components/ui/brand';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
-import { ScreenHeader } from '@/components/ui/screen-header';
+import { Brand } from '@/constants/theme';
 import { fetchStaff } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
@@ -36,7 +39,7 @@ export default function ResidentDirectoryScreen() {
   if (!societyId) {
     return (
       <ScreenHeader title="Directory" showBack>
-        <EmptyState title="No society linked" subtitle="Ask an admin to link your profile." />
+        <EmptyState visual="disconnected" title="No society linked" subtitle="Ask an admin to link your profile." />
       </ScreenHeader>
     );
   }
@@ -58,49 +61,47 @@ export default function ResidentDirectoryScreen() {
             <RefreshControl
               refreshing={listQuery.isRefetching}
               onRefresh={() => void listQuery.refetch()}
-              tintColor="#0F766E"
+              tintColor={Brand.primary}
             />
           }
           ListEmptyComponent={
-            <EmptyState title="Directory empty" subtitle="Staff contacts will appear here." />
+            <EmptyState
+              visual="helpdesk"
+              title="Directory empty"
+              subtitle="Staff contacts will appear here."
+            />
           }
           renderItem={({ item }) => (
             <View className="mb-5">
-              <Text className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+              <Text className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-muted">
                 {item.role}
               </Text>
               {item.data.map((person) => (
-                <View
-                  key={person.id}
-                  className="mb-2 flex-row items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3"
-                >
-                  <View className="h-12 w-12 overflow-hidden rounded-full bg-slate-100">
-                    {person.photo_url ? (
+                <AppCard key={person.id} className="mb-2 flex-row items-center gap-3 p-3">
+                  {person.photo_url ? (
+                    <View className="h-12 w-12 overflow-hidden rounded-full bg-surface-muted">
                       <Image
                         source={{ uri: person.photo_url }}
                         style={{ width: 48, height: 48 }}
+                        contentFit="cover"
                       />
-                    ) : (
-                      <View className="h-full w-full items-center justify-center">
-                        <Text className="text-base font-semibold text-slate-400">
-                          {person.name.charAt(0).toUpperCase()}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
+                    </View>
+                  ) : (
+                    <InitialsAvatar name={person.name} size={48} seed={person.id} />
+                  )}
                   <View className="flex-1">
-                    <Text className="font-semibold text-slate-900">{person.name}</Text>
-                    <Text className="text-sm text-slate-500">{person.phone ?? 'No phone'}</Text>
+                    <Text className="font-semibold text-ink">{person.name}</Text>
+                    <Text className="text-sm text-ink-muted">{person.phone ?? 'No phone'}</Text>
                   </View>
                   {person.phone ? (
                     <Pressable
                       onPress={() => void Linking.openURL(`tel:${person.phone}`)}
-                      className="h-10 w-10 items-center justify-center rounded-full bg-teal-50"
+                      className="h-10 w-10 items-center justify-center rounded-full bg-brand-50"
                     >
-                      <Phone color="#0F766E" size={18} />
+                      <Phone color={Brand.primary} size={18} />
                     </Pressable>
                   ) : null}
-                </View>
+                </AppCard>
               ))}
             </View>
           )}

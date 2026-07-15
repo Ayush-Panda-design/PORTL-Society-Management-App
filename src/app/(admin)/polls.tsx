@@ -96,7 +96,7 @@ export default function AdminPollsScreen() {
   if (!societyId) {
     return (
       <ScreenHeader title="Polls" showBack>
-        <EmptyState title="No society linked" subtitle="Assign a society to your admin profile." />
+        <EmptyState visual="disconnected" title="No society linked" subtitle="Assign a society to your admin profile." />
       </ScreenHeader>
     );
   }
@@ -138,7 +138,7 @@ export default function AdminPollsScreen() {
           refreshing={pollsQuery.isRefetching}
           onRefresh={() => void pollsQuery.refetch()}
           ListEmptyComponent={
-            <EmptyState title="No polls yet" subtitle="Tap + to create a poll for residents." />
+            <EmptyState visual="polls" title="No polls yet" subtitle="Tap + to create a poll for residents." />
           }
           renderItem={({ item }) => {
             const { total, counts } = pollStats(item, votes);

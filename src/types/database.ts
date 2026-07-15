@@ -103,6 +103,7 @@ export type Notice = {
   society_id: string;
   title: string;
   body: string;
+  cover_url?: string | null;
   posted_by: string | null;
   created_at: string;
 };

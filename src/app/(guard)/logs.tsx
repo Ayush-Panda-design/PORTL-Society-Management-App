@@ -6,6 +6,8 @@ import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { VisitorCard } from '@/components/visitors/visitor-card';
+import { ChipSelector } from '@/components/ui/chip-selector';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { formatDateTime } from '@/lib/visitors';
 import { supabase } from '@/lib/supabase';
@@ -164,7 +166,7 @@ export default function GuardLogsScreen() {
   if (!profile?.society_id) {
     return (
       <SafeAreaView className="flex-1 bg-slate-50">
-        <EmptyState title="No society linked" subtitle="Assign a society to view visitor logs." />
+        <EmptyState visual="disconnected" title="No society linked" subtitle="Assign a society to view visitor logs." />
       </SafeAreaView>
     );
   }
@@ -175,57 +177,26 @@ export default function GuardLogsScreen() {
         <Text className="text-2xl font-bold text-slate-900">Visitor logs</Text>
         <Text className="mb-3 text-sm text-slate-500">Society history · filters live</Text>
 
-        <View className="mb-2 flex-row gap-2">
-          {([
-            ['today', 'Today'],
-            ['week', '7 days'],
-            ['all', 'All'],
-          ] as const).map(([value, label]) => (
-            <Pressable
-              key={value}
-              onPress={() => setDateFilter(value)}
-              className={`rounded-full border px-3 py-1.5 ${
-                dateFilter === value
-                  ? 'border-teal-700 bg-teal-50'
-                  : 'border-slate-200 bg-white'
-              }`}
-            >
-              <Text
-                className={`text-xs font-semibold ${
-                  dateFilter === value ? 'text-teal-800' : 'text-slate-600'
-                }`}
-              >
-                {label}
-              </Text>
-            </Pressable>
-          ))}
+        <View className="mb-3">
+          <SegmentedControl
+            options={[
+              { value: 'today', label: 'Today' },
+              { value: 'week', label: '7 days' },
+              { value: 'all', label: 'All' },
+            ]}
+            value={dateFilter}
+            onChange={setDateFilter}
+          />
         </View>
 
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={[{ value: 'all' as const, label: 'All statuses' }, ...VISITOR_STATUSES]}
-          keyExtractor={(item) => item.value}
-          contentContainerStyle={{ gap: 8, paddingBottom: 4 }}
-          renderItem={({ item }) => {
-            const selected = statusFilter === item.value;
-            return (
-              <Pressable
-                onPress={() => setStatusFilter(item.value)}
-                className={`rounded-full border px-3 py-1.5 ${
-                  selected ? 'border-teal-700 bg-teal-50' : 'border-slate-200 bg-white'
-                }`}
-              >
-                <Text
-                  className={`text-xs font-semibold ${
-                    selected ? 'text-teal-800' : 'text-slate-600'
-                  }`}
-                >
-                  {item.label}
-                </Text>
-              </Pressable>
-            );
-          }}
+        <ChipSelector
+          className="mb-1"
+          options={[
+            { value: 'all', label: 'All statuses' },
+            ...VISITOR_STATUSES.map((s) => ({ value: s.value, label: s.label })),
+          ]}
+          value={statusFilter}
+          onChange={setStatusFilter}
         />
       </View>
 
@@ -246,6 +217,7 @@ export default function GuardLogsScreen() {
           }
           ListEmptyComponent={
             <EmptyState
+              visual="gate"
               title="No visitor history"
               subtitle="Registered visitors will show here with entry and exit times."
             />

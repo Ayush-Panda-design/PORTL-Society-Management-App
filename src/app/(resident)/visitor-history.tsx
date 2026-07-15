@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ChipSelector } from '@/components/ui/chip-selector';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
@@ -40,7 +41,7 @@ export default function ResidentVisitorHistoryScreen() {
     return (
       <SafeAreaView className="flex-1 bg-slate-50">
         <EmptyState
-          title="No flat linked"
+          visual="disconnected" title="No flat linked"
           subtitle="Link a flat to your profile to see visitor history."
         />
       </SafeAreaView>
@@ -62,32 +63,16 @@ export default function ResidentVisitorHistoryScreen() {
         </View>
       </View>
 
-      <FlatList
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        data={[{ value: 'all' as const, label: 'All' }, ...VISITOR_STATUSES]}
-        keyExtractor={(item) => item.value}
-        contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingBottom: 8 }}
-        renderItem={({ item }) => {
-          const selected = statusFilter === item.value;
-          return (
-            <Pressable
-              onPress={() => setStatusFilter(item.value)}
-              className={`rounded-full border px-3 py-1.5 ${
-                selected ? 'border-teal-700 bg-teal-50' : 'border-slate-200 bg-white'
-              }`}
-            >
-              <Text
-                className={`text-xs font-semibold ${
-                  selected ? 'text-teal-800' : 'text-slate-600'
-                }`}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          );
-        }}
-      />
+      <View className="px-4 pb-2">
+        <ChipSelector
+          options={[
+            { value: 'all', label: 'All' },
+            ...VISITOR_STATUSES.map((s) => ({ value: s.value, label: s.label })),
+          ]}
+          value={statusFilter}
+          onChange={setStatusFilter}
+        />
+      </View>
 
       {error ? <ErrorBanner message={error} onRetry={refresh} /> : null}
 
@@ -104,6 +89,7 @@ export default function ResidentVisitorHistoryScreen() {
           }
           ListEmptyComponent={
             <EmptyState
+              visual="visitors"
               title="No visitors yet"
               subtitle="Approved, rejected, and checked-in guests will appear here."
             />

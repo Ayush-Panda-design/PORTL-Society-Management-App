@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
-import { Camera, Plus, Trash2 } from 'lucide-react-native';
+import { Plus, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -15,10 +15,11 @@ import {
   View,
 } from 'react-native';
 
+import { AppCard, InitialsAvatar } from '@/components/ui/brand';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
-import { ScreenHeader } from '@/components/ui/screen-header';
 import {
   deleteStaff,
   fetchStaff,
@@ -125,7 +126,7 @@ export default function AdminStaffScreen() {
   if (!societyId) {
     return (
       <ScreenHeader title="Staff" showBack>
-        <EmptyState title="No society linked" subtitle="Assign a society to your admin profile." />
+        <EmptyState visual="disconnected" title="No society linked" subtitle="Assign a society to your admin profile." />
       </ScreenHeader>
     );
   }
@@ -138,7 +139,7 @@ export default function AdminStaffScreen() {
       right={
         <Pressable
           onPress={openCreate}
-          className="h-10 w-10 items-center justify-center rounded-full bg-teal-700"
+          className="h-10 w-10 items-center justify-center rounded-full bg-brand-700"
         >
           <Plus color="#fff" size={20} />
         </Pressable>
@@ -159,33 +160,39 @@ export default function AdminStaffScreen() {
           refreshing={listQuery.isRefetching}
           onRefresh={() => void listQuery.refetch()}
           ListEmptyComponent={
-            <EmptyState title="No staff yet" subtitle="Tap + to add a contact." />
+            <EmptyState
+              visual="helpdesk"
+              title="No staff yet"
+              subtitle="Tap + to add a contact."
+            />
           }
           renderItem={({ item }) => (
-            <View className="flex-row items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3">
-              <View className="h-12 w-12 overflow-hidden rounded-full bg-slate-100">
-                {item.photo_url ? (
+            <AppCard className="flex-row items-center gap-3 p-3">
+              {item.photo_url ? (
+                <View className="h-12 w-12 overflow-hidden rounded-full bg-surface-muted">
                   <Image
                     source={{ uri: item.photo_url }}
                     style={{ width: 48, height: 48 }}
                     contentFit="cover"
                   />
-                ) : null}
-              </View>
+                </View>
+              ) : (
+                <InitialsAvatar name={item.name} size={48} seed={item.id} />
+              )}
               <View className="flex-1">
-                <Text className="font-semibold text-slate-900">{item.name}</Text>
-                <Text className="text-sm text-slate-500">
+                <Text className="font-semibold text-ink">{item.name}</Text>
+                <Text className="text-sm text-ink-muted">
                   {item.role}
                   {item.phone ? ` · ${item.phone}` : ''}
                 </Text>
               </View>
               <Pressable onPress={() => openEdit(item)} className="px-2 py-1">
-                <Text className="text-sm font-semibold text-teal-700">Edit</Text>
+                <Text className="text-sm font-semibold text-brand-700">Edit</Text>
               </Pressable>
               <Pressable onPress={() => deleteMutation.mutate(item.id)} className="px-2 py-1">
                 <Trash2 color="#B91C1C" size={16} />
               </Pressable>
-            </View>
+            </AppCard>
           )}
         />
       )}
@@ -202,24 +209,22 @@ export default function AdminStaffScreen() {
             {formError ? <Text className="mb-2 text-sm text-red-600">{formError}</Text> : null}
 
             <View className="mb-4 flex-row items-center gap-3">
-              <View className="h-16 w-16 overflow-hidden rounded-2xl bg-slate-100">
-                {photoUri ? (
+              {photoUri ? (
+                <View className="h-16 w-16 overflow-hidden rounded-2xl bg-surface-muted">
                   <Image
                     source={{ uri: photoUri }}
                     style={{ width: 64, height: 64 }}
                     contentFit="cover"
                   />
-                ) : (
-                  <View className="h-full w-full items-center justify-center">
-                    <Camera color="#94A3B8" size={22} />
-                  </View>
-                )}
-              </View>
+                </View>
+              ) : (
+                <InitialsAvatar name={name || '?'} size={64} />
+              )}
               <Pressable
                 onPress={pickPhoto}
-                className="rounded-xl border border-slate-200 px-4 py-2.5"
+                className="rounded-xl border border-surface-border px-4 py-2.5"
               >
-                <Text className="font-semibold text-slate-700">Upload photo</Text>
+                <Text className="font-semibold text-ink-soft">Upload photo</Text>
               </Pressable>
             </View>
 
@@ -256,7 +261,7 @@ export default function AdminStaffScreen() {
               <Pressable
                 onPress={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending}
-                className="flex-1 items-center rounded-xl bg-teal-700 py-3"
+                className="flex-1 items-center rounded-xl bg-brand-700 py-3"
               >
                 {saveMutation.isPending ? (
                   <ActivityIndicator color="#fff" />

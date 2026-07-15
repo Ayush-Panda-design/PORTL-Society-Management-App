@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { Image } from 'expo-image';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -9,10 +10,13 @@ import {
   View,
 } from 'react-native';
 
+import { AppCard } from '@/components/ui/brand';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
-import { ScreenHeader } from '@/components/ui/screen-header';
+import { Brand, amenityImageForName } from '@/constants/theme';
 import { addDaysISO, todayISODate } from '@/lib/community';
 import {
   bookAmenitySlot,
@@ -34,6 +38,18 @@ export default function ResidentAmenitiesScreen() {
 
   const [date, setDate] = useState(todayISODate());
   const [message, setMessage] = useState<string | null>(null);
+
+  const dateOptions = useMemo(
+    () =>
+      [-1, 0, 1, 2].map((offset) => {
+        const value = addDaysISO(todayISODate(), offset);
+        return {
+          value,
+          label: offset === 0 ? 'Today' : value.slice(5),
+        };
+      }),
+    [],
+  );
 
   const amenitiesQuery = useQuery({
     queryKey: queryKeys.amenities(societyId ?? 'none'),
@@ -71,7 +87,7 @@ export default function ResidentAmenitiesScreen() {
   if (!societyId) {
     return (
       <ScreenHeader title="Amenities" showBack>
-        <EmptyState title="No society linked" subtitle="Ask an admin to link your profile." />
+        <EmptyState visual="disconnected" title="No society linked" subtitle="Ask an admin to link your profile." />
       </ScreenHeader>
     );
   }
@@ -79,7 +95,7 @@ export default function ResidentAmenitiesScreen() {
   if (!flatId) {
     return (
       <ScreenHeader title="Amenities" showBack>
-        <EmptyState title="No flat linked" subtitle="A flat is required to book amenities." />
+        <EmptyState visual="disconnected" title="No flat linked" subtitle="A flat is required to book amenities." />
       </ScreenHeader>
     );
   }
@@ -93,35 +109,27 @@ export default function ResidentAmenitiesScreen() {
         subtitle={selected.description ?? 'Pick a date and slot'}
         right={
           <Pressable onPress={() => setSelectedAmenityId(null)}>
-            <Text className="font-semibold text-teal-700">Back</Text>
+            <Text className="font-semibold text-brand-700">Back</Text>
           </Pressable>
         }
       >
-        <View className="mb-3 flex-row gap-2 px-4">
-          {[-1, 0, 1, 2].map((offset) => {
-            const value = addDaysISO(todayISODate(), offset);
-            const selectedDate = value === date;
-            return (
-              <Pressable
-                key={value}
-                onPress={() => {
-                  setDate(value);
-                  setMessage(null);
-                }}
-                className={`rounded-full border px-3 py-1.5 ${
-                  selectedDate ? 'border-teal-700 bg-teal-50' : 'border-slate-200 bg-white'
-                }`}
-              >
-                <Text
-                  className={`text-xs font-semibold ${
-                    selectedDate ? 'text-teal-800' : 'text-slate-600'
-                  }`}
-                >
-                  {offset === 0 ? 'Today' : value.slice(5)}
-                </Text>
-              </Pressable>
-            );
-          })}
+        <View className="mb-3 overflow-hidden rounded-2xl mx-4">
+          <Image
+            source={{ uri: amenityImageForName(selected.name) }}
+            style={{ width: '100%', height: 120 }}
+            contentFit="cover"
+            transition={200}
+          />
+        </View>
+        <View className="mb-3 px-4">
+          <SegmentedControl
+            options={dateOptions}
+            value={date}
+            onChange={(value) => {
+              setDate(value);
+              setMessage(null);
+            }}
+          />
         </View>
 
         {message ? (
@@ -162,11 +170,11 @@ export default function ResidentAmenitiesScreen() {
                 >
                   <Text className="font-medium text-slate-900">{item}</Text>
                   {bookMutation.isPending ? (
-                    <ActivityIndicator color="#0F766E" />
+                    <ActivityIndicator color={Brand.primary} />
                   ) : (
                     <Text
                       className={`text-sm font-semibold ${
-                        taken ? 'text-slate-400' : 'text-teal-700'
+                        taken ? 'text-ink-faint' : 'text-brand-700'
                       }`}
                     >
                       {taken ? 'Booked' : 'Book'}
@@ -202,11 +210,12 @@ export default function ResidentAmenitiesScreen() {
             <RefreshControl
               refreshing={amenitiesQuery.isRefetching}
               onRefresh={() => void amenitiesQuery.refetch()}
-              tintColor="#0F766E"
+              tintColor={Brand.primary}
             />
           }
           ListEmptyComponent={
             <EmptyState
+              visual="amenities"
               title="No amenities yet"
               subtitle="When your society adds amenities, you can book them here."
             />
@@ -217,12 +226,21 @@ export default function ResidentAmenitiesScreen() {
                 setMessage(null);
                 setSelectedAmenityId(item.id);
               }}
-              className="rounded-2xl border border-slate-200 bg-white p-4"
             >
-              <Text className="mb-1 text-base font-semibold text-slate-900">{item.name}</Text>
-              <Text className="text-sm text-slate-600">
-                {item.description || `${item.slots.length} slots available`}
-              </Text>
+              <AppCard className="overflow-hidden p-0">
+                <Image
+                  source={{ uri: amenityImageForName(item.name) }}
+                  style={{ width: '100%', height: 120 }}
+                  contentFit="cover"
+                  transition={200}
+                />
+                <View className="p-4">
+                  <Text className="mb-1 text-base font-semibold text-ink">{item.name}</Text>
+                  <Text className="text-sm text-ink-muted">
+                    {item.description || `${item.slots.length} slots available`}
+                  </Text>
+                </View>
+              </AppCard>
             </Pressable>
           )}
         />

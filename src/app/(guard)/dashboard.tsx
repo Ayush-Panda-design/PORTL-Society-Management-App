@@ -36,9 +36,9 @@ export default function GuardDashboard() {
 
   if (!profile?.society_id) {
     return (
-      <SafeAreaView className="flex-1 bg-slate-50">
+      <SafeAreaView className="flex-1 bg-surface">
         <EmptyState
-          title="No society linked"
+          visual="disconnected" title="No society linked"
           subtitle="Ask an admin to assign your profile to a society before managing visitors."
         />
       </SafeAreaView>
@@ -46,7 +46,7 @@ export default function GuardDashboard() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
       <View className="flex-row items-center justify-between px-4 pb-2 pt-3">
         <View>
           <Text className="text-2xl font-bold text-slate-900">Pending</Text>
@@ -81,6 +81,7 @@ export default function GuardDashboard() {
           }
           ListEmptyComponent={
             <EmptyState
+              visual="gate"
               title="No pending requests"
               subtitle="New visitor registrations from the gate will appear here instantly."
             />

@@ -64,7 +64,7 @@ export default function GuardVerifyScreen() {
     return (
       <SafeAreaView className="flex-1 bg-slate-50">
         <EmptyState
-          title="No society linked"
+          visual="disconnected" title="No society linked"
           subtitle="Assign a society to your guard profile to verify visitors."
         />
       </SafeAreaView>
@@ -95,6 +95,7 @@ export default function GuardVerifyScreen() {
           }
           ListEmptyComponent={
             <EmptyState
+              visual="visitors"
               title="No approved visitors"
               subtitle="Once a resident approves a request, they will appear here for check-in."
             />

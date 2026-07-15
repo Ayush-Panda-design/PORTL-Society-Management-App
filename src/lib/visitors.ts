@@ -63,20 +63,51 @@ export function statusColor(status: VisitorStatus): {
   bg: string;
   text: string;
   border: string;
+  icon: string;
 } {
   switch (status) {
     case 'pending':
-      return { bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200' };
+      return {
+        bg: 'bg-status-pendingSoft',
+        text: 'text-status-pending',
+        border: 'border-amber-200',
+        icon: '#D97706',
+      };
     case 'approved':
-      return { bg: 'bg-teal-50', text: 'text-teal-800', border: 'border-teal-200' };
+      return {
+        bg: 'bg-status-approvedSoft',
+        text: 'text-status-approved',
+        border: 'border-emerald-200',
+        icon: '#059669',
+      };
     case 'rejected':
-      return { bg: 'bg-red-50', text: 'text-red-800', border: 'border-red-200' };
+      return {
+        bg: 'bg-status-rejectedSoft',
+        text: 'text-status-rejected',
+        border: 'border-red-200',
+        icon: '#DC2626',
+      };
     case 'checked_in':
-      return { bg: 'bg-blue-50', text: 'text-blue-800', border: 'border-blue-200' };
+      return {
+        bg: 'bg-status-infoSoft',
+        text: 'text-status-info',
+        border: 'border-blue-200',
+        icon: '#2563EB',
+      };
     case 'checked_out':
-      return { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200' };
+      return {
+        bg: 'bg-slate-100',
+        text: 'text-slate-700',
+        border: 'border-slate-200',
+        icon: '#64748B',
+      };
     default:
-      return { bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200' };
+      return {
+        bg: 'bg-slate-50',
+        text: 'text-slate-700',
+        border: 'border-slate-200',
+        icon: '#64748B',
+      };
   }
 }
 

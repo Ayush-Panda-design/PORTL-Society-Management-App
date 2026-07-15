@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
-import { Camera, Search, X } from 'lucide-react-native';
+import { Search, X } from 'lucide-react-native';
 import { type ReactNode, useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ChipSelector } from '@/components/ui/chip-selector';
+import { VisitorSilhouette } from '@/components/illustrations';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { flatTowerName, notifyResidentOfVisitor } from '@/lib/visitors';
 import { supabase } from '@/lib/supabase';
@@ -265,12 +267,12 @@ export default function RegisterVisitorScreen() {
 
           <Text className="mb-2 text-sm font-medium text-slate-700">Photo</Text>
           <View className="mb-4 flex-row items-center gap-3">
-            <View className="h-20 w-20 overflow-hidden rounded-2xl bg-slate-200">
+            <View className="h-20 w-20 overflow-hidden rounded-2xl bg-brand-50">
               {photoUri ? (
                 <Image source={{ uri: photoUri }} style={{ width: 80, height: 80 }} contentFit="cover" />
               ) : (
                 <View className="h-full w-full items-center justify-center">
-                  <Camera color="#94A3B8" size={28} />
+                  <VisitorSilhouette size={64} />
                 </View>
               )}
             </View>
@@ -330,30 +332,12 @@ export default function RegisterVisitorScreen() {
           </Field>
 
           <Text className="mb-2 text-sm font-medium text-slate-700">Type</Text>
-          <View className="mb-4 flex-row flex-wrap gap-2">
-            {VISITOR_TYPES.map((item) => {
-              const selected = type === item.value;
-              return (
-                <Pressable
-                  key={item.value}
-                  onPress={() => setType(item.value)}
-                  className={`rounded-full border px-3.5 py-2 ${
-                    selected
-                      ? 'border-teal-700 bg-teal-50'
-                      : 'border-slate-200 bg-white'
-                  }`}
-                >
-                  <Text
-                    className={`text-sm font-medium ${
-                      selected ? 'text-teal-800' : 'text-slate-700'
-                    }`}
-                  >
-                    {item.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <ChipSelector
+            className="mb-4"
+            options={VISITOR_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+            value={type}
+            onChange={setType}
+          />
 
           <Text className="mb-2 text-sm font-medium text-slate-700">Flat</Text>
           {selectedFlat ? (

@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { FlatList, Text, View } from 'react-native';
 
+import { ChipSelector } from '@/components/ui/chip-selector';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
-import { ScreenHeader } from '@/components/ui/screen-header';
 import { complaintStatusTone } from '@/lib/community';
 import {
   fetchComplaintsForSociety,
@@ -61,7 +63,7 @@ export default function AdminComplaintsScreen() {
   if (!societyId) {
     return (
       <ScreenHeader title="Complaints" showBack>
-        <EmptyState title="No society linked" subtitle="Assign a society to your admin profile." />
+        <EmptyState visual="disconnected" title="No society linked" subtitle="Assign a society to your admin profile." />
       </ScreenHeader>
     );
   }
@@ -72,58 +74,23 @@ export default function AdminComplaintsScreen() {
 
   return (
     <ScreenHeader title="Complaints" subtitle="Society helpdesk queue" showBack>
-      <View className="mb-2 px-4">
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={[{ value: 'all' as const, label: 'All statuses' }, ...COMPLAINT_STATUSES]}
-          keyExtractor={(item) => item.value}
-          contentContainerStyle={{ gap: 8, paddingBottom: 8 }}
-          renderItem={({ item }) => {
-            const selected = statusFilter === item.value;
-            return (
-              <Pressable
-                onPress={() => setStatusFilter(item.value)}
-                className={`rounded-full border px-3 py-1.5 ${
-                  selected ? 'border-teal-700 bg-teal-50' : 'border-slate-200 bg-white'
-                }`}
-              >
-                <Text
-                  className={`text-xs font-semibold ${
-                    selected ? 'text-teal-800' : 'text-slate-600'
-                  }`}
-                >
-                  {item.label}
-                </Text>
-              </Pressable>
-            );
-          }}
+      <View className="mb-3 gap-3 px-4">
+        <SegmentedControl
+          options={[
+            { value: 'all', label: 'All' },
+            ...COMPLAINT_STATUSES.map((s) => ({ value: s.value, label: s.label })),
+          ]}
+          value={statusFilter}
+          onChange={setStatusFilter}
         />
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={['all', ...COMPLAINT_CATEGORIES]}
-          keyExtractor={(item) => item}
-          contentContainerStyle={{ gap: 8 }}
-          renderItem={({ item }) => {
-            const selected = categoryFilter === item;
-            return (
-              <Pressable
-                onPress={() => setCategoryFilter(item)}
-                className={`rounded-full border px-3 py-1.5 ${
-                  selected ? 'border-teal-700 bg-teal-50' : 'border-slate-200 bg-white'
-                }`}
-              >
-                <Text
-                  className={`text-xs font-semibold ${
-                    selected ? 'text-teal-800' : 'text-slate-600'
-                  }`}
-                >
-                  {item === 'all' ? 'All categories' : item}
-                </Text>
-              </Pressable>
-            );
-          }}
+        <ChipSelector
+          title="Category"
+          options={[
+            { value: 'all', label: 'All categories' },
+            ...COMPLAINT_CATEGORIES.map((c) => ({ value: c, label: c })),
+          ]}
+          value={categoryFilter}
+          onChange={setCategoryFilter}
         />
       </View>
 
@@ -145,7 +112,7 @@ export default function AdminComplaintsScreen() {
           refreshing={listQuery.isRefetching}
           onRefresh={() => void listQuery.refetch()}
           ListEmptyComponent={
-            <EmptyState title="No complaints" subtitle="Nothing matches these filters." />
+            <EmptyState visual="helpdesk" title="No complaints" subtitle="Nothing matches these filters." />
           }
           renderItem={({ item }) => {
             const tone = complaintStatusTone(item.status);
@@ -172,74 +139,43 @@ export default function AdminComplaintsScreen() {
                 ) : null}
 
                 <Text className="mb-2 text-xs font-semibold uppercase text-slate-500">Status</Text>
-                <View className="mb-3 flex-row flex-wrap gap-2">
-                  {COMPLAINT_STATUSES.map((status) => (
-                    <Pressable
-                      key={status.value}
-                      onPress={() =>
-                        updateMutation.mutate({
-                          id: item.id,
-                          status: status.value,
-                          assignedTo: item.assigned_to,
-                        })
-                      }
-                      className={`rounded-full border px-3 py-1.5 ${
-                        item.status === status.value
-                          ? 'border-teal-700 bg-teal-50'
-                          : 'border-slate-200'
-                      }`}
-                    >
-                      <Text
-                        className={`text-xs font-semibold ${
-                          item.status === status.value ? 'text-teal-800' : 'text-slate-600'
-                        }`}
-                      >
-                        {status.label}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
+                <SegmentedControl
+                  className="mb-3"
+                  options={COMPLAINT_STATUSES.map((s) => ({
+                    value: s.value,
+                    label: s.label,
+                  }))}
+                  value={item.status}
+                  onChange={(status) =>
+                    updateMutation.mutate({
+                      id: item.id,
+                      status,
+                      assignedTo: item.assigned_to,
+                    })
+                  }
+                />
 
                 <Text className="mb-2 text-xs font-semibold uppercase text-slate-500">
                   Assign (optional)
                 </Text>
-                <View className="flex-row flex-wrap gap-2">
-                  <Pressable
-                    onPress={() =>
-                      updateMutation.mutate({
-                        id: item.id,
-                        status: item.status as ComplaintStatus,
-                        assignedTo: null,
-                      })
-                    }
-                    className={`rounded-full border px-3 py-1.5 ${
-                      !item.assigned_to ? 'border-teal-700 bg-teal-50' : 'border-slate-200'
-                    }`}
-                  >
-                    <Text className="text-xs font-semibold text-slate-700">Unassigned</Text>
-                  </Pressable>
-                  {assignees.map((person) => (
-                    <Pressable
-                      key={person.id}
-                      onPress={() =>
-                        updateMutation.mutate({
-                          id: item.id,
-                          status: item.status as ComplaintStatus,
-                          assignedTo: person.id,
-                        })
-                      }
-                      className={`rounded-full border px-3 py-1.5 ${
-                        item.assigned_to === person.id
-                          ? 'border-teal-700 bg-teal-50'
-                          : 'border-slate-200'
-                      }`}
-                    >
-                      <Text className="text-xs font-semibold text-slate-700">
-                        {person.full_name ?? person.role}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
+                <ChipSelector
+                  title="Assignee"
+                  options={[
+                    { value: '', label: 'Unassigned' },
+                    ...assignees.map((person) => ({
+                      value: person.id,
+                      label: person.full_name ?? person.role,
+                    })),
+                  ]}
+                  value={item.assigned_to ?? ''}
+                  onChange={(assignedTo) =>
+                    updateMutation.mutate({
+                      id: item.id,
+                      status: item.status as ComplaintStatus,
+                      assignedTo: assignedTo || null,
+                    })
+                  }
+                />
               </View>
             );
           }}

@@ -71,7 +71,7 @@ export default function ResidentPollsScreen() {
   if (!societyId) {
     return (
       <ScreenHeader title="Polls" subtitle="Community voting">
-        <EmptyState title="No society linked" subtitle="Ask an admin to link your profile." />
+        <EmptyState visual="disconnected" title="No society linked" subtitle="Ask an admin to link your profile." />
       </ScreenHeader>
     );
   }
@@ -160,7 +160,7 @@ export default function ResidentPollsScreen() {
             />
           }
           ListEmptyComponent={
-            <EmptyState title="No polls" subtitle="When admins publish a poll, it will show up here." />
+            <EmptyState visual="polls" title="No polls" subtitle="When admins publish a poll, it will show up here." />
           }
           ListHeaderComponent={
             voteMutation.isPending ? (
