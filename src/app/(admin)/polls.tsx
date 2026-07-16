@@ -1,17 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2 } from 'lucide-react-native';
+import { Plus } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Modal,
-  Pressable,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { FlatList, Modal, Pressable, Text, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
+import { PollCreateForm } from '@/components/polls/poll-create-form';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
@@ -38,9 +31,6 @@ export default function AdminPollsScreen() {
   const queryClient = useQueryClient();
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [question, setQuestion] = useState('');
-  const [options, setOptions] = useState<string[]>(['', '']);
-  const [expiresLocal, setExpiresLocal] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
   const pollsQuery = useQuery({
@@ -58,35 +48,19 @@ export default function AdminPollsScreen() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (input: { question: string; options: string[]; expiresAt: string | null }) => {
       if (!societyId || !userId) throw new Error('Admin profile missing society.');
-      const cleaned = options.map((o) => o.trim()).filter(Boolean);
-      if (!question.trim()) throw new Error('Question is required.');
-      if (cleaned.length < 2) throw new Error('Add at least two options.');
-
-      let expiresAt: string | null = null;
-      if (expiresLocal.trim()) {
-        const parsed = new Date(expiresLocal.trim());
-        if (Number.isNaN(parsed.getTime())) {
-          throw new Error('Expiry must be a valid date, e.g. 2026-12-31 or 2026-12-31T18:00');
-        }
-        expiresAt = parsed.toISOString();
-      }
-
       await createPoll({
         societyId,
-        question: question.trim(),
-        options: cleaned,
-        expiresAt,
+        question: input.question,
+        options: input.options,
+        expiresAt: input.expiresAt,
         createdBy: userId,
       });
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.polls(societyId!) });
       setModalOpen(false);
-      setQuestion('');
-      setOptions(['', '']);
-      setExpiresLocal('');
       setFormError(null);
     },
     onError: (e: Error) => setFormError(e.message),
@@ -172,88 +146,17 @@ export default function AdminPollsScreen() {
         />
       )}
 
-      <Modal visible={modalOpen} animationType="slide" transparent>
-        <KeyboardAvoidingView
-          behavior="padding"
-          className="flex-1 justify-end bg-black/40"
-        >
-          <View className="max-h-[90%] rounded-t-3xl bg-white px-5 pb-10 pt-5">
-            <Text className="mb-4 text-xl font-bold text-slate-900">New poll</Text>
-            {formError ? <Text className="mb-2 text-sm text-red-600">{formError}</Text> : null}
-
-            <TextInput
-              className="mb-3 rounded-xl border border-slate-200 px-4 py-3 text-base text-slate-900"
-              placeholder="Question"
-              placeholderTextColor="#94A3B8"
-              value={question}
-              onChangeText={setQuestion}
+      <Modal visible={modalOpen} animationType="slide" transparent onRequestClose={() => setModalOpen(false)}>
+        {modalOpen ? (
+          <KeyboardAvoidingView behavior="padding" className="flex-1 justify-end bg-black/40">
+            <PollCreateForm
+              error={formError}
+              isSubmitting={createMutation.isPending}
+              onCancel={() => setModalOpen(false)}
+              onSubmit={(input) => createMutation.mutate(input)}
             />
-
-            <Text className="mb-2 text-sm font-medium text-slate-700">Options</Text>
-            {options.map((opt, index) => (
-              <View key={index} className="mb-2 flex-row items-center gap-2">
-                <TextInput
-                  className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-base text-slate-900"
-                  placeholder={`Option ${index + 1}`}
-                  placeholderTextColor="#94A3B8"
-                  value={opt}
-                  onChangeText={(text) => {
-                    const next = [...options];
-                    next[index] = text;
-                    setOptions(next);
-                  }}
-                />
-                {options.length > 2 ? (
-                  <Pressable
-                    onPress={() => setOptions(options.filter((_, i) => i !== index))}
-                    className="h-10 w-10 items-center justify-center rounded-full bg-slate-100"
-                  >
-                    <Trash2 color="#64748B" size={16} />
-                  </Pressable>
-                ) : null}
-              </View>
-            ))}
-
-            <Pressable
-              onPress={() => setOptions((prev) => [...prev, ''])}
-              className="mb-3 items-center rounded-xl border border-dashed border-slate-300 py-2.5"
-            >
-              <Text className="font-semibold text-teal-700">Add option</Text>
-            </Pressable>
-
-            <Text className="mb-2 text-sm font-medium text-slate-700">
-              Expiry (optional, e.g. 2026-12-31T20:00)
-            </Text>
-            <TextInput
-              className="mb-4 rounded-xl border border-slate-200 px-4 py-3 text-base text-slate-900"
-              placeholder="Leave blank for no expiry"
-              placeholderTextColor="#94A3B8"
-              autoCapitalize="none"
-              value={expiresLocal}
-              onChangeText={setExpiresLocal}
-            />
-
-            <View className="flex-row gap-2">
-              <Pressable
-                onPress={() => setModalOpen(false)}
-                className="flex-1 items-center rounded-xl border border-slate-200 py-3"
-              >
-                <Text className="font-semibold text-slate-700">Cancel</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => createMutation.mutate()}
-                disabled={createMutation.isPending}
-                className="flex-1 items-center rounded-xl bg-teal-700 py-3"
-              >
-                {createMutation.isPending ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text className="font-semibold text-white">Create</Text>
-                )}
-              </Pressable>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
+          </KeyboardAvoidingView>
+        ) : null}
       </Modal>
     </ScreenHeader>
   );

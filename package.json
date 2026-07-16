@@ -15,6 +15,7 @@
   "dependencies": {
     "@expo-google-fonts/manrope": "^0.4.2",
     "@expo/vector-icons": "^15.0.2",
+    "@react-native-community/datetimepicker": "8.6.0",
     "@react-native-community/netinfo": "^11.5.2",
     "@react-navigation/bottom-tabs": "^7.15.5",
     "@react-navigation/elements": "^2.9.10",

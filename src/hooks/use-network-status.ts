@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Platform } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
 
 type NetworkStatus = {
   isConnected: boolean;
@@ -22,12 +22,24 @@ export function useNetworkStatus(): NetworkStatus {
   useEffect(() => {
     if (Platform.OS === 'web') return;
 
+    // If the native module wasn't bundled into the current Android build yet,
+    // importing `@react-native-community/netinfo` can crash.
+    // Guard early by checking for the native interface first.
+    const hasNetInfoNative = Boolean((NativeModules as any)?.RNCNetInfo);
+    // Helpful during development when the native module isn't linked yet.
+    if (__DEV__) {
+      // eslint-disable-next-line no-console
+      console.log('[useNetworkStatus] netinfo native available:', hasNetInfoNative);
+    }
+    if (!hasNetInfoNative) return;
+
     let unsubscribe: (() => void) | undefined;
     let cancelled = false;
 
     void (async () => {
       try {
-        const { default: NetInfo } = await import('@react-native-community/netinfo');
+        const netinfoModule = require('@react-native-community/netinfo');
+        const NetInfo = netinfoModule?.default ?? netinfoModule;
 
         const apply = (state: {
           isConnected: boolean | null;
