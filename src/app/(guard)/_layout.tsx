@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
-import { ClipboardList, ScanLine, ShieldCheck, UserPlus } from 'lucide-react-native';
+import { ClipboardList, MoreHorizontal, ScanLine, ShieldCheck, UserPlus } from 'lucide-react-native';
 
-import { Brand } from '@/constants/theme';
+import { roleTabScreenOptions } from '@/constants/navigation';
 
 function tabIcon(
   Icon: typeof ShieldCheck,
@@ -22,19 +22,7 @@ function tabIcon(
 
 export default function GuardLayout() {
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        lazy: true,
-        freezeOnBlur: true,
-        tabBarActiveTintColor: Brand.primary,
-        tabBarInactiveTintColor: '#94A3B8',
-        tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: '#E2E8F0',
-        },
-      }}
-    >
+    <Tabs screenOptions={roleTabScreenOptions}>
       <Tabs.Screen
         name="dashboard"
         options={{
@@ -63,6 +51,14 @@ export default function GuardLayout() {
           title: 'Logs',
           tabBarIcon: ({ color, size, focused }) =>
             tabIcon(ClipboardList, color, size, focused),
+        }}
+      />
+      <Tabs.Screen
+        name="more"
+        options={{
+          title: 'More',
+          tabBarIcon: ({ color, size, focused }) =>
+            tabIcon(MoreHorizontal, color, size, focused),
         }}
       />
       <Tabs.Screen name="index" options={{ href: null }} />

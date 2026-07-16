@@ -8,11 +8,13 @@ import {
   Phone,
   Users,
 } from 'lucide-react-native';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EmptyMailboxIllustration } from '@/components/illustrations';
 import { AppCard, HeroBanner, PressableActionTile } from '@/components/ui/brand';
+import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { Brand, FontFamily } from '@/constants/theme';
@@ -46,6 +48,13 @@ export default function AdminHome() {
 
   const stats = statsQuery.data;
   const go = (href: Href) => router.push(href);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await statsQuery.refetch();
+    setRefreshing(false);
+  }, [statsQuery]);
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
@@ -53,6 +62,9 @@ export default function AdminHome() {
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 28 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <ThemedRefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
+        }
       >
         <HeroBanner
           title={`Welcome, ${name}`}

@@ -15,12 +15,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ChipSelector } from '@/components/ui/chip-selector';
 import { VisitorSilhouette } from '@/components/illustrations';
+import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { flatTowerName, notifyResidentOfVisitor } from '@/lib/visitors';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { FlatWithTower, VisitorType } from '@/types/database';
 import { VISITOR_TYPES } from '@/types/database';
+import { Brand } from '@/constants/theme';
 
 export default function RegisterVisitorScreen() {
   const profile = useAuthStore((s) => s.profile);
@@ -231,12 +233,12 @@ export default function RegisterVisitorScreen() {
 
   if (!profile?.society_id) {
     return (
-      <SafeAreaView className="flex-1 bg-slate-50">
-        <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center text-base text-slate-600">
-            Link your profile to a society to register visitors.
-          </Text>
-        </View>
+      <SafeAreaView className="flex-1 bg-surface">
+        <EmptyState
+          visual="disconnected"
+          title="No society linked"
+          subtitle="Ask an admin to assign your guard profile to a society before registering visitors."
+        />
       </SafeAreaView>
     );
   }
@@ -253,7 +255,7 @@ export default function RegisterVisitorScreen() {
             Creates a pending request for the flat&apos;s resident.
           </Text>
 
-          {error ? <ErrorBanner message={error} /> : null}
+          {error ? <ErrorBanner message={error} onRetry={() => setError(null)} /> : null}
           {success ? (
             <View className="mb-3 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3">
               <Text className="text-sm text-teal-800">{success}</Text>
@@ -360,7 +362,7 @@ export default function RegisterVisitorScreen() {
                   onChangeText={searchFlats}
                   autoCapitalize="characters"
                 />
-                {searchingFlats ? <ActivityIndicator color="#0F766E" /> : null}
+                {searchingFlats ? <ActivityIndicator color={Brand.primary} /> : null}
               </View>
               {flatResults.length > 0 ? (
                 <View className="overflow-hidden rounded-xl border border-slate-200 bg-white">

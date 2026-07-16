@@ -1,13 +1,15 @@
 import { useRouter } from 'expo-router';
 import { History, UserPlus } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { VisitorCard } from '@/components/visitors/visitor-card';
+import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
+import { Brand } from '@/constants/theme';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { supabase } from '@/lib/supabase';
 import { notifyGuardOfVisitorDecision } from '@/lib/visitors';
@@ -100,7 +102,7 @@ export default function ResidentVisitorsScreen() {
         onPress={() => router.push('/(resident)/pre-approve')}
         className="mx-4 mb-3 flex-row items-center justify-center gap-2 rounded-xl border border-teal-200 bg-teal-50 py-3"
       >
-        <UserPlus color="#0F766E" size={18} />
+        <UserPlus color={Brand.primary} size={18} />
         <Text className="text-sm font-semibold text-teal-800">Pre-approve guest</Text>
       </Pressable>
 
@@ -117,7 +119,7 @@ export default function ResidentVisitorsScreen() {
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
           ItemSeparatorComponent={() => <View className="h-3" />}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0F766E" />
+            <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           ListEmptyComponent={
             <EmptyState

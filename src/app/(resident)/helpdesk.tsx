@@ -4,7 +4,6 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
-  RefreshControl,
   Text,
   TextInput,
   View,
@@ -13,6 +12,7 @@ import { KeyboardAwareScrollView, KeyboardAvoidingView } from 'react-native-keyb
 
 import { ChipSelector } from '@/components/ui/chip-selector';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
@@ -86,10 +86,9 @@ export default function ResidentHelpdeskScreen() {
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 28, flexGrow: 1 }}
           ItemSeparatorComponent={() => <View className="h-3" />}
           refreshControl={
-            <RefreshControl
+            <ThemedRefreshControl
               refreshing={listQuery.isRefetching}
               onRefresh={() => void listQuery.refetch()}
-              tintColor="#0F766E"
             />
           }
           ListHeaderComponent={

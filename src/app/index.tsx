@@ -1,6 +1,7 @@
 import { Redirect } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 
+import { Brand } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
 
 export default function Index() {
@@ -8,8 +9,8 @@ export default function Index() {
 
   if (!isInitialized || isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#0F766E" />
+      <View className="flex-1 items-center justify-center bg-surface">
+        <ActivityIndicator size="large" color={Brand.primary} />
       </View>
     );
   }

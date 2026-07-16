@@ -1,10 +1,11 @@
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Brand, FontFamily } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -38,13 +39,20 @@ export default function AuthCallbackScreen() {
   const router = useRouter();
   const fetchProfile = useAuthStore((s) => s.fetchProfile);
   const [message, setMessage] = useState('Confirming your email…');
+  const [isError, setIsError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const handleUrl = async (url: string) => {
+  const handleUrl = useCallback(
+    async (url: string) => {
+      setIsLoading(true);
+      setIsError(false);
+      setMessage('Confirming your email…');
+
       try {
         const session = await createSessionFromUrl(url);
 
         if (!session) {
+          setIsError(true);
           setMessage('This confirmation link is invalid or has expired.');
           return;
         }
@@ -52,13 +60,23 @@ export default function AuthCallbackScreen() {
         await fetchProfile(session.user.id);
         router.replace('/');
       } catch (error) {
+        setIsError(true);
         setMessage(error instanceof Error ? error.message : 'Email confirmation failed.');
+      } finally {
+        setIsLoading(false);
       }
-    };
+    },
+    [fetchProfile, router],
+  );
 
+  useEffect(() => {
     void Linking.getInitialURL().then((url) => {
       if (url) {
         void handleUrl(url);
+      } else {
+        setIsLoading(false);
+        setIsError(true);
+        setMessage('No confirmation link found. Open the link from your email again.');
       }
     });
 
@@ -67,13 +85,30 @@ export default function AuthCallbackScreen() {
     });
 
     return () => subscription.remove();
-  }, [fetchProfile, router]);
+  }, [handleUrl]);
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-surface">
       <View className="flex-1 items-center justify-center px-6">
-        <ActivityIndicator size="large" color="#0F766E" />
-        <Text className="mt-4 text-center text-base text-slate-600">{message}</Text>
+        {isLoading ? (
+          <ActivityIndicator size="large" color={Brand.primary} />
+        ) : null}
+        <Text
+          className={`mt-4 text-center text-base ${isError ? 'text-status-rejected' : 'text-ink-muted'}`}
+          style={{ fontFamily: FontFamily.body }}
+        >
+          {message}
+        </Text>
+        {isError && !isLoading ? (
+          <Pressable
+            onPress={() => router.replace('/(auth)/login')}
+            className="mt-6 rounded-xl bg-brand-700 px-6 py-3"
+          >
+            <Text className="font-semibold text-white" style={{ fontFamily: FontFamily.heading }}>
+              Back to login
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
     </SafeAreaView>
   );

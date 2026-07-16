@@ -1,15 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { FlatList, RefreshControl, Text, View } from 'react-native';
+import { FlatList, Text, View } from 'react-native';
 
 import { AppCard } from '@/components/ui/brand';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
-import { Brand } from '@/constants/theme';
-import { fetchNotices } from '@/lib/community-api';
 import { formatNoticeDate } from '@/lib/community';
+import { fetchNotices } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -45,10 +45,9 @@ export default function ResidentNoticesScreen() {
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
           ItemSeparatorComponent={() => <View className="h-3" />}
           refreshControl={
-            <RefreshControl
+            <ThemedRefreshControl
               refreshing={isRefetching}
               onRefresh={() => void refetch()}
-              tintColor={Brand.primary}
             />
           }
           ListEmptyComponent={

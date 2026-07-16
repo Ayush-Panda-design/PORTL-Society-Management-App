@@ -5,9 +5,12 @@
 :root {
   --color-brand: #0f766e;
   --color-brand-dark: #115e59;
+  --color-brand-soft: #ccfbf1;
   --color-accent: #d97706;
   --color-surface: #f7fafc;
   --color-ink: #0f172a;
+  --color-ink-muted: #64748b;
+  --color-border: #e2e8f0;
   --font-display: 'Manrope', ui-sans-serif, system-ui, sans-serif;
   --font-body: 'Manrope', ui-sans-serif, system-ui, sans-serif;
   --font-mono:

@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react';
-import { FlatList, RefreshControl, Text, View } from 'react-native';
+import { FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
@@ -91,7 +92,7 @@ export default function GuardVerifyScreen() {
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
           ItemSeparatorComponent={() => <View className="h-3" />}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0F766E" />
+            <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           ListEmptyComponent={
             <EmptyState

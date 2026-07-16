@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
+import { Brand } from '@/constants/theme';
 import { isPollExpired } from '@/lib/community';
 import { castVote, fetchPolls, fetchVotesForPolls } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
@@ -150,13 +152,12 @@ export default function ResidentPollsScreen() {
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
           ItemSeparatorComponent={() => <View className="h-3" />}
           refreshControl={
-            <RefreshControl
+            <ThemedRefreshControl
               refreshing={pollsQuery.isRefetching || votesQuery.isRefetching}
               onRefresh={() => {
                 void pollsQuery.refetch();
                 void votesQuery.refetch();
               }}
-              tintColor="#0F766E"
             />
           }
           ListEmptyComponent={
@@ -165,7 +166,7 @@ export default function ResidentPollsScreen() {
           ListHeaderComponent={
             voteMutation.isPending ? (
               <View className="mb-3 items-center">
-                <ActivityIndicator color="#0F766E" />
+                <ActivityIndicator color={Brand.primary} />
               </View>
             ) : null
           }

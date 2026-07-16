@@ -8,6 +8,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { Brand } from '@/constants/theme';
+
 type Props = {
   message?: string;
 };
@@ -15,7 +17,7 @@ type Props = {
 export function LoadingState({ message = 'Loading…' }: Props) {
   return (
     <View className="flex-1 items-center justify-center px-6 py-12">
-      <ActivityIndicator size="large" color="#0F766E" />
+      <ActivityIndicator size="large" color={Brand.primary} />
       <Text className="mt-3 text-sm text-ink-muted">{message}</Text>
     </View>
   );

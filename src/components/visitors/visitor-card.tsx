@@ -3,7 +3,7 @@ import { Check, CheckCircle2, Clock3, LogIn, LogOut, X, XCircle } from 'lucide-r
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { VisitorSilhouette } from '@/components/illustrations';
-import { FontFamily } from '@/constants/theme';
+import { Brand, FontFamily } from '@/constants/theme';
 import {
   flatLabel,
   formatRelativeTime,
@@ -129,14 +129,14 @@ export function VisitorCard({ visitor, actions, showStatus = true }: Props) {
                 }`}
               >
                 {action.loading ? (
-                  <ActivityIndicator color={isDanger || isPrimary ? '#fff' : '#0F766E'} />
+                  <ActivityIndicator color={isDanger || isPrimary ? '#fff' : Brand.primary} />
                 ) : (
                   <>
                     {action.icon === 'check' ? (
-                      <Check color={isDanger || isPrimary ? '#fff' : '#0F766E'} size={16} />
+                      <Check color={isDanger || isPrimary ? '#fff' : Brand.primary} size={16} />
                     ) : null}
                     {action.icon === 'x' ? (
-                      <X color={isDanger || isPrimary ? '#fff' : '#0F766E'} size={16} />
+                      <X color={isDanger || isPrimary ? '#fff' : Brand.primary} size={16} />
                     ) : null}
                     <Text className={`text-sm font-semibold ${text}`}>{action.label}</Text>
                   </>

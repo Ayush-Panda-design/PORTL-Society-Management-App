@@ -10,6 +10,7 @@ import { type ReactNode, useEffect } from 'react';
 import { ActivityIndicator, NativeModules, useColorScheme, View } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
+import { OfflineBanner } from '@/components/ui/offline-banner';
 import { Brand } from '@/constants/theme';
 import { usePortlFonts } from '@/hooks/use-portl-fonts';
 import { queryClient } from '@/lib/query-client';
@@ -144,13 +145,16 @@ export default function RootLayout() {
       <KeyboardProvider preload={false}>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <AuthGate>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(resident)" />
-              <Stack.Screen name="(guard)" />
-              <Stack.Screen name="(admin)" />
-            </Stack>
+            <View className="flex-1">
+              <OfflineBanner />
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="index" />
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(resident)" />
+                <Stack.Screen name="(guard)" />
+                <Stack.Screen name="(admin)" />
+              </Stack>
+            </View>
           </AuthGate>
           <StatusBar style="auto" />
         </ThemeProvider>

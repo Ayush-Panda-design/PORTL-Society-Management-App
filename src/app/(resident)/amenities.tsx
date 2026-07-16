@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
-  RefreshControl,
   Text,
   View,
 } from 'react-native';
@@ -13,6 +12,7 @@ import {
 import { AppCard } from '@/components/ui/brand';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
@@ -207,10 +207,9 @@ export default function ResidentAmenitiesScreen() {
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
           ItemSeparatorComponent={() => <View className="h-3" />}
           refreshControl={
-            <RefreshControl
+            <ThemedRefreshControl
               refreshing={amenitiesQuery.isRefetching}
               onRefresh={() => void amenitiesQuery.refetch()}
-              tintColor={Brand.primary}
             />
           }
           ListEmptyComponent={

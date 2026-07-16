@@ -1,11 +1,12 @@
 import { useCallback, useState } from 'react';
-import { FlatList, RefreshControl, Text, View } from 'react-native';
+import { FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { VisitorCard } from '@/components/visitors/visitor-card';
+import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -60,7 +61,7 @@ export default function GuardDashboard() {
           }}
           ItemSeparatorComponent={() => <View className="h-3" />}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0F766E" />
+            <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           ListEmptyComponent={
             <EmptyState

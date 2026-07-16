@@ -2,10 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Phone } from 'lucide-react-native';
 import { useMemo } from 'react';
-import { FlatList, Linking, Pressable, RefreshControl, Text, View } from 'react-native';
+import { FlatList, Linking, Pressable, Text, View } from 'react-native';
 
 import { AppCard, InitialsAvatar } from '@/components/ui/brand';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
@@ -58,10 +59,9 @@ export default function ResidentDirectoryScreen() {
           keyExtractor={(item) => item.role}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
           refreshControl={
-            <RefreshControl
+            <ThemedRefreshControl
               refreshing={listQuery.isRefetching}
               onRefresh={() => void listQuery.refetch()}
-              tintColor={Brand.primary}
             />
           }
           ListEmptyComponent={

@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Bell, Home, MoreHorizontal, Users } from 'lucide-react-native';
 
-import { Brand } from '@/constants/theme';
+import { roleTabScreenOptions } from '@/constants/navigation';
 
 function tabIcon(
   Icon: typeof Home,
@@ -22,19 +22,7 @@ function tabIcon(
 
 export default function ResidentLayout() {
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        lazy: true,
-        freezeOnBlur: true,
-        tabBarActiveTintColor: Brand.primary,
-        tabBarInactiveTintColor: '#94A3B8',
-        tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: '#E2E8F0',
-        },
-      }}
-    >
+    <Tabs screenOptions={roleTabScreenOptions}>
       <Tabs.Screen
         name="index"
         options={{
