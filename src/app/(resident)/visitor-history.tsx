@@ -65,6 +65,7 @@ export default function ResidentVisitorHistoryScreen() {
 
       <View className="px-4 pb-2">
         <ChipSelector
+          presentation="filter"
           options={[
             { value: 'all', label: 'All' },
             ...VISITOR_STATUSES.map((s) => ({ value: s.value, label: s.label })),

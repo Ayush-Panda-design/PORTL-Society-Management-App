@@ -10,6 +10,7 @@ import { SkeletonList } from '@/components/visitors/loading-state';
 import { VisitorCard } from '@/components/visitors/visitor-card';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { supabase } from '@/lib/supabase';
+import { notifyGuardOfVisitorDecision } from '@/lib/visitors';
 import { useAuthStore } from '@/stores/authStore';
 
 export default function ResidentVisitorsScreen() {
@@ -35,6 +36,8 @@ export default function ResidentVisitorsScreen() {
     setActionId(visitorId);
     setActionError(null);
 
+    const visitor = visitors.find((v) => v.id === visitorId);
+
     try {
       const { error: updateError } = await supabase
         .from('visitors')
@@ -44,7 +47,14 @@ export default function ResidentVisitorsScreen() {
 
       if (updateError) {
         setActionError(updateError.message);
+        return;
       }
+
+      void notifyGuardOfVisitorDecision({
+        createdBy: visitor?.created_by ?? null,
+        visitorName: visitor?.name ?? 'Visitor',
+        status,
+      });
     } catch (e) {
       setActionError(e instanceof Error ? e.message : 'Failed to update request');
     } finally {

@@ -1,3 +1,5 @@
+import { invokeSendPush } from '@/lib/push-notifications';
+import { supabase } from '@/lib/supabase';
 import type { VisitorStatus, VisitorType, VisitorWithFlat } from '@/types/database';
 
 export const VISITOR_SELECT = `
@@ -133,8 +135,7 @@ export function flatLabel(visitor: VisitorWithFlat): string {
 }
 
 /**
- * TODO: look up residents for this flat_id who have Expo push tokens stored,
- * then send a push via the Expo Push API when a visitor is registered/pending.
+ * Notify residents of a flat when a guard registers a visitor.
  */
 export async function notifyResidentOfVisitor(params: {
   flatId: string;
@@ -142,5 +143,54 @@ export async function notifyResidentOfVisitor(params: {
   visitorType: VisitorType;
   societyId: string;
 }): Promise<void> {
-  console.log('[TODO push] Notify resident of visitor', params);
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('flat_id', params.flatId)
+      .eq('role', 'resident')
+      .eq('society_id', params.societyId);
+
+    if (error) {
+      console.warn('[push] Failed to look up residents:', error.message);
+      return;
+    }
+
+    const userIds = (data ?? []).map((row) => row.id as string);
+    if (userIds.length === 0) return;
+
+    const typeLabelText = typeLabel(params.visitorType);
+    await invokeSendPush({
+      userIds,
+      title: 'Visitor at the gate',
+      body: `${params.visitorName} (${typeLabelText}) is waiting for your approval.`,
+      data: {
+        type: 'visitor_pending',
+        flatId: params.flatId,
+        societyId: params.societyId,
+      },
+    });
+  } catch (e) {
+    console.warn('[push] notifyResidentOfVisitor failed:', e);
+  }
+}
+
+/** Notify the guard who created a visitor request after approve/reject. */
+export async function notifyGuardOfVisitorDecision(params: {
+  createdBy: string | null;
+  visitorName: string;
+  status: 'approved' | 'rejected';
+}): Promise<void> {
+  if (!params.createdBy) return;
+
+  const verb = params.status === 'approved' ? 'approved' : 'rejected';
+  await invokeSendPush({
+    userId: params.createdBy,
+    title: `Visitor ${verb}`,
+    body: `${params.visitorName} was ${verb} by the resident.`,
+    data: {
+      type: 'visitor_decision',
+      status: params.status,
+    },
+  });
 }

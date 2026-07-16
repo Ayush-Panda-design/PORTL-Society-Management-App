@@ -1,6 +1,7 @@
 import type { Session, User } from '@supabase/supabase-js';
 import { create } from 'zustand';
 
+import { clearPushToken, registerForPushNotifications } from '@/lib/push-notifications';
 import { supabase } from '@/lib/supabase';
 import type { Profile, UserRole } from '@/types/database';
 
@@ -20,6 +21,11 @@ type AuthState = {
 
 function isUserRole(value: unknown): value is UserRole {
   return value === 'resident' || value === 'guard' || value === 'admin';
+}
+
+function syncPushToken(userId: string) {
+  // Fire-and-forget — never block auth / navigation.
+  void registerForPushNotifications(userId);
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -113,9 +119,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (session?.user) {
         await get().fetchProfile(session.user.id);
+        syncPushToken(session.user.id);
       }
 
-      supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+      supabase.auth.onAuthStateChange(async (event, nextSession) => {
         set({
           session: nextSession,
           user: nextSession?.user ?? null,
@@ -123,6 +130,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         if (nextSession?.user) {
           await get().fetchProfile(nextSession.user.id);
+          // Register on login / fresh session only — skip token refresh noise.
+          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+            syncPushToken(nextSession.user.id);
+          }
         } else {
           set({ profile: null, role: null });
         }
@@ -133,6 +144,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async () => {
+    const userId = get().user?.id;
+    if (userId) {
+      await clearPushToken(userId);
+    }
     await supabase.auth.signOut();
     set({
       session: null,

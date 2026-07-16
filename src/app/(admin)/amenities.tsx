@@ -5,14 +5,13 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
 import { AppCard } from '@/components/ui/brand';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -176,7 +175,7 @@ export default function AdminAmenitiesScreen() {
 
       <Modal visible={modalOpen} animationType="slide" transparent>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
           className="flex-1 justify-end bg-black/40"
         >
           <View className="max-h-[90%] rounded-t-3xl bg-white px-5 pb-10 pt-5">

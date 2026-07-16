@@ -3,14 +3,12 @@ import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GateAuthIllustration } from '@/components/illustrations';
@@ -97,36 +95,35 @@ export default function SignupScreen() {
 
   return (
     <View className="flex-1 bg-surface">
-      <LinearGradient
-        colors={[...Gradients.auth]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ paddingTop: 12, paddingBottom: 20 }}
+      <KeyboardAwareScrollView
+        bottomOffset={24}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ flexGrow: 1 }}
+        bounces={false}
       >
-        <SafeAreaView edges={['top']}>
-          <View className="items-center px-6 pt-2">
-            <Text
-              className="mb-1 text-4xl text-white"
-              style={{ fontFamily: FontFamily.display }}
-            >
-              Portl
-            </Text>
-            <Text className="mb-3 text-center text-sm text-teal-50/90">
-              Join your society at the gate
-            </Text>
-            <GateAuthIllustration width={220} height={120} />
-          </View>
-        </SafeAreaView>
-      </LinearGradient>
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="-mt-4 flex-1 rounded-t-3xl bg-surface"
-      >
-        <ScrollView
-          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 28, paddingBottom: 40 }}
-          keyboardShouldPersistTaps="handled"
+        <LinearGradient
+          colors={[...Gradients.auth]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ paddingTop: 12, paddingBottom: 20 }}
         >
+          <SafeAreaView edges={['top']}>
+            <View className="items-center px-6 pt-2">
+              <Text
+                className="mb-1 text-4xl text-white"
+                style={{ fontFamily: FontFamily.display }}
+              >
+                Portl
+              </Text>
+              <Text className="mb-3 text-center text-sm text-teal-50/90">
+                Join your society at the gate
+              </Text>
+              <GateAuthIllustration width={220} height={120} />
+            </View>
+          </SafeAreaView>
+        </LinearGradient>
+
+        <View className="-mt-4 flex-1 rounded-t-3xl bg-surface px-6 pb-10 pt-7">
           <Text className="mb-5 text-base text-ink-soft">Create your society account</Text>
 
           <View className="mb-4 gap-2">
@@ -215,8 +212,8 @@ export default function SignupScreen() {
               Sign in
             </Link>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </View>
+      </KeyboardAwareScrollView>
     </View>
   );
 }

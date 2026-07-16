@@ -5,14 +5,12 @@ import { type ReactNode, useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ChipSelector } from '@/components/ui/chip-selector';
@@ -245,14 +243,11 @@ export default function RegisterVisitorScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1"
+      <KeyboardAwareScrollView
+        bottomOffset={32}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
       >
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-        >
           <Text className="mb-1 text-2xl font-bold text-slate-900">Register visitor</Text>
           <Text className="mb-6 text-sm text-slate-500">
             Creates a pending request for the flat&apos;s resident.
@@ -334,6 +329,7 @@ export default function RegisterVisitorScreen() {
           <Text className="mb-2 text-sm font-medium text-slate-700">Type</Text>
           <ChipSelector
             className="mb-4"
+            presentation="tiles"
             options={VISITOR_TYPES.map((t) => ({ value: t.value, label: t.label }))}
             value={type}
             onChange={setType}
@@ -412,8 +408,7 @@ export default function RegisterVisitorScreen() {
               <Text className="text-base font-semibold text-white">Submit for approval</Text>
             )}
           </Pressable>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }

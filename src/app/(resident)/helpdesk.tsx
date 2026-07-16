@@ -3,14 +3,13 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   RefreshControl,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView, KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
 import { ChipSelector } from '@/components/ui/chip-selector';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -76,13 +75,14 @@ export default function ResidentHelpdeskScreen() {
 
   return (
     <ScreenHeader title="Helpdesk" subtitle="Report issues for your flat" showBack>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1"
-      >
+      <KeyboardAvoidingView behavior="padding" className="flex-1" keyboardVerticalOffset={8}>
         <FlatList
           data={listQuery.data ?? []}
           keyExtractor={(item) => item.id}
+          keyboardShouldPersistTaps="handled"
+          renderScrollComponent={(props) => (
+            <KeyboardAwareScrollView {...props} bottomOffset={24} />
+          )}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 28, flexGrow: 1 }}
           ItemSeparatorComponent={() => <View className="h-3" />}
           refreshControl={
@@ -102,6 +102,7 @@ export default function ResidentHelpdeskScreen() {
               <ChipSelector
                 className="mb-3"
                 title="Category"
+                presentation="sheet"
                 options={COMPLAINT_CATEGORIES.map((c) => ({ value: c, label: c }))}
                 value={category}
                 onChange={setCategory}

@@ -3,14 +3,12 @@ import { ArrowLeft } from 'lucide-react-native';
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ChipSelector } from '@/components/ui/chip-selector';
@@ -92,27 +90,24 @@ export default function PreApproveGuestScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1"
-      >
-        <View className="flex-row items-center gap-3 px-4 pb-2 pt-3">
-          <Pressable
-            onPress={() => router.back()}
-            className="h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white"
-          >
-            <ArrowLeft color="#475569" size={18} />
-          </Pressable>
-          <View>
-            <Text className="text-2xl font-bold text-slate-900">Pre-approve guest</Text>
-            <Text className="text-sm text-slate-500">Skips gate approval wait</Text>
-          </View>
-        </View>
-
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+      <View className="flex-row items-center gap-3 px-4 pb-2 pt-3">
+        <Pressable
+          onPress={() => router.back()}
+          className="h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white"
         >
+          <ArrowLeft color="#475569" size={18} />
+        </Pressable>
+        <View>
+          <Text className="text-2xl font-bold text-slate-900">Pre-approve guest</Text>
+          <Text className="text-sm text-slate-500">Skips gate approval wait</Text>
+        </View>
+      </View>
+
+      <KeyboardAwareScrollView
+        bottomOffset={32}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
+      >
           {error ? <ErrorBanner message={error} /> : null}
           {success ? (
             <View className="mb-3 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3">
@@ -151,6 +146,7 @@ export default function PreApproveGuestScreen() {
           <Text className="mb-2 text-sm font-medium text-slate-700">Type</Text>
           <ChipSelector
             className="mb-6"
+            presentation="tiles"
             options={VISITOR_TYPES.map((t) => ({ value: t.value, label: t.label }))}
             value={type}
             onChange={setType}
@@ -169,8 +165,7 @@ export default function PreApproveGuestScreen() {
               <Text className="text-base font-semibold text-white">Pre-approve</Text>
             )}
           </Pressable>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }

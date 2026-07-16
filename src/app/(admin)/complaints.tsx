@@ -85,6 +85,7 @@ export default function AdminComplaintsScreen() {
         />
         <ChipSelector
           title="Category"
+          presentation="sheet"
           options={[
             { value: 'all', label: 'All categories' },
             ...COMPLAINT_CATEGORIES.map((c) => ({ value: c, label: c })),
@@ -160,6 +161,7 @@ export default function AdminComplaintsScreen() {
                 </Text>
                 <ChipSelector
                   title="Assignee"
+                  presentation="sheet"
                   options={[
                     { value: '', label: 'Unassigned' },
                     ...assignees.map((person) => ({

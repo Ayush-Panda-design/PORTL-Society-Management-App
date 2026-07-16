@@ -2,11 +2,13 @@ import '@/global.css';
 
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { requireOptionalNativeModule } from 'expo';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { type ReactNode, useEffect } from 'react';
-import { ActivityIndicator, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, NativeModules, useColorScheme, View } from 'react-native';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { Brand } from '@/constants/theme';
 import { usePortlFonts } from '@/hooks/use-portl-fonts';
@@ -15,6 +17,32 @@ import { useAuthStore } from '@/stores/authStore';
 import type { UserRole } from '@/types/database';
 
 void SplashScreen.preventAutoHideAsync();
+
+/** Hide Expo's floating Tools (gear) FAB. Persists via native UserDefaults/SharedPreferences. */
+async function hideExpoToolsFab() {
+  const modules = [
+    requireOptionalNativeModule('DevMenuPreferences'),
+    NativeModules.DevMenuPreferences,
+    NativeModules.ExpoDevMenuPreferences,
+    NativeModules.EXDevMenuPreferences,
+  ].filter(Boolean);
+
+  for (const mod of modules) {
+    try {
+      if (typeof mod.setPreferencesAsync === 'function') {
+        await mod.setPreferencesAsync({ showFloatingActionButton: false });
+        return true;
+      }
+      if (typeof mod.setSettingsAsync === 'function') {
+        await mod.setSettingsAsync({ showFloatingActionButton: false });
+        return true;
+      }
+    } catch {
+      // try next candidate
+    }
+  }
+  return false;
+}
 
 function roleHome(role: UserRole | null): '/(resident)' | '/(guard)' | '/(admin)' | '/(auth)/login' {
   switch (role) {
@@ -89,6 +117,15 @@ export default function RootLayout() {
   const { fontsLoaded } = usePortlFonts();
 
   useEffect(() => {
+    void hideExpoToolsFab();
+    // Retry once — native module can register after first paint in Expo Go.
+    const t = setTimeout(() => {
+      void hideExpoToolsFab();
+    }, 800);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
     if (fontsLoaded) {
       void SplashScreen.hideAsync();
     }
@@ -104,18 +141,20 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <AuthGate>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(resident)" />
-            <Stack.Screen name="(guard)" />
-            <Stack.Screen name="(admin)" />
-          </Stack>
-        </AuthGate>
-        <StatusBar style="auto" />
-      </ThemeProvider>
+      <KeyboardProvider preload={false}>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <AuthGate>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(resident)" />
+              <Stack.Screen name="(guard)" />
+              <Stack.Screen name="(admin)" />
+            </Stack>
+          </AuthGate>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </KeyboardProvider>
     </QueryClientProvider>
   );
 }

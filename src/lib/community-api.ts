@@ -1,16 +1,22 @@
 import { parseJsonStringArray } from '@/lib/community';
+import { invokeSendPush } from '@/lib/push-notifications';
 import { supabase } from '@/lib/supabase';
 import type {
+  AdminDashboardStats,
   Amenity,
   AmenityBooking,
   Complaint,
   ComplaintStatus,
   ComplaintWithFlat,
+  Flat,
+  FlatWithTower,
   Notice,
   Poll,
   PollVote,
   Profile,
+  ProfileWithFlat,
   StaffMember,
+  Tower,
 } from '@/types/database';
 
 export async function fetchNotices(societyId: string): Promise<Notice[]> {
@@ -53,6 +59,54 @@ export async function upsertNotice(input: {
     cover_url: input.coverUrl ?? null,
   });
   if (error) throw new Error(error.message);
+
+  // Notify society residents (batched via Edge Function). Non-blocking.
+  void notifySocietyResidentsOfNotice({
+    societyId: input.societyId,
+    title: input.title,
+    body: input.body,
+  });
+}
+
+async function notifySocietyResidentsOfNotice(params: {
+  societyId: string;
+  title: string;
+  body: string;
+}): Promise<void> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('society_id', params.societyId)
+      .eq('role', 'resident');
+
+    if (error) {
+      console.warn('[push] Failed to load residents for notice:', error.message);
+      return;
+    }
+
+    const userIds = (data ?? []).map((row) => row.id as string);
+    if (userIds.length === 0) return;
+
+    const preview =
+      params.body.length > 120 ? `${params.body.slice(0, 117)}…` : params.body;
+
+    // Expo accepts up to 100 messages per request; Edge Function chunks further.
+    const BATCH = 100;
+    for (let i = 0; i < userIds.length; i += BATCH) {
+      await invokeSendPush({
+        userIds: userIds.slice(i, i + BATCH),
+        title: params.title,
+        body: preview,
+        data: {
+          type: 'notice',
+          societyId: params.societyId,
+        },
+      });
+    }
+  } catch (e) {
+    console.warn('[push] notice notify failed:', e);
+  }
 }
 
 export async function deleteNotice(id: string): Promise<void> {
@@ -301,6 +355,199 @@ export async function fetchSocietyProfiles(societyId: string): Promise<Profile[]
     .order('full_name', { ascending: true });
   if (error) throw new Error(error.message);
   return (data as Profile[]) ?? [];
+}
+
+export async function fetchTowers(societyId: string): Promise<Tower[]> {
+  const { data, error } = await supabase
+    .from('towers')
+    .select('*')
+    .eq('society_id', societyId)
+    .order('name', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data as Tower[]) ?? [];
+}
+
+export async function upsertTower(input: {
+  id?: string;
+  societyId: string;
+  name: string;
+}): Promise<Tower> {
+  if (input.id) {
+    const { data, error } = await supabase
+      .from('towers')
+      .update({ name: input.name })
+      .eq('id', input.id)
+      .select('*')
+      .single();
+    if (error) throw new Error(error.message);
+    return data as Tower;
+  }
+
+  const { data, error } = await supabase
+    .from('towers')
+    .insert({ society_id: input.societyId, name: input.name })
+    .select('*')
+    .single();
+  if (error) throw new Error(error.message);
+  return data as Tower;
+}
+
+export async function deleteTower(id: string): Promise<void> {
+  const { error } = await supabase.from('towers').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function fetchFlats(societyId: string): Promise<FlatWithTower[]> {
+  const { data, error } = await supabase
+    .from('flats')
+    .select(
+      `
+      id,
+      tower_id,
+      number,
+      towers!inner (
+        id,
+        name,
+        society_id
+      )
+    `,
+    )
+    .eq('towers.society_id', societyId)
+    .order('number', { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  return ((data as FlatWithTower[]) ?? []).map((row) => ({
+    ...row,
+    towers: Array.isArray(row.towers) ? row.towers[0] ?? null : row.towers,
+  }));
+}
+
+export async function upsertFlat(input: {
+  id?: string;
+  towerId: string;
+  number: string;
+}): Promise<Flat> {
+  if (input.id) {
+    const { data, error } = await supabase
+      .from('flats')
+      .update({ tower_id: input.towerId, number: input.number })
+      .eq('id', input.id)
+      .select('*')
+      .single();
+    if (error) throw new Error(error.message);
+    return data as Flat;
+  }
+
+  const { data, error } = await supabase
+    .from('flats')
+    .insert({ tower_id: input.towerId, number: input.number })
+    .select('*')
+    .single();
+  if (error) throw new Error(error.message);
+  return data as Flat;
+}
+
+export async function deleteFlat(id: string): Promise<void> {
+  const { error } = await supabase.from('flats').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function fetchResidents(societyId: string): Promise<ProfileWithFlat[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(
+      `
+      *,
+      flats (
+        id,
+        number,
+        towers (
+          id,
+          name
+        )
+      )
+    `,
+    )
+    .eq('society_id', societyId)
+    .eq('role', 'resident')
+    .order('full_name', { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  return ((data as ProfileWithFlat[]) ?? []).map((row) => {
+    const flats = row.flats;
+    if (!flats) return row;
+    const towers = Array.isArray(flats.towers) ? flats.towers[0] ?? null : flats.towers;
+    return { ...row, flats: { ...flats, towers } };
+  });
+}
+
+export async function assignResidentFlat(input: {
+  profileId: string;
+  flatId: string | null;
+}): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ flat_id: input.flatId })
+    .eq('id', input.profileId);
+  if (error) throw new Error(error.message);
+}
+
+function startOfTodayIso(): string {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
+function endOfTodayIso(): string {
+  const d = new Date();
+  d.setHours(23, 59, 59, 999);
+  return d.toISOString();
+}
+
+export async function fetchAdminDashboardStats(
+  societyId: string,
+): Promise<AdminDashboardStats> {
+  const todayStart = startOfTodayIso();
+  const todayEnd = endOfTodayIso();
+  const nowIso = new Date().toISOString();
+
+  const [residents, pendingVisitors, openComplaints, activePolls] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('society_id', societyId)
+      .eq('role', 'resident'),
+    supabase
+      .from('visitors')
+      .select('id', { count: 'exact', head: true })
+      .eq('society_id', societyId)
+      .eq('status', 'pending')
+      .gte('created_at', todayStart)
+      .lte('created_at', todayEnd),
+    supabase
+      .from('complaints')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'open'),
+    supabase
+      .from('polls')
+      .select('id', { count: 'exact', head: true })
+      .eq('society_id', societyId)
+      .or(`expires_at.is.null,expires_at.gt.${nowIso}`),
+  ]);
+
+  if (residents.error) throw new Error(residents.error.message);
+  if (pendingVisitors.error) throw new Error(pendingVisitors.error.message);
+  if (openComplaints.error) throw new Error(openComplaints.error.message);
+  if (activePolls.error) throw new Error(activePolls.error.message);
+
+  return {
+    totalResidents: residents.count ?? 0,
+    pendingVisitorsToday: pendingVisitors.count ?? 0,
+    openComplaints: openComplaints.count ?? 0,
+    activePolls: activePolls.count ?? 0,
+  };
 }
 
 async function uploadPublicImage(

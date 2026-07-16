@@ -191,6 +191,7 @@ export default function GuardLogsScreen() {
 
         <ChipSelector
           className="mb-1"
+          presentation="filter"
           options={[
             { value: 'all', label: 'All statuses' },
             ...VISITOR_STATUSES.map((s) => ({ value: s.value, label: s.label })),

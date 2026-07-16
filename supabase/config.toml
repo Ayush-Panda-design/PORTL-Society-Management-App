@@ -1,0 +1,12 @@
+# Minimal Supabase CLI config for Edge Functions.
+# Deploy: supabase functions deploy send-push
+# Optional secret: supabase secrets set EXPO_ACCESS_TOKEN=...
+
+[project]
+id = "portl"
+
+[api]
+enabled = true
+
+[functions.send-push]
+verify_jwt = true

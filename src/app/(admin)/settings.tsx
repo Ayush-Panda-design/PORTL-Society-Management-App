@@ -1,8 +1,9 @@
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import {
   BarChart3,
   Building2,
   ClipboardList,
+  Layers,
   Phone,
   Users,
 } from 'lucide-react-native';
@@ -11,36 +12,53 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/stores/authStore';
 
-const LINKS = [
+const LINKS: {
+  href: Href;
+  title: string;
+  subtitle: string;
+  Icon: typeof Building2;
+}[] = [
   {
-    href: '/(admin)/polls' as const,
+    href: '/(admin)/towers' as Href,
+    title: 'Towers',
+    subtitle: 'Add and rename society buildings',
+    Icon: Building2,
+  },
+  {
+    href: '/(admin)/flats' as Href,
+    title: 'Flats',
+    subtitle: 'Map units to towers',
+    Icon: Layers,
+  },
+  {
+    href: '/(admin)/residents',
+    title: 'Residents',
+    subtitle: 'Assign members to flats',
+    Icon: Users,
+  },
+  {
+    href: '/(admin)/polls',
     title: 'Polls',
     subtitle: 'Create polls and view results',
     Icon: BarChart3,
   },
   {
-    href: '/(admin)/complaints' as const,
+    href: '/(admin)/complaints',
     title: 'Complaints',
     subtitle: 'Triage society helpdesk tickets',
     Icon: ClipboardList,
   },
   {
-    href: '/(admin)/amenities' as const,
+    href: '/(admin)/amenities',
     title: 'Amenities',
     subtitle: 'Manage facilities and slots',
     Icon: Building2,
   },
   {
-    href: '/(admin)/staff' as const,
+    href: '/(admin)/staff',
     title: 'Staff directory',
     subtitle: 'Contacts residents can call',
     Icon: Phone,
-  },
-  {
-    href: '/(admin)/residents' as const,
-    title: 'Residents',
-    subtitle: 'Society member overview',
-    Icon: Users,
   },
 ];
 
@@ -65,7 +83,7 @@ export default function AdminSettingsMore() {
         <View className="mb-6 gap-2">
           {LINKS.map(({ href, title, subtitle, Icon }) => (
             <Pressable
-              key={href}
+              key={title}
               onPress={() => router.push(href)}
               className="flex-row items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5"
             >

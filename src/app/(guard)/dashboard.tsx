@@ -1,8 +1,6 @@
 import { useCallback, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { LogOut } from 'lucide-react-native';
 
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
@@ -12,9 +10,7 @@ import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { useAuthStore } from '@/stores/authStore';
 
 export default function GuardDashboard() {
-  const router = useRouter();
   const profile = useAuthStore((s) => s.profile);
-  const signOut = useAuthStore((s) => s.signOut);
   const [refreshing, setRefreshing] = useState(false);
 
   const { visitors, isLoading, error, refresh } = useVisitorsRealtime({
@@ -29,11 +25,6 @@ export default function GuardDashboard() {
     setRefreshing(false);
   }, [refresh]);
 
-  const onSignOut = async () => {
-    await signOut();
-    router.replace('/(auth)/login');
-  };
-
   if (!profile?.society_id) {
     return (
       <SafeAreaView className="flex-1 bg-surface">
@@ -47,19 +38,11 @@ export default function GuardDashboard() {
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
-      <View className="flex-row items-center justify-between px-4 pb-2 pt-3">
-        <View>
-          <Text className="text-2xl font-bold text-slate-900">Pending</Text>
-          <Text className="text-sm text-slate-500">
-            Waiting for resident approval · live
-          </Text>
-        </View>
-        <Pressable
-          onPress={onSignOut}
-          className="h-10 w-10 items-center justify-center rounded-full bg-white border border-slate-200"
-        >
-          <LogOut color="#64748B" size={18} />
-        </Pressable>
+      <View className="px-4 pb-2 pt-3">
+        <Text className="text-2xl font-bold text-slate-900">Pending</Text>
+        <Text className="text-sm text-slate-500">
+          Waiting for resident approval · live
+        </Text>
       </View>
 
       {error ? <ErrorBanner message={error} onRetry={refresh} /> : null}

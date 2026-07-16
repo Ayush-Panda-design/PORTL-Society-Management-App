@@ -16,6 +16,7 @@ export type Profile = {
   phone: string | null;
   flat_id: string | null;
   society_id: string | null;
+  push_token?: string | null;
   created_at: string;
 };
 
@@ -42,6 +43,24 @@ export type FlatWithTower = Flat & {
     | Pick<Tower, 'id' | 'name' | 'society_id'>
     | Pick<Tower, 'id' | 'name' | 'society_id'>[]
     | null;
+};
+
+export type ProfileWithFlat = Profile & {
+  flats:
+    | (Pick<Flat, 'id' | 'number'> & {
+        towers:
+          | Pick<Tower, 'id' | 'name'>
+          | Pick<Tower, 'id' | 'name'>[]
+          | null;
+      })
+    | null;
+};
+
+export type AdminDashboardStats = {
+  totalResidents: number;
+  pendingVisitorsToday: number;
+  openComplaints: number;
+  activePolls: number;
 };
 
 export type Visitor = {

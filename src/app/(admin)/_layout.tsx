@@ -69,6 +69,8 @@ export default function AdminLayout() {
       <Tabs.Screen name="complaints" options={{ href: null }} />
       <Tabs.Screen name="amenities" options={{ href: null }} />
       <Tabs.Screen name="staff" options={{ href: null }} />
+      <Tabs.Screen name="towers" options={{ href: null }} />
+      <Tabs.Screen name="flats" options={{ href: null }} />
     </Tabs>
   );
 }
