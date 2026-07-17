@@ -89,10 +89,24 @@ Deno.serve(async (req) => {
     }
 
     const admin = createClient(supabaseUrl, serviceRoleKey);
+
+    // Fetch the caller's profile to get their society_id
+    const { data: callerProfile, error: callerError } = await admin
+      .from('profiles')
+      .select('society_id')
+      .eq('id', user.id)
+      .single();
+
+    if (callerError || !callerProfile?.society_id) {
+      return jsonResponse(403, { error: 'Caller not authorized or missing society' });
+    }
+
+    // Only allow sending pushes to users in the same society
     const { data: profiles, error: profilesError } = await admin
       .from('profiles')
       .select('id, push_token')
       .in('id', userIds)
+      .eq('society_id', callerProfile.society_id)
       .not('push_token', 'is', null);
 
     if (profilesError) {
