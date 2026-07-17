@@ -45,8 +45,8 @@ export default function GuardDashboard() {
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
       <View className="flex-row items-center justify-between px-4 pb-2 pt-3">
         <View className="flex-1">
-          <Text className="text-2xl font-bold text-slate-900">Pending</Text>
-          <Text className="text-sm text-slate-500">Waiting for resident approval</Text>
+          <Text className="text-2xl font-bold text-ink">Pending</Text>
+          <Text className="text-sm text-ink-muted">Waiting for resident approval</Text>
         </View>
       </View>
 

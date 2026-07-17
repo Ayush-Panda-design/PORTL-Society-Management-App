@@ -147,12 +147,12 @@ export default function AdminComplaintsScreen() {
                 accessibilityLabel={`${item.category} complaint, Flat ${item.flats?.number ?? 'unknown'}, status ${tone.label}${unread ? ', unread' : ''}`}
                 onPress={() => markComplaintSeen(item.id)}
                 onFocus={() => markComplaintSeen(item.id)}
-                className="rounded-2xl border border-slate-200 bg-surface-card p-4"
+                className="rounded-2xl border border-surface-border bg-surface-card p-4"
               >
                 <View className="mb-1 flex-row items-center justify-between gap-2">
                   <View className="flex-1 flex-row items-center gap-2">
                     <InitialsAvatar name={item.category} seed={item.id} size={32} hasUnread={unread} />
-                    <Text className="flex-1 text-base font-semibold text-slate-900">
+                    <Text className="flex-1 text-base font-semibold text-ink">
                       {item.category}
                     </Text>
                   </View>
@@ -160,19 +160,19 @@ export default function AdminComplaintsScreen() {
                     <Text className={`text-xs font-medium ${tone.text}`}>{tone.label}</Text>
                   </View>
                 </View>
-                <Text className="mb-1 text-xs text-slate-400">
+                <Text className="mb-1 text-xs text-ink-faint">
                   Flat {item.flats?.number ?? '—'} · {new Date(item.created_at).toLocaleString()}
                 </Text>
-                <Text className="mb-3 text-sm text-slate-600">{item.description}</Text>
+                <Text className="mb-3 text-sm text-ink-soft">{item.description}</Text>
                 {item.assigned_to ? (
-                  <Text className="mb-3 text-xs text-slate-500">
+                  <Text className="mb-3 text-xs text-ink-muted">
                     Assigned to{' '}
                     {assignees.find((p) => p.id === item.assigned_to)?.full_name ??
                       'society staff'}
                   </Text>
                 ) : null}
 
-                <Text className="mb-2 text-xs font-semibold uppercase text-slate-500">Status</Text>
+                <Text className="mb-2 text-xs font-semibold uppercase text-ink-muted">Status</Text>
                 <SegmentedControl
                   className="mb-3"
                   options={COMPLAINT_STATUSES.map((s) => ({
@@ -190,7 +190,7 @@ export default function AdminComplaintsScreen() {
                   }}
                 />
 
-                <Text className="mb-2 text-xs font-semibold uppercase text-slate-500">
+                <Text className="mb-2 text-xs font-semibold uppercase text-ink-muted">
                   Assign (optional)
                 </Text>
                 <ChipSelector

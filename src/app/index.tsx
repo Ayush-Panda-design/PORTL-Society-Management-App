@@ -2,10 +2,11 @@ import { Redirect } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 
 import { Brand } from '@/constants/theme';
+import { destinationForProfile } from '@/lib/auth-routing';
 import { useAuthStore } from '@/stores/authStore';
 
 export default function Index() {
-  const { session, role, isLoading, isInitialized } = useAuthStore();
+  const { session, profile, isLoading, isInitialized } = useAuthStore();
 
   if (!isInitialized || isLoading) {
     return (
@@ -19,9 +20,5 @@ export default function Index() {
     return <Redirect href="/(auth)/login" />;
   }
 
-  if (role === 'guard') return <Redirect href="/(guard)" />;
-  if (role === 'admin') return <Redirect href="/(admin)" />;
-  if (role === 'resident') return <Redirect href="/(resident)" />;
-
-  return <Redirect href="/(auth)/login" />;
+  return <Redirect href={destinationForProfile(profile)} />;
 }

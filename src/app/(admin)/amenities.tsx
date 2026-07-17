@@ -181,27 +181,27 @@ export default function AdminAmenitiesScreen() {
           className="flex-1 justify-end bg-black/40"
         >
           <View className="max-h-[90%] rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
-            <Text className="mb-4 text-xl font-bold text-slate-900">
+            <Text className="mb-4 text-xl font-bold text-ink">
               {editing ? 'Edit amenity' : 'New amenity'}
             </Text>
-            {formError ? <Text className="mb-2 text-sm text-red-600">{formError}</Text> : null}
+            {formError ? <Text className="mb-2 text-sm text-red-500">{formError}</Text> : null}
             <TextInput
-              className="mb-3 rounded-xl border border-slate-200 px-4 py-3 text-base text-slate-900"
+              className="mb-3 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
               placeholder="Name"
               placeholderTextColor="#94A3B8"
               value={name}
               onChangeText={setName}
             />
             <TextInput
-              className="mb-3 rounded-xl border border-slate-200 px-4 py-3 text-base text-slate-900"
+              className="mb-3 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
               placeholder="Description"
               placeholderTextColor="#94A3B8"
               value={description}
               onChangeText={setDescription}
             />
-            <Text className="mb-2 text-sm font-medium text-slate-700">Slots (one per line)</Text>
+            <Text className="mb-2 text-sm font-medium text-ink-soft">Slots (one per line)</Text>
             <TextInput
-              className="mb-4 min-h-[140px] rounded-xl border border-slate-200 px-4 py-3 text-base text-slate-900"
+              className="mb-4 min-h-[140px] rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
               placeholder={'06:00-07:00\n07:00-08:00'}
               placeholderTextColor="#94A3B8"
               multiline
@@ -212,9 +212,9 @@ export default function AdminAmenitiesScreen() {
             <View className="flex-row gap-2">
               <Pressable
                 onPress={() => setModalOpen(false)}
-                className="flex-1 items-center rounded-xl border border-slate-200 py-3"
+                className="flex-1 items-center rounded-xl border border-surface-border py-3"
               >
-                <Text className="font-semibold text-slate-700">Cancel</Text>
+                <Text className="font-semibold text-ink-soft">Cancel</Text>
               </Pressable>
               <Pressable
                 onPress={() => saveMutation.mutate()}

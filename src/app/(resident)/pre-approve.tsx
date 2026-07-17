@@ -15,6 +15,7 @@ import { ChipSelector } from '@/components/ui/chip-selector';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { QRCodeModal } from '@/components/visitors/qr-code-modal';
+import { useThemePalette } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { VisitorType, VisitorWithFlat } from '@/types/database';
@@ -22,6 +23,7 @@ import { VISITOR_TYPES } from '@/types/database';
 
 export default function PreApproveGuestScreen() {
   const router = useRouter();
+  const palette = useThemePalette();
   const profile = useAuthStore((s) => s.profile);
   const user = useAuthStore((s) => s.user);
 
@@ -86,7 +88,7 @@ export default function PreApproveGuestScreen() {
 
   if (!profile?.flat_id || !profile.society_id) {
     return (
-      <SafeAreaView className="flex-1 bg-slate-50">
+      <SafeAreaView className="flex-1 bg-surface">
         <EmptyState
           title="Flat not linked"
           subtitle="You need a flat and society on your profile to pre-approve guests."
@@ -96,19 +98,19 @@ export default function PreApproveGuestScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
       <View className="flex-row items-center gap-3 px-4 pb-2 pt-3">
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Go back"
           onPress={() => router.back()}
-          className="h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-surface-card"
+          className="h-10 w-10 items-center justify-center rounded-full border border-surface-border bg-surface-card"
         >
-          <ArrowLeft color="#475569" size={18} />
+          <ArrowLeft color={palette.inkMuted} size={18} />
         </Pressable>
         <View>
-          <Text className="text-2xl font-bold text-slate-900">Pre-approve guest</Text>
-          <Text className="text-sm text-slate-500">Skips gate approval wait</Text>
+          <Text className="text-2xl font-bold text-ink">Pre-approve guest</Text>
+          <Text className="text-sm text-ink-muted">Skips gate approval wait</Text>
         </View>
       </View>
 
@@ -122,32 +124,32 @@ export default function PreApproveGuestScreen() {
           {createdVisitor ? (
             <Pressable 
               onPress={() => setQrModalVisible(true)}
-              className="mb-6 flex-row items-center justify-between rounded-2xl border border-teal-200 bg-teal-50 p-4"
+              className="mb-6 flex-row items-center justify-between rounded-2xl border border-brand-100 bg-brand-50 p-4"
             >
               <View className="flex-row items-center gap-3">
-                <View className="h-10 w-10 items-center justify-center rounded-full bg-teal-100">
+                <View className="h-10 w-10 items-center justify-center rounded-full bg-brand-100">
                   <CheckCircle2 color="#0F766E" size={20} />
                 </View>
                 <View>
-                  <Text className="font-semibold text-teal-900">Guest Pre-approved!</Text>
-                  <Text className="text-sm text-teal-700">Tap to view QR Pass</Text>
+                  <Text className="font-semibold text-ink">Guest Pre-approved!</Text>
+                  <Text className="text-sm text-ink-muted">Tap to view QR Pass</Text>
                 </View>
               </View>
             </Pressable>
           ) : null}
 
-          <Text className="mb-2 text-sm font-medium text-slate-700">Guest name</Text>
+          <Text className="mb-2 text-sm font-medium text-ink-soft">Guest name</Text>
           <TextInput
-            className="mb-4 rounded-xl border border-slate-200 bg-surface-card px-4 py-3 text-base text-slate-900"
+            className="mb-4 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
             placeholder="Alex Rivera"
             placeholderTextColor="#94A3B8"
             value={name}
             onChangeText={setName}
           />
 
-          <Text className="mb-2 text-sm font-medium text-slate-700">Phone</Text>
+          <Text className="mb-2 text-sm font-medium text-ink-soft">Phone</Text>
           <TextInput
-            className="mb-4 rounded-xl border border-slate-200 bg-surface-card px-4 py-3 text-base text-slate-900"
+            className="mb-4 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
             placeholder="Optional"
             placeholderTextColor="#94A3B8"
             keyboardType="phone-pad"
@@ -155,16 +157,16 @@ export default function PreApproveGuestScreen() {
             onChangeText={setPhone}
           />
 
-          <Text className="mb-2 text-sm font-medium text-slate-700">Purpose</Text>
+          <Text className="mb-2 text-sm font-medium text-ink-soft">Purpose</Text>
           <TextInput
-            className="mb-4 rounded-xl border border-slate-200 bg-surface-card px-4 py-3 text-base text-slate-900"
+            className="mb-4 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
             placeholder="Dinner, overnight stay…"
             placeholderTextColor="#94A3B8"
             value={purpose}
             onChangeText={setPurpose}
           />
 
-          <Text className="mb-2 text-sm font-medium text-slate-700">Type</Text>
+          <Text className="mb-2 text-sm font-medium text-ink-soft">Type</Text>
           <ChipSelector
             className="mb-6"
             presentation="tiles"

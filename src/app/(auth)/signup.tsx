@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -9,20 +8,15 @@ import {
   View,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GateAuthIllustration } from '@/components/illustrations';
 import { Brand, FontFamily, Gradients } from '@/constants/theme';
+import { destinationForProfile } from '@/lib/auth-routing';
 import { getAuthRedirectUrl } from '@/lib/auth-redirect';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
-import type { UserRole } from '@/types/database';
-
-const ROLES: { value: UserRole; label: string; hint: string }[] = [
-  { value: 'resident', label: 'Resident', hint: 'Flat owner / tenant' },
-  { value: 'guard', label: 'Guard', hint: 'Gate & visitor checks' },
-  { value: 'admin', label: 'Admin', hint: 'Society management' },
-];
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -31,15 +25,8 @@ export default function SignupScreen() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('resident');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  const redirectForRole = (nextRole: UserRole | null) => {
-    if (nextRole === 'guard') router.replace('/(guard)');
-    else if (nextRole === 'admin') router.replace('/(admin)');
-    else router.replace('/(resident)');
-  };
 
   const onSignup = async () => {
     setError(null);
@@ -61,7 +48,7 @@ export default function SignupScreen() {
         password,
         options: {
           emailRedirectTo: getAuthRedirectUrl(),
-          data: { full_name: fullName.trim(), role },
+          data: { full_name: fullName.trim(), role: 'resident' },
         },
       });
 
@@ -71,15 +58,15 @@ export default function SignupScreen() {
       }
 
       if (data.user) {
-        // Fallback if the DB trigger did not run / email confirmation is off
         if (data.session) {
           await supabase.from('profiles').upsert({
             id: data.user.id,
-            role,
+            role: 'resident',
             full_name: fullName.trim(),
+            status: 'active',
           });
           const profile = await fetchProfile(data.user.id);
-          redirectForRole(profile?.role ?? role);
+          router.replace(destinationForProfile(profile));
         } else {
           setError(
             'Check your email to confirm your account, then sign in. If the link opens localhost, update Supabase → Authentication → URL Configuration and sign up again.',
@@ -116,7 +103,7 @@ export default function SignupScreen() {
                 Portl
               </Text>
               <Text className="mb-3 text-center text-sm text-teal-50/90">
-                Join your society at the gate
+                Create your account, then join or start a society
               </Text>
               <GateAuthIllustration width={220} height={120} />
             </View>
@@ -124,7 +111,7 @@ export default function SignupScreen() {
         </LinearGradient>
 
         <View className="-mt-4 flex-1 rounded-t-3xl bg-surface px-6 pb-10 pt-7">
-          <Text className="mb-5 text-base text-ink-soft">Create your society account</Text>
+          <Text className="mb-5 text-base text-ink-soft">Create your Portl account</Text>
 
           <View className="mb-4 gap-2">
             <Text className="text-sm font-medium text-ink-soft">Full name</Text>
@@ -152,7 +139,7 @@ export default function SignupScreen() {
             />
           </View>
 
-          <View className="mb-5 gap-2">
+          <View className="mb-6 gap-2">
             <Text className="text-sm font-medium text-ink-soft">Password</Text>
             <TextInput
               className="rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
@@ -165,39 +152,12 @@ export default function SignupScreen() {
             />
           </View>
 
-          <Text className="mb-3 text-sm font-medium text-ink-soft">I am a…</Text>
-          <View className="mb-5 gap-2">
-            {ROLES.map((item) => {
-              const selected = role === item.value;
-              return (
-                <Pressable
-                  key={item.value}
-                  onPress={() => setRole(item.value)}
-                  className={`rounded-xl border px-4 py-3 ${
-                    selected
-                      ? 'border-brand-700 bg-brand-50'
-                      : 'border-surface-border bg-surface-card'
-                  }`}
-                >
-                  <Text
-                    className={`text-base font-semibold ${
-                      selected ? 'text-brand-800' : 'text-ink'
-                    }`}
-                  >
-                    {item.label}
-                  </Text>
-                  <Text className="text-sm text-ink-muted">{item.hint}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
           {error ? <Text className="mb-4 text-sm text-status-rejected">{error}</Text> : null}
 
           <Pressable
             className={`items-center rounded-xl bg-accent-600 py-3.5 ${submitting ? 'opacity-70' : ''}`}
             disabled={submitting}
-            onPress={onSignup}
+            onPress={() => void onSignup()}
           >
             {submitting ? (
               <ActivityIndicator color="#fff" />

@@ -299,10 +299,10 @@ export default function AdminStaffScreen() {
           className="flex-1 justify-end bg-black/40"
         >
           <View className="rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
-            <Text className="mb-4 text-xl font-bold text-slate-900">
+            <Text className="mb-4 text-xl font-bold text-ink">
               {editing ? 'Edit staff' : 'Add staff'}
             </Text>
-            {formError ? <Text className="mb-2 text-sm text-red-600">{formError}</Text> : null}
+            {formError ? <Text className="mb-2 text-sm text-red-500">{formError}</Text> : null}
 
             <View className="mb-4 flex-row items-center gap-3">
               {photoUri ? (
@@ -325,21 +325,21 @@ export default function AdminStaffScreen() {
             </View>
 
             <TextInput
-              className="mb-3 rounded-xl border border-slate-200 px-4 py-3 text-base text-slate-900"
+              className="mb-3 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
               placeholder="Name"
               placeholderTextColor="#94A3B8"
               value={name}
               onChangeText={setName}
             />
             <TextInput
-              className="mb-3 rounded-xl border border-slate-200 px-4 py-3 text-base text-slate-900"
+              className="mb-3 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
               placeholder="Role (e.g. Plumber, Security)"
               placeholderTextColor="#94A3B8"
               value={role}
               onChangeText={setRole}
             />
             <TextInput
-              className="mb-4 rounded-xl border border-slate-200 px-4 py-3 text-base text-slate-900"
+              className="mb-4 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
               placeholder="Phone"
               placeholderTextColor="#94A3B8"
               keyboardType="phone-pad"
@@ -350,9 +350,9 @@ export default function AdminStaffScreen() {
             <View className="flex-row gap-2">
               <Pressable
                 onPress={() => setModalOpen(false)}
-                className="flex-1 items-center rounded-xl border border-slate-200 py-3"
+                className="flex-1 items-center rounded-xl border border-surface-border py-3"
               >
-                <Text className="font-semibold text-slate-700">Cancel</Text>
+                <Text className="font-semibold text-ink-soft">Cancel</Text>
               </Pressable>
               <Pressable
                 onPress={() => saveMutation.mutate()}

@@ -271,19 +271,19 @@ export default function AdminResidentsScreen() {
           />
           <View className="rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
             <View className="mb-4 items-center">
-              <View className="mb-3 h-1 w-10 rounded-full bg-slate-200" />
+              <View className="mb-3 h-1 w-10 rounded-full bg-surface-muted" />
               <InitialsAvatar
                 name={selected?.full_name ?? 'Resident'}
                 seed={selected?.id}
                 size={64}
               />
-              <Text className="mt-3 text-xl font-bold text-slate-900">
+              <Text className="mt-3 text-xl font-bold text-ink">
                 {selected?.full_name ?? 'Unnamed resident'}
               </Text>
-              <Text className="mt-1 text-sm text-slate-500">Resident profile</Text>
+              <Text className="mt-1 text-sm text-ink-muted">Resident profile</Text>
             </View>
 
-            <View className="mb-4 gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+            <View className="mb-4 gap-3 rounded-2xl border border-surface-border bg-surface-muted px-4 py-3">
               <DetailRow label="Phone" value={selected?.phone ?? '—'} />
               <DetailRow label="Flat" value={selected ? flatLabel(selected) : '—'} />
               <DetailRow
@@ -301,9 +301,9 @@ export default function AdminResidentsScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Close"
                 onPress={() => setDetailOpen(false)}
-                className="flex-1 items-center rounded-xl border border-slate-200 py-3"
+                className="flex-1 items-center rounded-xl border border-surface-border py-3"
               >
-                <Text className="font-semibold text-slate-700">Close</Text>
+                <Text className="font-semibold text-ink-soft">Close</Text>
               </Pressable>
               <Pressable
                 accessibilityRole="button"
@@ -327,16 +327,16 @@ export default function AdminResidentsScreen() {
       <Modal visible={assignOpen} animationType="slide" transparent>
         <KeyboardAvoidingView behavior="padding" className="flex-1 justify-end bg-black/40">
           <View className="max-h-[90%] rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
-            <Text className="mb-1 text-xl font-bold text-slate-900">
+            <Text className="mb-1 text-xl font-bold text-ink">
               {selected?.flat_id ? 'Reassign flat' : 'Assign flat'}
             </Text>
-            <Text className="mb-4 text-sm text-slate-500">
+            <Text className="mb-4 text-sm text-ink-muted">
               {selected?.full_name ?? 'Resident'}
             </Text>
-            {formError ? <Text className="mb-2 text-sm text-red-600">{formError}</Text> : null}
+            {formError ? <Text className="mb-2 text-sm text-red-500">{formError}</Text> : null}
 
             {(flatsQuery.data?.length ?? 0) === 0 ? (
-              <Text className="mb-4 text-sm text-slate-600">
+              <Text className="mb-4 text-sm text-ink-soft">
                 No flats exist yet. Create towers and flats first, then assign residents.
               </Text>
             ) : (
@@ -356,9 +356,9 @@ export default function AdminResidentsScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Cancel"
                 onPress={() => setAssignOpen(false)}
-                className="flex-1 items-center rounded-xl border border-slate-200 py-3"
+                className="flex-1 items-center rounded-xl border border-surface-border py-3"
               >
-                <Text className="font-semibold text-slate-700">Cancel</Text>
+                <Text className="font-semibold text-ink-soft">Cancel</Text>
               </Pressable>
               <Pressable
                 accessibilityRole="button"
@@ -384,8 +384,8 @@ export default function AdminResidentsScreen() {
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <View className="flex-row items-start justify-between gap-3">
-      <Text className="text-sm text-slate-500">{label}</Text>
-      <Text className="flex-1 text-right text-sm font-medium text-slate-900">{value}</Text>
+      <Text className="text-sm text-ink-muted">{label}</Text>
+      <Text className="flex-1 text-right text-sm font-medium text-ink">{value}</Text>
     </View>
   );
 }

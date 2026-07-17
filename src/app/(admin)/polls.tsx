@@ -83,17 +83,17 @@ export default function AdminPollsScreen() {
   const renderRespondents = (poll: Poll, pollVotes: PollVoteWithProfile[]) => {
     if (pollVotes.length === 0) {
       return (
-        <Text className="text-sm text-slate-400">No responses yet.</Text>
+        <Text className="text-sm text-ink-faint">No responses yet.</Text>
       );
     }
 
     return pollVotes.map((vote) => (
       <View
         key={vote.id}
-        className="flex-row items-start justify-between border-t border-slate-100 py-2"
+        className="flex-row items-start justify-between border-t border-surface-border py-2"
       >
-        <Text className="mr-3 flex-1 text-sm text-slate-700">{pollRespondentLabel(vote)}</Text>
-        <Text className="text-sm font-medium text-teal-800">{vote.option}</Text>
+        <Text className="mr-3 flex-1 text-sm text-ink-soft">{pollRespondentLabel(vote)}</Text>
+        <Text className="text-sm font-medium text-brand-700">{vote.option}</Text>
       </View>
     ));
   };
@@ -109,7 +109,7 @@ export default function AdminPollsScreen() {
             setFormError(null);
             setModalOpen(true);
           }}
-          className="h-10 w-10 items-center justify-center rounded-full bg-teal-700"
+          className="h-10 w-10 items-center justify-center rounded-full bg-brand-700"
         >
           <Plus color="#fff" size={20} />
         </Pressable>
@@ -161,36 +161,36 @@ export default function AdminPollsScreen() {
                 : `${total} response${total === 1 ? '' : 's'}`;
 
             return (
-              <View className="rounded-2xl border border-slate-200 bg-surface-card p-4">
-                <Text className="mb-1 text-base font-semibold text-slate-900">{item.question}</Text>
-                <Text className="mb-1 text-xs text-slate-400">
+              <View className="rounded-2xl border border-surface-border bg-surface-card p-4">
+                <Text className="mb-1 text-base font-semibold text-ink">{item.question}</Text>
+                <Text className="mb-1 text-xs text-ink-faint">
                   {expired ? 'Expired' : 'Active'}
                   {item.expires_at
                     ? ` · ends ${new Date(item.expires_at).toLocaleString()}`
                     : ''}
                 </Text>
-                <Text className="mb-3 text-sm font-medium text-slate-600">{participation}</Text>
+                <Text className="mb-3 text-sm font-medium text-ink-soft">{participation}</Text>
                 {item.options.map((option) => {
                   const count = counts[option] ?? 0;
                   const pct = total === 0 ? 0 : Math.round((count / total) * 100);
                   return (
-                    <View key={option} className="mb-2 overflow-hidden rounded-xl border border-slate-200">
+                    <View key={option} className="mb-2 overflow-hidden rounded-xl border border-surface-border">
                       <View
                         pointerEvents="none"
-                        className="absolute bottom-0 left-0 top-0 bg-teal-100"
+                        className="absolute bottom-0 left-0 top-0 bg-brand-100"
                         style={{ width: `${pct}%` }}
                       />
                       <View className="flex-row justify-between px-3 py-2.5">
-                        <Text className="text-slate-800">{option}</Text>
-                        <Text className="text-slate-500">
+                        <Text className="text-ink">{option}</Text>
+                        <Text className="text-ink-muted">
                           {pct}% ({count})
                         </Text>
                       </View>
                     </View>
                   );
                 })}
-                <View className="mt-3 rounded-xl bg-slate-50 px-3 py-2">
-                  <Text className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <View className="mt-3 rounded-xl bg-surface-muted px-3 py-2">
+                  <Text className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-muted">
                     Who responded
                   </Text>
                   {renderRespondents(item, pollRespondents)}

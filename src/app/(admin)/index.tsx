@@ -4,8 +4,10 @@ import {
   Bell,
   Building2,
   ClipboardList,
+  KeyRound,
   Layers,
   Phone,
+  UserPlus,
   Users,
 } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
@@ -40,7 +42,7 @@ export default function AdminHome() {
         <EmptyState
           visual="disconnected"
           title="No society linked"
-          subtitle="Assign a society to your admin profile."
+          subtitle="Finish onboarding to create or join a society."
         />
       </SafeAreaView>
     );
@@ -132,6 +134,18 @@ export default function AdminHome() {
           subtitle="Map units to towers"
           icon={<Layers color={Brand.primary} size={20} />}
           onPress={() => go('/(admin)/flats' as Href)}
+        />
+        <PressableActionTile
+          title="Invite links"
+          subtitle="Share resident and guard codes"
+          icon={<KeyRound color={Brand.primary} size={20} />}
+          onPress={() => go('/(admin)/invites' as Href)}
+        />
+        <PressableActionTile
+          title="Join requests"
+          subtitle="Approve new residents and guards"
+          icon={<UserPlus color={Brand.primary} size={20} />}
+          onPress={() => go('/(admin)/join-requests' as Href)}
         />
         <PressableActionTile
           title="Residents"

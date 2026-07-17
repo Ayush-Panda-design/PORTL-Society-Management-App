@@ -1,5 +1,9 @@
 export type UserRole = 'resident' | 'guard' | 'admin';
 
+export type MembershipStatus = 'pending' | 'active' | 'rejected';
+
+export type InviteRole = 'resident' | 'guard';
+
 export type VisitorType = 'guest' | 'delivery' | 'cab' | 'service';
 
 export type VisitorStatus =
@@ -16,6 +20,7 @@ export type Profile = {
   phone: string | null;
   flat_id: string | null;
   society_id: string | null;
+  status: MembershipStatus;
   push_token?: string | null;
   created_at: string;
 };
@@ -24,6 +29,45 @@ export type Society = {
   id: string;
   name: string;
   address: string;
+  created_by?: string | null;
+  created_at?: string;
+};
+
+export type InviteCode = {
+  id: string;
+  role: InviteRole;
+  code: string;
+  created_at: string;
+  revoked_at: string | null;
+};
+
+export type InviteFlatOption = {
+  id: string;
+  number: string;
+  tower_id: string;
+  tower_name: string;
+};
+
+export type ResolvedInvite = {
+  society_id: string;
+  society_name: string;
+  society_address: string;
+  role: InviteRole;
+  flats: InviteFlatOption[];
+};
+
+export type CreateSocietyResult = {
+  society: Society;
+  resident_invite_code: string;
+  guard_invite_code: string;
+};
+
+export type JoinSocietyResult = {
+  society_id: string;
+  society_name: string;
+  role: InviteRole;
+  status: 'pending';
+  flat_id: string | null;
 };
 
 export type Tower = {

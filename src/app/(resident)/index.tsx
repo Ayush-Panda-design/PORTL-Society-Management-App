@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Bell, Building2, ClipboardList, UserPlus, Users } from 'lucide-react-native';
+import { Bell, Building2, ClipboardList, UserPlus, Users, Search } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +9,10 @@ import { HeroBanner, PressableActionTile } from '@/components/ui/brand';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { VisitorSwipeDeck } from '@/components/visitors/visitor-swipe-deck';
 import type { SwipeDecision } from '@/components/visitors/swipeable-visitor-card';
+import { GlassCard } from '@/components/ui/glass-card';
+import { AnimatedPressable } from '@/components/ui/animated-pressable';
+import { GradientText } from '@/components/ui/gradient-text';
+import Toast from 'react-native-toast-message';
 import { Brand, FontFamily } from '@/constants/theme';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { updateVisitorStatus } from '@/lib/visitors';
@@ -126,49 +130,58 @@ export default function ResidentHome() {
           </View>
         ) : null}
 
-        <View className={pendingCount > 0 ? 'mt-8' : 'mt-5'}>
-          {pendingCount === 0 ? (
-            <PressableActionTile
-              title="Open visitors"
-              subtitle="Approve guests at the gate"
-              icon={<Users color={Brand.primary} size={20} />}
-              onPress={() => router.push('/(resident)/visitors')}
-            />
-          ) : (
-            <PressableActionTile
-              title="All visitor requests"
-              subtitle="List view with history"
-              icon={<Users color={Brand.primary} size={20} />}
-              onPress={() => router.push('/(resident)/visitors')}
-            />
-          )}
-          <PressableActionTile
-            title="Pre-approve a guest"
-            subtitle="Skip the wait when they arrive"
-            icon={<UserPlus color={Brand.primary} size={20} />}
-            onPress={() => router.push('/(resident)/pre-approve')}
-          />
-          <PressableActionTile
-            title="Notices"
-            subtitle="Society announcements"
-            icon={<Bell color={Brand.primary} size={20} />}
-            onPress={() => router.push('/(resident)/notices')}
-          />
-          <PressableActionTile
-            title="Book an amenity"
-            subtitle="Gym, clubhouse, and more"
-            icon={<Building2 color={Brand.primary} size={20} />}
-            onPress={() => router.push('/(resident)/amenities')}
-          />
-          <PressableActionTile
-            title="Helpdesk"
-            subtitle="Raise a complaint"
-            icon={<ClipboardList color={Brand.primary} size={20} />}
-            onPress={() => router.push('/(resident)/helpdesk')}
-          />
+        <View className="mt-8 flex-row justify-between items-center mb-4">
+          <GradientText
+            colors={['#14B8A6', '#F59E0B']}
+            className="text-xl font-bold"
+            style={{ fontFamily: FontFamily.heading }}
+          >
+            Quick Actions
+          </GradientText>
+          <AnimatedPressable onPress={() => Toast.show({ type: 'info', text1: 'Command Palette opened' })}>
+            <View className="bg-surface-muted px-3 py-1.5 rounded-full flex-row items-center">
+              <Search color={Brand.primary} size={16} />
+              <Text className="text-xs text-ink-muted ml-2">Cmd + K</Text>
+            </View>
+          </AnimatedPressable>
         </View>
 
-        <Pressable onPress={() => router.push('/(resident)/more')} className="mt-2 items-center py-3">
+        <View className="flex-row flex-wrap justify-between gap-y-4">
+          <AnimatedPressable
+            containerStyle={{ width: '48%' }}
+            onPress={() => router.push('/(resident)/visitors')}
+          >
+            <GlassCard className="h-32 justify-center items-center">
+              <Users color={Brand.primary} size={32} className="mb-2" />
+              <Text className="text-ink font-bold text-center">Visitors</Text>
+            </GlassCard>
+          </AnimatedPressable>
+
+          <AnimatedPressable
+            containerStyle={{ width: '48%' }}
+            onPress={() => router.push('/(resident)/pre-approve')}
+          >
+            <GlassCard className="h-32 justify-center items-center bg-brand-soft-bg">
+              <UserPlus color={Brand.primary} size={32} className="mb-2" />
+              <Text className="text-brand-900 font-bold text-center">Pre-approve</Text>
+            </GlassCard>
+          </AnimatedPressable>
+
+          <AnimatedPressable
+            containerStyle={{ width: '100%' }}
+            onPress={() => router.push('/(resident)/amenities')}
+          >
+            <GlassCard className="h-28 flex-row items-center px-6 bg-accent-soft">
+              <Building2 color="#F59E0B" size={40} className="mr-4" />
+              <View>
+                <Text className="text-ink font-bold text-lg">Book an amenity</Text>
+                <Text className="text-ink-muted text-sm">Gym, clubhouse, and more</Text>
+              </View>
+            </GlassCard>
+          </AnimatedPressable>
+        </View>
+
+        <Pressable onPress={() => router.push('/(resident)/more')} className="mt-6 items-center py-3">
           <Text className="text-sm text-brand-700" style={{ fontFamily: FontFamily.medium }}>
             More community tools
           </Text>

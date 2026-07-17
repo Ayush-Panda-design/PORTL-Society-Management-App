@@ -39,8 +39,8 @@ export default function ScanPassScreen() {
 
   if (!permission.granted) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-slate-50 p-6">
-        <Text className="mb-4 text-center text-lg text-slate-700">
+      <SafeAreaView className="flex-1 items-center justify-center bg-surface p-6">
+        <Text className="mb-4 text-center text-lg text-ink-soft">
           We need your permission to use the camera to scan passes.
         </Text>
         <Pressable

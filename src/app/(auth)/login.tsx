@@ -13,9 +13,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GateAuthIllustration } from '@/components/illustrations';
 import { Brand, FontFamily, Gradients } from '@/constants/theme';
+import { destinationForProfile } from '@/lib/auth-routing';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
-import type { UserRole } from '@/types/database';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -24,12 +24,6 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  const redirectForRole = (role: UserRole | null) => {
-    if (role === 'guard') router.replace('/(guard)');
-    else if (role === 'admin') router.replace('/(admin)');
-    else router.replace('/(resident)');
-  };
 
   const onLogin = async () => {
     setError(null);
@@ -48,7 +42,7 @@ export default function LoginScreen() {
 
       if (data.user) {
         const profile = await fetchProfile(data.user.id);
-        redirectForRole(profile?.role ?? null);
+        router.replace(destinationForProfile(profile));
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to sign in');

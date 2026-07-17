@@ -545,6 +545,7 @@ export async function fetchResidents(societyId: string): Promise<ProfileWithFlat
     )
     .eq('society_id', societyId)
     .eq('role', 'resident')
+    .eq('status', 'active')
     .order('full_name', { ascending: true });
 
   if (error) throw new Error(error.message);
@@ -592,7 +593,8 @@ export async function fetchAdminDashboardStats(
       .from('profiles')
       .select('id', { count: 'exact', head: true })
       .eq('society_id', societyId)
-      .eq('role', 'resident'),
+      .eq('role', 'resident')
+      .eq('status', 'active'),
     supabase
       .from('visitors')
       .select('id', { count: 'exact', head: true })

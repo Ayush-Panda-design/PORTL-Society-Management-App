@@ -80,9 +80,9 @@ export default function ResidentPollsScreen() {
     const locked = readOnly || Boolean(myVote) || isVotingThisPoll;
 
     return (
-      <View className="rounded-2xl border border-slate-200 bg-surface-card p-4">
-        <Text className="mb-1 text-base font-semibold text-slate-900">{poll.question}</Text>
-        <Text className="mb-3 text-xs text-slate-400">
+      <View className="rounded-2xl border border-surface-border bg-surface-card p-4">
+        <Text className="mb-1 text-base font-semibold text-ink">{poll.question}</Text>
+        <Text className="mb-3 text-xs text-ink-faint">
           {readOnly
             ? 'Closed'
             : poll.expires_at
@@ -102,19 +102,19 @@ export default function ResidentPollsScreen() {
               disabled={locked}
               onPress={() => voteMutation.mutate({ pollId: poll.id, option })}
               className={`mb-2 overflow-hidden rounded-xl border ${
-                selected ? 'border-teal-700' : 'border-slate-200'
+                selected ? 'border-teal-700' : 'border-surface-border'
               }`}
             >
               <View
                 pointerEvents="none"
                 className={`absolute bottom-0 left-0 top-0 ${
-                  selected ? 'bg-teal-100' : 'bg-slate-100'
+                  selected ? 'bg-brand-100' : 'bg-surface-muted'
                 }`}
                 style={{ width: `${pct}%` }}
               />
               <View className="flex-row items-center justify-between px-3 py-3">
                 <Text className="font-medium text-slate-800">{option}</Text>
-                <Text className="text-sm text-slate-500">
+                <Text className="text-sm text-ink-muted">
                   {pct}% ({count})
                 </Text>
               </View>

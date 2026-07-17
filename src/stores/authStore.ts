@@ -3,13 +3,14 @@ import { create } from 'zustand';
 
 import { clearPushToken, registerForPushNotifications } from '@/lib/push-notifications';
 import { supabase } from '@/lib/supabase';
-import type { Profile, UserRole } from '@/types/database';
+import type { MembershipStatus, Profile, UserRole } from '@/types/database';
 
 type AuthState = {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
   role: UserRole | null;
+  membershipStatus: MembershipStatus | null;
   isLoading: boolean;
   isInitialized: boolean;
   setSession: (session: Session | null) => void;
@@ -23,9 +24,31 @@ function isUserRole(value: unknown): value is UserRole {
   return value === 'resident' || value === 'guard' || value === 'admin';
 }
 
+function normalizeProfile(data: Profile): Profile {
+  return {
+    ...data,
+    status: data.status ?? 'active',
+  };
+}
+
 function syncPushToken(userId: string) {
   // Fire-and-forget — never block auth / navigation.
   void registerForPushNotifications(userId);
+}
+
+export function needsSocietyOnboarding(profile: Profile | null): boolean {
+  if (!profile) return false;
+  if (!profile.society_id) return true;
+  if (profile.status === 'rejected') return true;
+  return false;
+}
+
+export function isMembershipPending(profile: Profile | null): boolean {
+  return Boolean(profile?.society_id && profile.status === 'pending');
+}
+
+export function isMembershipActive(profile: Profile | null): boolean {
+  return Boolean(profile?.society_id && profile.status === 'active');
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -33,6 +56,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   profile: null,
   role: null,
+  membershipStatus: null,
   isLoading: true,
   isInitialized: false,
 
@@ -44,9 +68,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   setProfile: (profile) => {
+    const normalized = profile ? normalizeProfile(profile) : null;
     set({
-      profile,
-      role: profile?.role ?? null,
+      profile: normalized,
+      role: normalized?.role ?? null,
+      membershipStatus: normalized?.status ?? null,
     });
   },
 
@@ -59,13 +85,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     if (error) {
       console.warn('Failed to fetch profile:', error.message);
-      set({ profile: null, role: null });
+      set({ profile: null, role: null, membershipStatus: null });
       return null;
     }
 
     if (data) {
-      const profile = data as Profile;
-      set({ profile, role: profile.role });
+      const profile = normalizeProfile(data as Profile);
+      set({
+        profile,
+        role: profile.role,
+        membershipStatus: profile.status,
+      });
       return profile;
     }
 
@@ -75,7 +105,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } = await supabase.auth.getUser();
 
     const metaRole = user?.user_metadata?.role;
-    const role: UserRole = isUserRole(metaRole) ? metaRole : 'resident';
+    const role: UserRole =
+      metaRole === 'guard' ? 'guard' : isUserRole(metaRole) && metaRole !== 'admin' ? metaRole : 'resident';
     const fullName =
       typeof user?.user_metadata?.full_name === 'string'
         ? user.user_metadata.full_name
@@ -87,18 +118,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         id: userId,
         role,
         full_name: fullName,
+        status: 'active',
       })
       .select('*')
       .maybeSingle();
 
     if (createError || !created) {
       console.warn('Failed to create profile:', createError?.message ?? 'unknown');
-      set({ profile: null, role: null });
+      set({ profile: null, role: null, membershipStatus: null });
       return null;
     }
 
-    const profile = created as Profile;
-    set({ profile, role: profile.role });
+    const profile = normalizeProfile(created as Profile);
+    set({
+      profile,
+      role: profile.role,
+      membershipStatus: profile.status,
+    });
     return profile;
   },
 
@@ -135,7 +171,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             syncPushToken(nextSession.user.id);
           }
         } else {
-          set({ profile: null, role: null });
+          set({ profile: null, role: null, membershipStatus: null });
         }
       });
     } finally {
@@ -157,6 +193,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user: null,
         profile: null,
         role: null,
+        membershipStatus: null,
         isLoading: false,
       });
     }

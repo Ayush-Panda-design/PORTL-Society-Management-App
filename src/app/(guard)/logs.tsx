@@ -166,17 +166,17 @@ export default function GuardLogsScreen() {
 
   if (!profile?.society_id) {
     return (
-      <SafeAreaView className="flex-1 bg-slate-50">
+      <SafeAreaView className="flex-1 bg-surface">
         <EmptyState visual="disconnected" title="No society linked" subtitle="Assign a society to view visitor logs." />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
       <View className="px-4 pb-2 pt-3">
-        <Text className="text-2xl font-bold text-slate-900">Visitor logs</Text>
-        <Text className="mb-3 text-sm text-slate-500">Society history · filters live</Text>
+        <Text className="text-2xl font-bold text-ink">Visitor logs</Text>
+        <Text className="mb-3 text-sm text-ink-muted">Society history · filters live</Text>
 
         <View className="mb-3">
           <SegmentedControl
@@ -246,8 +246,8 @@ export default function GuardLogsScreen() {
                   }
                 />
                 {(meta?.entry || meta?.exit) && (
-                  <View className="-mt-1 mb-1 rounded-b-2xl border border-t-0 border-slate-200 bg-slate-50 px-4 py-2">
-                    <Text className="text-xs text-slate-500">
+                  <View className="-mt-1 mb-1 rounded-b-2xl border border-t-0 border-surface-border bg-surface px-4 py-2">
+                    <Text className="text-xs text-ink-muted">
                       In {formatDateTime(meta.entry)} · Out {formatDateTime(meta.exit)}
                     </Text>
                   </View>

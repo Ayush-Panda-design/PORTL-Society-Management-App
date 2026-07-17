@@ -10,12 +10,14 @@ import { SkeletonList } from '@/components/visitors/loading-state';
 import { VisitorCard } from '@/components/visitors/visitor-card';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { Brand } from '@/constants/theme';
+import { useThemePalette } from '@/hooks/use-theme';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { updateVisitorStatus } from '@/lib/visitors';
 import { useAuthStore } from '@/stores/authStore';
 
 export default function ResidentVisitorsScreen() {
   const router = useRouter();
+  const palette = useThemePalette();
   const profile = useAuthStore((s) => s.profile);
   const [actionId, setActionId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -75,17 +77,17 @@ export default function ResidentVisitorsScreen() {
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
       <View className="flex-row items-start justify-between px-4 pb-2 pt-3">
         <View className="flex-1 pr-3">
-          <Text className="text-2xl font-bold text-slate-900">Visitor requests</Text>
-          <Text className="text-sm text-slate-500">Approve or reject · live updates</Text>
+          <Text className="text-2xl font-bold text-ink">Visitor requests</Text>
+          <Text className="text-sm text-ink-muted">Approve or reject · live updates</Text>
         </View>
         <View className="flex-row gap-2">
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="View visitor history"
             onPress={() => router.push('/(resident)/visitor-history')}
-            className="h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-surface-card"
+            className="h-10 w-10 items-center justify-center rounded-full border border-surface-border bg-surface-card"
           >
-            <History color="#64748B" size={18} />
+            <History color={palette.inkMuted} size={18} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -100,10 +102,10 @@ export default function ResidentVisitorsScreen() {
 
       <Pressable
         onPress={() => router.push('/(resident)/pre-approve')}
-        className="mx-4 mb-3 flex-row items-center justify-center gap-2 rounded-xl border border-teal-200 bg-teal-50 py-3"
+        className="mx-4 mb-3 flex-row items-center justify-center gap-2 rounded-xl border border-brand-100 bg-brand-50 py-3"
       >
         <UserPlus color={Brand.primary} size={18} />
-        <Text className="text-sm font-semibold text-teal-800">Pre-approve guest</Text>
+        <Text className="text-sm font-semibold text-brand-800">Pre-approve guest</Text>
       </Pressable>
 
       {(error || actionError) && (

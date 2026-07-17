@@ -2,8 +2,10 @@ import {
   BarChart3,
   Building2,
   ClipboardList,
+  KeyRound,
   Layers,
   Phone,
+  UserPlus,
   Users,
 } from 'lucide-react-native';
 import { type Href } from 'expo-router';
@@ -17,6 +19,18 @@ const LINKS: {
   subtitle: string;
   Icon: typeof Building2;
 }[] = [
+  {
+    href: '/(admin)/invites' as Href,
+    title: 'Invite links',
+    subtitle: 'Share resident and guard codes',
+    Icon: KeyRound,
+  },
+  {
+    href: '/(admin)/join-requests' as Href,
+    title: 'Join requests',
+    subtitle: 'Approve or deny new members',
+    Icon: UserPlus,
+  },
   {
     href: '/(admin)/towers' as Href,
     title: 'Towers',

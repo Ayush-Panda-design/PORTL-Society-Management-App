@@ -62,6 +62,8 @@ export default function AdminLayout() {
       <Tabs.Screen name="staff" options={{ href: null }} />
       <Tabs.Screen name="towers" options={{ href: null }} />
       <Tabs.Screen name="flats" options={{ href: null }} />
+      <Tabs.Screen name="invites" options={{ href: null }} />
+      <Tabs.Screen name="join-requests" options={{ href: null }} />
     </Tabs>
   );
 }

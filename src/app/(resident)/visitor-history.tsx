@@ -11,6 +11,7 @@ import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { VisitorCard } from '@/components/visitors/visitor-card';
 import { QRCodeModal } from '@/components/visitors/qr-code-modal';
+import { useThemePalette } from '@/hooks/use-theme';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { useAuthStore } from '@/stores/authStore';
 import type { VisitorStatus, VisitorWithFlat } from '@/types/database';
@@ -18,6 +19,7 @@ import { VISITOR_STATUSES } from '@/types/database';
 
 export default function ResidentVisitorHistoryScreen() {
   const router = useRouter();
+  const palette = useThemePalette();
   const profile = useAuthStore((s) => s.profile);
   const [statusFilter, setStatusFilter] = useState<VisitorStatus | 'all'>('all');
   const [refreshing, setRefreshing] = useState(false);
@@ -42,7 +44,7 @@ export default function ResidentVisitorHistoryScreen() {
 
   if (!profile?.flat_id) {
     return (
-      <SafeAreaView className="flex-1 bg-slate-50">
+      <SafeAreaView className="flex-1 bg-surface">
         <EmptyState
           visual="disconnected" title="No flat linked"
           subtitle="Link a flat to your profile to see visitor history."
@@ -52,19 +54,19 @@ export default function ResidentVisitorHistoryScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
       <View className="flex-row items-center gap-3 px-4 pb-2 pt-3">
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Go back"
           onPress={() => router.back()}
-          className="h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-surface-card"
+          className="h-10 w-10 items-center justify-center rounded-full border border-surface-border bg-surface-card"
         >
-          <ArrowLeft color="#475569" size={18} />
+          <ArrowLeft color={palette.inkMuted} size={18} />
         </Pressable>
         <View>
-          <Text className="text-2xl font-bold text-slate-900">Visitor history</Text>
-          <Text className="text-sm text-slate-500">Past guests for your flat</Text>
+          <Text className="text-2xl font-bold text-ink">Visitor history</Text>
+          <Text className="text-sm text-ink-muted">Past guests for your flat</Text>
         </View>
       </View>
 

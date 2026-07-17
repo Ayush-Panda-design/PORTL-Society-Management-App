@@ -25,5 +25,7 @@ export const queryKeys = {
   towers: (societyId: string) => ['towers', societyId] as const,
   flats: (societyId: string) => ['flats', societyId] as const,
   residents: (societyId: string) => ['residents', societyId] as const,
+  pendingMembers: (societyId: string) => ['pending-members', societyId] as const,
+  inviteCodes: (societyId: string) => ['invite-codes', societyId] as const,
   adminDashboard: (societyId: string) => ['admin-dashboard', societyId] as const,
 };

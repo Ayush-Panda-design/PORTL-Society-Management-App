@@ -73,7 +73,7 @@ export default function GuardVerifyScreen() {
 
   if (!profile?.society_id) {
     return (
-      <SafeAreaView className="flex-1 bg-slate-50">
+      <SafeAreaView className="flex-1 bg-surface">
         <EmptyState
           visual="disconnected" title="No society linked"
           subtitle="Assign a society to your guard profile to verify visitors."
@@ -83,10 +83,10 @@ export default function GuardVerifyScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
       <View className="px-4 pb-2 pt-3">
-        <Text className="text-2xl font-bold text-slate-900">Ready for entry</Text>
-        <Text className="text-sm text-slate-500">Approved visitors · mark gate entry</Text>
+        <Text className="text-2xl font-bold text-ink">Ready for entry</Text>
+        <Text className="text-sm text-ink-muted">Approved visitors · mark gate entry</Text>
       </View>
 
       {(error || loadError) && (

@@ -1,6 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { Search, X } from 'lucide-react-native';
+import { useThemePalette } from '@/hooks/use-theme';
 import { type ReactNode, useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -26,6 +27,7 @@ import { VISITOR_TYPES } from '@/types/database';
 import { Brand } from '@/constants/theme';
 
 export default function RegisterVisitorScreen() {
+  const palette = useThemePalette();
   const profile = useAuthStore((s) => s.profile);
   const user = useAuthStore((s) => s.user);
 
@@ -255,25 +257,25 @@ export default function RegisterVisitorScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
       <KeyboardAwareScrollView
         bottomOffset={32}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
       >
-          <Text className="mb-1 text-2xl font-bold text-slate-900">Register visitor</Text>
-          <Text className="mb-6 text-sm text-slate-500">
+          <Text className="mb-1 text-2xl font-bold text-ink">Register visitor</Text>
+          <Text className="mb-6 text-sm text-ink-muted">
             Creates a pending request for the flat&apos;s resident.
           </Text>
 
           {error ? <ErrorBanner message={error} onRetry={() => setError(null)} /> : null}
           {success ? (
-            <View className="mb-3 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3">
-              <Text className="text-sm text-teal-800">{success}</Text>
+            <View className="mb-3 rounded-xl border border-brand-100 bg-brand-50 px-4 py-3">
+              <Text className="text-sm text-brand-700">{success}</Text>
             </View>
           ) : null}
 
-          <Text className="mb-2 text-sm font-medium text-slate-700">Photo</Text>
+          <Text className="mb-2 text-sm font-medium text-ink-soft">Photo</Text>
           <View className="mb-4 flex-row items-center gap-3">
             <View className="h-20 w-20 overflow-hidden rounded-2xl bg-brand-50">
               {photoUri ? (
@@ -293,9 +295,9 @@ export default function RegisterVisitorScreen() {
               </Pressable>
               <Pressable
                 onPress={pickFromLibrary}
-                className="items-center rounded-xl border border-slate-200 bg-surface-card py-2.5"
+                className="items-center rounded-xl border border-surface-border bg-surface-card py-2.5"
               >
-                <Text className="text-sm font-semibold text-slate-700">Choose from gallery</Text>
+                <Text className="text-sm font-semibold text-ink-soft">Choose from gallery</Text>
               </Pressable>
             </View>
             {photoUri ? (
@@ -307,16 +309,16 @@ export default function RegisterVisitorScreen() {
                   setPhotoMimeType(null);
                   setPhotoBase64(null);
                 }}
-                className="h-9 w-9 items-center justify-center rounded-full bg-slate-200"
+                className="h-9 w-9 items-center justify-center rounded-full bg-surface-muted"
               >
-                <X color="#475569" size={16} />
+                <X color={palette.inkMuted} size={16} />
               </Pressable>
             ) : null}
           </View>
 
           <Field label="Name">
             <TextInput
-              className="rounded-xl border border-slate-200 bg-surface-card px-4 py-3 text-base text-slate-900"
+              className="rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
               placeholder="Visitor name"
               placeholderTextColor="#94A3B8"
               value={name}
@@ -326,7 +328,7 @@ export default function RegisterVisitorScreen() {
 
           <Field label="Phone">
             <TextInput
-              className="rounded-xl border border-slate-200 bg-surface-card px-4 py-3 text-base text-slate-900"
+              className="rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
               placeholder="Optional"
               placeholderTextColor="#94A3B8"
               keyboardType="phone-pad"
@@ -337,7 +339,7 @@ export default function RegisterVisitorScreen() {
 
           <Field label="Purpose">
             <TextInput
-              className="rounded-xl border border-slate-200 bg-surface-card px-4 py-3 text-base text-slate-900"
+              className="rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
               placeholder="Meeting, delivery, etc."
               placeholderTextColor="#94A3B8"
               value={purpose}
@@ -345,7 +347,7 @@ export default function RegisterVisitorScreen() {
             />
           </Field>
 
-          <Text className="mb-2 text-sm font-medium text-slate-700">Type</Text>
+          <Text className="mb-2 text-sm font-medium text-ink-soft">Type</Text>
           <ChipSelector
             className="mb-4"
             presentation="tiles"
@@ -354,25 +356,25 @@ export default function RegisterVisitorScreen() {
             onChange={setType}
           />
 
-          <Text className="mb-2 text-sm font-medium text-slate-700">Flat</Text>
+          <Text className="mb-2 text-sm font-medium text-ink-soft">Flat</Text>
           {selectedFlat ? (
-            <View className="mb-4 flex-row items-center justify-between rounded-xl border border-teal-200 bg-teal-50 px-4 py-3">
-              <Text className="font-semibold text-teal-900">
+            <View className="mb-4 flex-row items-center justify-between rounded-xl border border-brand-100 bg-brand-50 px-4 py-3">
+              <Text className="font-semibold text-ink">
                 {flatTowerName(selectedFlat.towers)
                   ? `${flatTowerName(selectedFlat.towers)} · `
                   : ''}
                 Flat {selectedFlat.number}
               </Text>
               <Pressable onPress={() => setSelectedFlat(null)}>
-                <Text className="text-sm font-medium text-teal-700">Change</Text>
+                <Text className="text-sm font-medium text-ink-muted">Change</Text>
               </Pressable>
             </View>
           ) : (
             <View className="mb-4">
-              <View className="mb-2 flex-row items-center rounded-xl border border-slate-200 bg-surface-card px-3">
+              <View className="mb-2 flex-row items-center rounded-xl border border-surface-border bg-surface-card px-3">
                 <Search color="#94A3B8" size={18} />
                 <TextInput
-                  className="ml-2 flex-1 py-3 text-base text-slate-900"
+                  className="ml-2 flex-1 py-3 text-base text-ink"
                   placeholder="Search flat number…"
                   placeholderTextColor="#94A3B8"
                   value={flatQuery}
@@ -382,7 +384,7 @@ export default function RegisterVisitorScreen() {
                 {searchingFlats ? <ActivityIndicator color={Brand.primary} /> : null}
               </View>
               {flatResults.length > 0 ? (
-                <View className="overflow-hidden rounded-xl border border-slate-200 bg-surface-card">
+                <View className="overflow-hidden rounded-xl border border-surface-border bg-surface-card">
                   <FlatList
                     data={flatResults}
                     keyExtractor={(item) => item.id}
@@ -395,10 +397,10 @@ export default function RegisterVisitorScreen() {
                           setFlatQuery(item.number);
                         }}
                         className={`px-4 py-3 ${
-                          index < flatResults.length - 1 ? 'border-b border-slate-100' : ''
+                          index < flatResults.length - 1 ? 'border-b border-surface-border' : ''
                         }`}
                       >
-                        <Text className="font-medium text-slate-900">
+                        <Text className="font-medium text-ink">
                           Flat {item.number}
                           {flatTowerName(item.towers)
                             ? ` · ${flatTowerName(item.towers)}`
@@ -409,7 +411,7 @@ export default function RegisterVisitorScreen() {
                   />
                 </View>
               ) : flatQuery.trim().length > 0 && !searchingFlats ? (
-                <Text className="text-sm text-slate-500">No flats match “{flatQuery}”.</Text>
+                <Text className="text-sm text-ink-muted">No flats match "{flatQuery}".</Text>
               ) : null}
             </View>
           )}
@@ -435,7 +437,7 @@ export default function RegisterVisitorScreen() {
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <View className="mb-4">
-      <Text className="mb-2 text-sm font-medium text-slate-700">{label}</Text>
+      <Text className="mb-2 text-sm font-medium text-ink-soft">{label}</Text>
       {children}
     </View>
   );

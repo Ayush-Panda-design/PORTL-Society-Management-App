@@ -92,12 +92,12 @@ export default function ResidentHelpdeskScreen() {
             />
           }
           ListHeaderComponent={
-            <View className="mb-4 rounded-2xl border border-slate-200 bg-surface-card p-4">
-              <Text className="mb-2 text-base font-semibold text-slate-900">New complaint</Text>
-              {formError ? <Text className="mb-2 text-sm text-red-600">{formError}</Text> : null}
+            <View className="mb-4 rounded-2xl border border-surface-border bg-surface-card p-4">
+              <Text className="mb-2 text-base font-semibold text-ink">New complaint</Text>
+              {formError ? <Text className="mb-2 text-sm text-status-rejected">{formError}</Text> : null}
               {success ? <Text className="mb-2 text-sm text-teal-700">{success}</Text> : null}
 
-              <Text className="mb-2 text-sm font-medium text-slate-700">Category</Text>
+              <Text className="mb-2 text-sm font-medium text-ink-soft">Category</Text>
               <ChipSelector
                 className="mb-3"
                 title="Category"
@@ -108,7 +108,7 @@ export default function ResidentHelpdeskScreen() {
               />
 
               <TextInput
-                className="mb-3 min-h-[90px] rounded-xl border border-slate-200 px-4 py-3 text-base text-slate-900"
+                className="mb-3 min-h-[90px] rounded-xl border border-surface-border px-4 py-3 text-base text-ink"
                 placeholder="Describe the issue…"
                 placeholderTextColor="#94A3B8"
                 multiline
@@ -129,7 +129,7 @@ export default function ResidentHelpdeskScreen() {
                 )}
               </Pressable>
 
-              <Text className="mb-1 mt-5 text-base font-semibold text-slate-900">Your complaints</Text>
+              <Text className="mb-1 mt-5 text-base font-semibold text-ink">Your complaints</Text>
             </View>
           }
           ListEmptyComponent={
@@ -147,17 +147,17 @@ export default function ResidentHelpdeskScreen() {
           renderItem={({ item }) => {
             const tone = complaintStatusTone(item.status);
             return (
-              <View className="rounded-2xl border border-slate-200 bg-surface-card p-4">
+              <View className="rounded-2xl border border-surface-border bg-surface-card p-4">
                 <View className="mb-2 flex-row items-center justify-between gap-2">
-                  <Text className="flex-1 text-base font-semibold text-slate-900">
+                  <Text className="flex-1 text-base font-semibold text-ink">
                     {item.category}
                   </Text>
                   <View className={`rounded-full border px-2 py-0.5 ${tone.bg} ${tone.border}`}>
                     <Text className={`text-xs font-medium ${tone.text}`}>{tone.label}</Text>
                   </View>
                 </View>
-                <Text className="text-sm text-slate-600">{item.description}</Text>
-                <Text className="mt-2 text-xs text-slate-400">
+                <Text className="text-sm text-ink-soft">{item.description}</Text>
+                <Text className="mt-2 text-xs text-ink-faint">
                   {new Date(item.created_at).toLocaleString()}
                 </Text>
               </View>

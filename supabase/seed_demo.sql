@@ -39,12 +39,13 @@ begin
   values (v_tower_id, '101')
   returning id into v_flat_id;
 
-  -- Link profiles
+  -- Link profiles (active members for demo)
   update public.profiles
   set
     role = 'guard',
     society_id = v_society_id,
     flat_id = null,
+    status = 'active',
     full_name = coalesce(nullif(full_name, ''), 'Demo Guard')
   where id = v_guard_id;
 
@@ -53,8 +54,18 @@ begin
     role = 'resident',
     society_id = v_society_id,
     flat_id = v_flat_id,
+    status = 'active',
     full_name = coalesce(nullif(full_name, ''), 'Demo Resident')
   where id = v_resident_id;
 
-  raise notice 'Seed OK. society=% tower=% flat=%', v_society_id, v_tower_id, v_flat_id;
+  -- Demo invite codes (regenerate in app if needed)
+  insert into public.invite_codes (society_id, role, code)
+  values
+    (v_society_id, 'resident', 'DEMORES1'),
+    (v_society_id, 'guard', 'DEMOGRD1')
+  on conflict (society_id, role) do update
+    set code = excluded.code, revoked_at = null, created_at = now();
+
+  raise notice 'Seed OK. society=% tower=% flat=% resident_code=DEMORES1 guard_code=DEMOGRD1',
+    v_society_id, v_tower_id, v_flat_id;
 end $$;

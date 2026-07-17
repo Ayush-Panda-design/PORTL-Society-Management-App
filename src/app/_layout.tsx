@@ -3,20 +3,28 @@ import '@/global.css';
 
 import { QueryClientProvider } from '@tanstack/react-query';
 import { requireOptionalNativeModule } from 'expo';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { type ReactNode, useEffect } from 'react';
 import { ActivityIndicator, NativeModules, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import Toast from 'react-native-toast-message';
+
 import { AppThemeProvider } from '@/components/theme/app-theme-provider';
 import { OfflineBanner } from '@/components/ui/offline-banner';
 import { Brand } from '@/constants/theme';
 import { usePortlFonts } from '@/hooks/use-portl-fonts';
+import { destinationForProfile } from '@/lib/auth-routing';
 import { queryClient } from '@/lib/query-client';
-import { useAuthStore } from '@/stores/authStore';
-import type { UserRole } from '@/types/database';
+import {
+  isMembershipActive,
+  isMembershipPending,
+  needsSocietyOnboarding,
+  useAuthStore,
+} from '@/stores/authStore';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -46,23 +54,10 @@ async function hideExpoToolsFab() {
   return false;
 }
 
-function roleHome(role: UserRole | null): '/(resident)' | '/(guard)' | '/(admin)' | '/(auth)/login' {
-  switch (role) {
-    case 'resident':
-      return '/(resident)';
-    case 'guard':
-      return '/(guard)';
-    case 'admin':
-      return '/(admin)';
-    default:
-      return '/(auth)/login';
-  }
-}
-
 function AuthGate({ children }: { children: ReactNode }) {
   const router = useRouter();
   const segments = useSegments();
-  const { session, role, isLoading, isInitialized, initialize } = useAuthStore();
+  const { session, profile, isLoading, isInitialized, initialize } = useAuthStore();
 
   useEffect(() => {
     void initialize();
@@ -71,7 +66,9 @@ function AuthGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isInitialized || isLoading) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
+    const root = segments[0];
+    const inAuthGroup = root === '(auth)';
+    const inOnboardingGroup = root === '(onboarding)';
 
     if (!session) {
       const authScreen = segments[1];
@@ -85,23 +82,47 @@ function AuthGate({ children }: { children: ReactNode }) {
       return;
     }
 
-    const home = roleHome(role);
+    const dest = destinationForProfile(profile);
+    const onboardingScreen = segments[1];
+    const isRoot = !root;
 
-    const isRoot = !segments[0];
-
-    if (inAuthGroup || isRoot) {
-      router.replace(home);
+    if (needsSocietyOnboarding(profile)) {
+      const allowed = ['index', 'create', 'join'];
+      if (!inOnboardingGroup) {
+        router.replace('/(onboarding)' as Href);
+      } else if (onboardingScreen && !allowed.includes(onboardingScreen)) {
+        if (onboardingScreen === 'pending') router.replace('/(onboarding)' as Href);
+      }
       return;
     }
 
-    const currentGroup = segments[0];
-    const expectedGroup =
-      role === 'resident' ? '(resident)' : role === 'guard' ? '(guard)' : role === 'admin' ? '(admin)' : null;
-
-    if (expectedGroup && currentGroup !== expectedGroup) {
-      router.replace(home);
+    if (isMembershipPending(profile)) {
+      if (!inOnboardingGroup || onboardingScreen !== 'pending') {
+        router.replace('/(onboarding)/pending' as Href);
+      }
+      return;
     }
-  }, [session, role, isLoading, isInitialized, segments, router]);
+
+    if (isMembershipActive(profile)) {
+      if (inAuthGroup || inOnboardingGroup || isRoot) {
+        router.replace(dest);
+        return;
+      }
+
+      const expectedGroup =
+        profile?.role === 'resident'
+          ? '(resident)'
+          : profile?.role === 'guard'
+            ? '(guard)'
+            : profile?.role === 'admin'
+              ? '(admin)'
+              : null;
+
+      if (expectedGroup && root !== expectedGroup) {
+        router.replace(dest);
+      }
+    }
+  }, [session, profile, isLoading, isInitialized, segments, router]);
 
   if (!isInitialized || isLoading) {
     return (
@@ -142,24 +163,28 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <QueryClientProvider client={queryClient}>
-        <KeyboardProvider preload={false}>
-          <AppThemeProvider>
-            <AuthGate>
-              <View className="flex-1">
-                <OfflineBanner />
-                <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="index" />
-                  <Stack.Screen name="(auth)" />
-                  <Stack.Screen name="(resident)" />
-                  <Stack.Screen name="(guard)" />
-                  <Stack.Screen name="(admin)" />
-                </Stack>
-              </View>
-            </AuthGate>
-          </AppThemeProvider>
-        </KeyboardProvider>
-      </QueryClientProvider>
+      <BottomSheetModalProvider>
+        <QueryClientProvider client={queryClient}>
+          <KeyboardProvider preload={false}>
+            <AppThemeProvider>
+              <AuthGate>
+                <View className="flex-1">
+                  <OfflineBanner />
+                  <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+                    <Stack.Screen name="index" />
+                    <Stack.Screen name="(auth)" />
+                    <Stack.Screen name="(onboarding)" />
+                    <Stack.Screen name="(resident)" />
+                    <Stack.Screen name="(guard)" />
+                    <Stack.Screen name="(admin)" />
+                  </Stack>
+                </View>
+              </AuthGate>
+            </AppThemeProvider>
+          </KeyboardProvider>
+        </QueryClientProvider>
+        <Toast />
+      </BottomSheetModalProvider>
     </GestureHandlerRootView>
   );
 }

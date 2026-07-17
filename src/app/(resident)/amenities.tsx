@@ -133,8 +133,8 @@ export default function ResidentAmenitiesScreen() {
         </View>
 
         {message ? (
-          <View className="mx-4 mb-2 rounded-xl border border-slate-200 bg-surface-card px-3 py-2">
-            <Text className="text-sm text-slate-700">{message}</Text>
+          <View className="mx-4 mb-2 rounded-xl border border-surface-border bg-surface-card px-3 py-2">
+            <Text className="text-sm text-ink-soft">{message}</Text>
           </View>
         ) : null}
 
@@ -164,11 +164,11 @@ export default function ResidentAmenitiesScreen() {
                   onPress={() => bookMutation.mutate(item)}
                   className={`flex-row items-center justify-between rounded-xl border px-4 py-3.5 ${
                     taken
-                      ? 'border-slate-100 bg-slate-100 opacity-60'
-                      : 'border-slate-200 bg-surface-card'
+                      ? 'border-surface-border bg-surface-muted opacity-60'
+                      : 'border-surface-border bg-surface-card'
                   }`}
                 >
-                  <Text className="font-medium text-slate-900">{item}</Text>
+                  <Text className="font-medium text-ink">{item}</Text>
                   {bookMutation.isPending ? (
                     <ActivityIndicator color={Brand.primary} />
                   ) : (
