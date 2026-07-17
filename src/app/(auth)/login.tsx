@@ -93,7 +93,7 @@ export default function LoginScreen() {
           <View className="mb-4 gap-2">
             <Text className="text-sm font-medium text-ink-soft">Email</Text>
             <TextInput
-              className="rounded-xl border border-surface-border bg-white px-4 py-3 text-base text-ink"
+              className="rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
               autoCapitalize="none"
               autoComplete="email"
               keyboardType="email-address"
@@ -107,7 +107,7 @@ export default function LoginScreen() {
           <View className="mb-6 gap-2">
             <Text className="text-sm font-medium text-ink-soft">Password</Text>
             <TextInput
-              className="rounded-xl border border-surface-border bg-white px-4 py-3 text-base text-ink"
+              className="rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
               secureTextEntry
               autoComplete="password"
               placeholder="••••••••"

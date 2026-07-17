@@ -143,6 +143,16 @@ export type PollVote = {
   option: string;
 };
 
+export type PollVoteWithProfile = PollVote & {
+  profile: {
+    full_name: string | null;
+    flats: {
+      number: string;
+      towers: { name: string } | { name: string }[] | null;
+    } | null;
+  } | null;
+};
+
 export type Complaint = {
   id: string;
   flat_id: string;

@@ -1,5 +1,5 @@
-import { formatDateTime } from '@/lib/visitors';
-import type { ComplaintStatus } from '@/types/database';
+import { flatTowerName, formatDateTime } from '@/lib/visitors';
+import type { ComplaintStatus, Poll, PollVote, PollVoteWithProfile } from '@/types/database';
 
 export function parseJsonStringArray(value: unknown): string[] {
   if (Array.isArray(value)) {
@@ -19,6 +19,26 @@ export function parseJsonStringArray(value: unknown): string[] {
 export function isPollExpired(expiresAt: string | null | undefined): boolean {
   if (!expiresAt) return false;
   return new Date(expiresAt).getTime() < Date.now();
+}
+
+export function pollStats(poll: Poll, votes: PollVote[]) {
+  const pollVotes = votes.filter((v) => v.poll_id === poll.id);
+  const total = pollVotes.length;
+  const counts: Record<string, number> = {};
+  for (const opt of poll.options) counts[opt] = 0;
+  for (const v of pollVotes) {
+    counts[v.option] = (counts[v.option] ?? 0) + 1;
+  }
+  return { total, counts, pollVotes };
+}
+
+export function pollRespondentLabel(vote: PollVoteWithProfile): string {
+  const name = vote.profile?.full_name?.trim() || 'Unnamed resident';
+  const flats = vote.profile?.flats;
+  if (!flats) return `${name} · No flat assigned`;
+  const tower = flatTowerName(flats.towers);
+  const flat = `Flat ${flats.number}`;
+  return tower ? `${name} · ${tower} · ${flat}` : `${name} · ${flat}`;
 }
 
 export function formatNoticeDate(iso: string): string {

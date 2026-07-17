@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 
 import { EmptyState } from '@/components/visitors/empty-state';
@@ -8,28 +8,18 @@ import { SkeletonList } from '@/components/visitors/loading-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { Brand } from '@/constants/theme';
-import { isPollExpired } from '@/lib/community';
+import { isPollExpired, pollStats } from '@/lib/community';
 import { castVote, fetchPolls, fetchVotesForPolls } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
-import type { Poll, PollVote } from '@/types/database';
-
-function pollStats(poll: Poll, votes: PollVote[]) {
-  const pollVotes = votes.filter((v) => v.poll_id === poll.id);
-  const total = pollVotes.length;
-  const counts: Record<string, number> = {};
-  for (const opt of poll.options) counts[opt] = 0;
-  for (const v of pollVotes) {
-    counts[v.option] = (counts[v.option] ?? 0) + 1;
-  }
-  return { total, counts };
-}
+import type { Poll } from '@/types/database';
 
 export default function ResidentPollsScreen() {
   const profile = useAuthStore((s) => s.profile);
   const societyId = profile?.society_id;
   const userId = profile?.id;
   const queryClient = useQueryClient();
+  const [votingPollId, setVotingPollId] = useState<string | null>(null);
 
   const pollsQuery = useQuery({
     queryKey: queryKeys.polls(societyId ?? 'none'),
@@ -40,17 +30,22 @@ export default function ResidentPollsScreen() {
   const pollIds = useMemo(() => (pollsQuery.data ?? []).map((p) => p.id), [pollsQuery.data]);
 
   const votesQuery = useQuery({
-    queryKey: [...queryKeys.polls(societyId ?? 'none'), 'votes', pollIds.join(',')],
+    queryKey: queryKeys.pollVotes(societyId ?? 'none', pollIds),
     queryFn: () => fetchVotesForPolls(pollIds),
     enabled: Boolean(societyId) && pollIds.length > 0,
   });
 
   const voteMutation = useMutation({
-    mutationFn: (input: { pollId: string; option: string }) =>
-      castVote({ pollId: input.pollId, userId: userId!, option: input.option }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.polls(societyId!) });
+    mutationFn: (input: { pollId: string; option: string }) => {
+      setVotingPollId(input.pollId);
+      return castVote({ pollId: input.pollId, option: input.option });
     },
+    onSuccess: async () => {
+      if (!societyId) return;
+      await queryClient.invalidateQueries({ queryKey: queryKeys.polls(societyId) });
+      await queryClient.refetchQueries({ queryKey: queryKeys.pollVotes(societyId, pollIds) });
+    },
+    onSettled: () => setVotingPollId(null),
   });
 
   const votes = votesQuery.data ?? [];
@@ -81,10 +76,11 @@ export default function ResidentPollsScreen() {
   const renderPoll = (poll: Poll, readOnly: boolean) => {
     const { total, counts } = pollStats(poll, votes);
     const myVote = myVotes.get(poll.id);
-    const locked = readOnly || Boolean(myVote) || voteMutation.isPending;
+    const isVotingThisPoll = votingPollId === poll.id && voteMutation.isPending;
+    const locked = readOnly || Boolean(myVote) || isVotingThisPoll;
 
     return (
-      <View className="rounded-2xl border border-slate-200 bg-white p-4">
+      <View className="rounded-2xl border border-slate-200 bg-surface-card p-4">
         <Text className="mb-1 text-base font-semibold text-slate-900">{poll.question}</Text>
         <Text className="mb-3 text-xs text-slate-400">
           {readOnly
@@ -110,6 +106,7 @@ export default function ResidentPollsScreen() {
               }`}
             >
               <View
+                pointerEvents="none"
                 className={`absolute bottom-0 left-0 top-0 ${
                   selected ? 'bg-teal-100' : 'bg-slate-100'
                 }`}
@@ -133,8 +130,14 @@ export default function ResidentPollsScreen() {
       {pollsQuery.error ? (
         <ErrorBanner
           message={pollsQuery.error.message}
-          onRetry={() => void pollsQuery.refetch()}
+          onRetry={() => {
+            void pollsQuery.refetch();
+            void votesQuery.refetch();
+          }}
         />
+      ) : null}
+      {votesQuery.error ? (
+        <ErrorBanner message={votesQuery.error.message} onRetry={() => void votesQuery.refetch()} />
       ) : null}
       {voteMutation.error ? (
         <ErrorBanner message={(voteMutation.error as Error).message} />

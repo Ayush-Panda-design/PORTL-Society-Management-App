@@ -222,7 +222,7 @@ export default function AdminResidentsScreen() {
       <Modal visible={detailOpen} animationType="slide" transparent>
         <View className="flex-1 justify-end bg-black/40">
           <Pressable className="absolute inset-0" onPress={() => setDetailOpen(false)} />
-          <View className="rounded-t-3xl bg-white px-5 pb-10 pt-5">
+          <View className="rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
             <View className="mb-4 items-center">
               <View className="mb-3 h-1 w-10 rounded-full bg-slate-200" />
               <InitialsAvatar
@@ -275,7 +275,7 @@ export default function AdminResidentsScreen() {
 
       <Modal visible={assignOpen} animationType="slide" transparent>
         <KeyboardAvoidingView behavior="padding" className="flex-1 justify-end bg-black/40">
-          <View className="max-h-[90%] rounded-t-3xl bg-white px-5 pb-10 pt-5">
+          <View className="max-h-[90%] rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
             <Text className="mb-1 text-xl font-bold text-slate-900">
               {selected?.flat_id ? 'Reassign flat' : 'Assign flat'}
             </Text>

@@ -5,24 +5,21 @@ import { FlatList, Modal, Pressable, Text, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
 import { PollCreateForm } from '@/components/polls/poll-create-form';
+import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { isPollExpired } from '@/lib/community';
-import { createPoll, fetchPolls, fetchVotesForPolls } from '@/lib/community-api';
+import { isPollExpired, pollRespondentLabel, pollStats } from '@/lib/community';
+import {
+  createPoll,
+  fetchPolls,
+  fetchPollVotesWithProfiles,
+  fetchResidents,
+} from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
-import type { Poll, PollVote } from '@/types/database';
-
-function pollStats(poll: Poll, votes: PollVote[]) {
-  const pollVotes = votes.filter((v) => v.poll_id === poll.id);
-  const total = pollVotes.length;
-  const counts: Record<string, number> = {};
-  for (const opt of poll.options) counts[opt] = 0;
-  for (const v of pollVotes) counts[v.option] = (counts[v.option] ?? 0) + 1;
-  return { total, counts };
-}
+import type { Poll, PollVoteWithProfile } from '@/types/database';
 
 export default function AdminPollsScreen() {
   const profile = useAuthStore((s) => s.profile);
@@ -42,9 +39,15 @@ export default function AdminPollsScreen() {
   const pollIds = useMemo(() => (pollsQuery.data ?? []).map((p) => p.id), [pollsQuery.data]);
 
   const votesQuery = useQuery({
-    queryKey: [...queryKeys.polls(societyId ?? 'none'), 'votes', pollIds.join(',')],
-    queryFn: () => fetchVotesForPolls(pollIds),
-    enabled: pollIds.length > 0,
+    queryKey: queryKeys.pollVotes(societyId ?? 'none', pollIds),
+    queryFn: () => fetchPollVotesWithProfiles(pollIds),
+    enabled: Boolean(societyId) && pollIds.length > 0,
+  });
+
+  const residentsQuery = useQuery({
+    queryKey: queryKeys.residents(societyId ?? 'none'),
+    queryFn: () => fetchResidents(societyId!),
+    enabled: Boolean(societyId),
   });
 
   const createMutation = useMutation({
@@ -75,6 +78,25 @@ export default function AdminPollsScreen() {
   }
 
   const votes = votesQuery.data ?? [];
+  const totalResidents = residentsQuery.data?.length ?? 0;
+
+  const renderRespondents = (poll: Poll, pollVotes: PollVoteWithProfile[]) => {
+    if (pollVotes.length === 0) {
+      return (
+        <Text className="text-sm text-slate-400">No responses yet.</Text>
+      );
+    }
+
+    return pollVotes.map((vote) => (
+      <View
+        key={vote.id}
+        className="flex-row items-start justify-between border-t border-slate-100 py-2"
+      >
+        <Text className="mr-3 flex-1 text-sm text-slate-700">{pollRespondentLabel(vote)}</Text>
+        <Text className="text-sm font-medium text-teal-800">{vote.option}</Text>
+      </View>
+    ));
+  };
 
   return (
     <ScreenHeader
@@ -96,7 +118,16 @@ export default function AdminPollsScreen() {
       {pollsQuery.error ? (
         <ErrorBanner
           message={pollsQuery.error.message}
-          onRetry={() => void pollsQuery.refetch()}
+          onRetry={() => {
+            void pollsQuery.refetch();
+            void votesQuery.refetch();
+          }}
+        />
+      ) : null}
+      {votesQuery.error ? (
+        <ErrorBanner
+          message={votesQuery.error.message}
+          onRetry={() => void votesQuery.refetch()}
         />
       ) : null}
 
@@ -108,29 +139,47 @@ export default function AdminPollsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
           ItemSeparatorComponent={() => <View className="h-3" />}
-          refreshing={pollsQuery.isRefetching}
-          onRefresh={() => void pollsQuery.refetch()}
+          refreshControl={
+            <ThemedRefreshControl
+              refreshing={pollsQuery.isRefetching || votesQuery.isRefetching}
+              onRefresh={() => {
+                void pollsQuery.refetch();
+                void votesQuery.refetch();
+              }}
+            />
+          }
           ListEmptyComponent={
             <EmptyState visual="polls" title="No polls yet" subtitle="Tap + to create a poll for residents." />
           }
           renderItem={({ item }) => {
             const { total, counts } = pollStats(item, votes);
+            const pollRespondents = votes.filter((v) => v.poll_id === item.id);
             const expired = isPollExpired(item.expires_at);
+            const participation =
+              totalResidents > 0
+                ? `${total} of ${totalResidents} resident${totalResidents === 1 ? '' : 's'} responded`
+                : `${total} response${total === 1 ? '' : 's'}`;
+
             return (
-              <View className="rounded-2xl border border-slate-200 bg-white p-4">
+              <View className="rounded-2xl border border-slate-200 bg-surface-card p-4">
                 <Text className="mb-1 text-base font-semibold text-slate-900">{item.question}</Text>
-                <Text className="mb-3 text-xs text-slate-400">
-                  {expired ? 'Expired' : 'Active'} · {total} vote{total === 1 ? '' : 's'}
+                <Text className="mb-1 text-xs text-slate-400">
+                  {expired ? 'Expired' : 'Active'}
                   {item.expires_at
                     ? ` · ends ${new Date(item.expires_at).toLocaleString()}`
                     : ''}
                 </Text>
+                <Text className="mb-3 text-sm font-medium text-slate-600">{participation}</Text>
                 {item.options.map((option) => {
                   const count = counts[option] ?? 0;
                   const pct = total === 0 ? 0 : Math.round((count / total) * 100);
                   return (
                     <View key={option} className="mb-2 overflow-hidden rounded-xl border border-slate-200">
-                      <View className="absolute bottom-0 left-0 top-0 bg-teal-100" style={{ width: `${pct}%` }} />
+                      <View
+                        pointerEvents="none"
+                        className="absolute bottom-0 left-0 top-0 bg-teal-100"
+                        style={{ width: `${pct}%` }}
+                      />
                       <View className="flex-row justify-between px-3 py-2.5">
                         <Text className="text-slate-800">{option}</Text>
                         <Text className="text-slate-500">
@@ -140,6 +189,12 @@ export default function AdminPollsScreen() {
                     </View>
                   );
                 })}
+                <View className="mt-3 rounded-xl bg-slate-50 px-3 py-2">
+                  <Text className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Who responded
+                  </Text>
+                  {renderRespondents(item, pollRespondents)}
+                </View>
               </View>
             );
           }}

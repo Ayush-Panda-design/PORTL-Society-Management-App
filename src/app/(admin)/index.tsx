@@ -87,7 +87,7 @@ export default function AdminHome() {
         ) : null}
 
         {statsQuery.isLoading && !stats ? (
-          <View className="mb-2 h-36 items-center justify-center rounded-2xl border border-surface-border bg-white">
+          <View className="mb-2 h-36 items-center justify-center rounded-2xl border border-surface-border bg-surface-card">
             <ActivityIndicator color={Brand.primary} />
           </View>
         ) : (

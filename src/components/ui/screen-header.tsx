@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FontFamily } from '@/constants/theme';
+import { useThemePalette } from '@/hooks/use-theme';
 
 type Props = {
   title: string;
@@ -16,6 +17,7 @@ type Props = {
 
 export function ScreenHeader({ title, subtitle, children, right, showBack }: Props) {
   const router = useRouter();
+  const palette = useThemePalette();
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
@@ -24,9 +26,9 @@ export function ScreenHeader({ title, subtitle, children, right, showBack }: Pro
           {showBack ? (
             <Pressable
               onPress={() => router.back()}
-              className="mt-0.5 h-9 w-9 items-center justify-center rounded-full border border-surface-border bg-white"
+              className="mt-0.5 h-9 w-9 items-center justify-center rounded-full border border-surface-border bg-surface-card"
             >
-              <ChevronLeft color="#475569" size={20} />
+              <ChevronLeft color={palette.inkMuted} size={20} />
             </Pressable>
           ) : null}
           <View className="min-w-0 flex-1">

@@ -92,7 +92,7 @@ export default function ResidentHelpdeskScreen() {
             />
           }
           ListHeaderComponent={
-            <View className="mb-4 rounded-2xl border border-slate-200 bg-white p-4">
+            <View className="mb-4 rounded-2xl border border-slate-200 bg-surface-card p-4">
               <Text className="mb-2 text-base font-semibold text-slate-900">New complaint</Text>
               {formError ? <Text className="mb-2 text-sm text-red-600">{formError}</Text> : null}
               {success ? <Text className="mb-2 text-sm text-teal-700">{success}</Text> : null}
@@ -147,7 +147,7 @@ export default function ResidentHelpdeskScreen() {
           renderItem={({ item }) => {
             const tone = complaintStatusTone(item.status);
             return (
-              <View className="rounded-2xl border border-slate-200 bg-white p-4">
+              <View className="rounded-2xl border border-slate-200 bg-surface-card p-4">
                 <View className="mb-2 flex-row items-center justify-between gap-2">
                   <Text className="flex-1 text-base font-semibold text-slate-900">
                     {item.category}

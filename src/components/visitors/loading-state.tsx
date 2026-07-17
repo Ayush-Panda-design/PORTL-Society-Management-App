@@ -47,7 +47,7 @@ export function SkeletonList({ count = 3 }: { count?: number }) {
       {Array.from({ length: count }).map((_, i) => (
         <View
           key={i}
-          className="rounded-2xl border border-surface-border bg-white p-4"
+          className="rounded-2xl border border-surface-border bg-surface-card p-4"
           style={{
             shadowColor: '#0F172A',
             shadowOffset: { width: 0, height: 2 },

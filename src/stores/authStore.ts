@@ -145,15 +145,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signOut: async () => {
     const userId = get().user?.id;
+    // Never block sign-out on push cleanup (network / native can hang).
     if (userId) {
-      await clearPushToken(userId);
+      void clearPushToken(userId).catch(() => undefined);
     }
-    await supabase.auth.signOut();
-    set({
-      session: null,
-      user: null,
-      profile: null,
-      role: null,
-    });
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      set({
+        session: null,
+        user: null,
+        profile: null,
+        role: null,
+        isLoading: false,
+      });
+    }
   },
 }));

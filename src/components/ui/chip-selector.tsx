@@ -17,6 +17,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Brand, FontFamily } from '@/constants/theme';
+import { useThemePalette } from '@/hooks/use-theme';
 
 export type ChipOption<T extends string = string> = {
   value: T;
@@ -71,6 +72,7 @@ function FilterChip<T extends string>({
   onSelect: (value: T) => void;
 }) {
   const press = usePressScale();
+  const palette = useThemePalette();
 
   return (
     <AnimatedPressable
@@ -88,9 +90,9 @@ function FilterChip<T extends string>({
           paddingHorizontal: selected ? 12 : 14,
           paddingVertical: 9,
           minHeight: 40,
-          backgroundColor: selected ? Brand.primarySoft : '#FFFFFF',
+          backgroundColor: selected ? palette.primarySoft : palette.card,
           borderWidth: 1.5,
-          borderColor: selected ? Brand.primary : '#D8E0E8',
+          borderColor: selected ? Brand.primary : palette.border,
         },
         press.style,
       ]}
@@ -100,7 +102,7 @@ function FilterChip<T extends string>({
         style={{
           fontFamily: FontFamily.heading,
           fontSize: 13,
-          color: selected ? Brand.primaryDark : Brand.inkSoft,
+          color: selected ? palette.primarySoftText : palette.inkSoft,
         }}
       >
         {option.label}
@@ -183,6 +185,7 @@ function ChoiceTile<T extends string>({
   onSelect: (value: T) => void;
 }) {
   const press = usePressScale();
+  const palette = useThemePalette();
 
   return (
     <AnimatedPressable
@@ -197,9 +200,9 @@ function ChoiceTile<T extends string>({
           borderRadius: 14,
           paddingVertical: 14,
           paddingHorizontal: 12,
-          backgroundColor: selected ? Brand.primarySoft : '#FFFFFF',
+          backgroundColor: selected ? palette.primarySoft : palette.card,
           borderWidth: 1.5,
-          borderColor: selected ? Brand.primary : '#E2E8F0',
+          borderColor: selected ? Brand.primary : palette.border,
         },
         press.style,
       ]}
@@ -212,7 +215,7 @@ function ChoiceTile<T extends string>({
             style={{
               fontFamily: FontFamily.heading,
               fontSize: 14,
-              color: selected ? Brand.primaryDark : Brand.ink,
+              color: selected ? palette.primarySoftText : palette.ink,
             }}
           >
             {option.label}
@@ -224,7 +227,7 @@ function ChoiceTile<T extends string>({
             height: 20,
             borderRadius: 10,
             borderWidth: selected ? 0 : 1.5,
-            borderColor: '#CBD5E1',
+            borderColor: palette.inkFaint,
             backgroundColor: selected ? Brand.primary : 'transparent',
             alignItems: 'center',
             justifyContent: 'center',
@@ -254,6 +257,7 @@ function RadioSheet<T extends string>({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const palette = useThemePalette();
   const selectedLabel = options.find((o) => o.value === value)?.label ?? 'Select';
 
   const pick = (next: T) => {
@@ -271,11 +275,11 @@ function RadioSheet<T extends string>({
           void Haptics.selectionAsync();
           setOpen(true);
         }}
-        className="flex-row items-center justify-between rounded-2xl border border-surface-border bg-white px-4 py-3.5"
+        className="flex-row items-center justify-between rounded-2xl border border-surface-border bg-surface-card px-4 py-3.5"
         style={{
-          shadowColor: '#0F172A',
+          shadowColor: palette.shadow,
           shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.04,
+          shadowOpacity: palette.isDark ? 0.35 : 0.04,
           shadowRadius: 4,
           elevation: 1,
         }}
@@ -298,16 +302,16 @@ function RadioSheet<T extends string>({
           </Text>
         </View>
         <View className="h-8 w-8 items-center justify-center rounded-full bg-surface-muted">
-          <ChevronDown color={Brand.inkMuted} size={18} />
+          <ChevronDown color={palette.inkMuted} size={18} />
         </View>
       </Pressable>
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
         <View className="flex-1 justify-end bg-black/45">
           <Pressable className="absolute inset-0" onPress={() => setOpen(false)} />
-          <View className="max-h-[72%] rounded-t-3xl bg-white pb-10 pt-2">
+          <View className="max-h-[72%] rounded-t-3xl bg-surface-card pb-10 pt-2">
             <View className="mb-1 items-center px-4 pt-1">
-              <View className="mb-3 h-1 w-10 rounded-full bg-slate-200" />
+              <View className="mb-3 h-1 w-10 rounded-full bg-surface-muted" />
               <Text className="mb-2 self-start text-lg text-ink" style={{ fontFamily: FontFamily.display }}>
                 {title ?? 'Choose one'}
               </Text>
@@ -317,7 +321,7 @@ function RadioSheet<T extends string>({
                 const selected = option.value === value;
                 return (
                   <View key={option.value}>
-                    {i > 0 ? <View className="mx-4 h-px bg-slate-100" /> : null}
+                    {i > 0 ? <View className="mx-4 h-px bg-surface-border" /> : null}
                     <Pressable
                       onPress={() => pick(option.value)}
                       className="flex-row items-center justify-between px-5 py-4"
@@ -326,7 +330,7 @@ function RadioSheet<T extends string>({
                         style={{
                           fontFamily: selected ? FontFamily.heading : FontFamily.body,
                           fontSize: 16,
-                          color: Brand.ink,
+                          color: palette.ink,
                         }}
                       >
                         {option.label}
@@ -337,7 +341,7 @@ function RadioSheet<T extends string>({
                           height: 22,
                           borderRadius: 11,
                           borderWidth: selected ? 0 : 1.5,
-                          borderColor: '#CBD5E1',
+                          borderColor: palette.inkFaint,
                           backgroundColor: selected ? Brand.primary : 'transparent',
                           alignItems: 'center',
                           justifyContent: 'center',

@@ -93,7 +93,7 @@ export default function PreApproveGuestScreen() {
       <View className="flex-row items-center gap-3 px-4 pb-2 pt-3">
         <Pressable
           onPress={() => router.back()}
-          className="h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white"
+          className="h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-surface-card"
         >
           <ArrowLeft color="#475569" size={18} />
         </Pressable>
@@ -117,7 +117,7 @@ export default function PreApproveGuestScreen() {
 
           <Text className="mb-2 text-sm font-medium text-slate-700">Guest name</Text>
           <TextInput
-            className="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
+            className="mb-4 rounded-xl border border-slate-200 bg-surface-card px-4 py-3 text-base text-slate-900"
             placeholder="Alex Rivera"
             placeholderTextColor="#94A3B8"
             value={name}
@@ -126,7 +126,7 @@ export default function PreApproveGuestScreen() {
 
           <Text className="mb-2 text-sm font-medium text-slate-700">Phone</Text>
           <TextInput
-            className="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
+            className="mb-4 rounded-xl border border-slate-200 bg-surface-card px-4 py-3 text-base text-slate-900"
             placeholder="Optional"
             placeholderTextColor="#94A3B8"
             keyboardType="phone-pad"
@@ -136,7 +136,7 @@ export default function PreApproveGuestScreen() {
 
           <Text className="mb-2 text-sm font-medium text-slate-700">Purpose</Text>
           <TextInput
-            className="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
+            className="mb-4 rounded-xl border border-slate-200 bg-surface-card px-4 py-3 text-base text-slate-900"
             placeholder="Dinner, overnight stay…"
             placeholderTextColor="#94A3B8"
             value={purpose}

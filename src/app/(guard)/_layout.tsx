@@ -1,7 +1,8 @@
 import { Tabs } from 'expo-router';
 import { ClipboardList, MoreHorizontal, ScanLine, ShieldCheck, UserPlus } from 'lucide-react-native';
 
-import { roleTabScreenOptions } from '@/constants/navigation';
+import { useResolvedColorScheme } from '@/hooks/use-resolved-color-scheme';
+import { getRoleTabScreenOptions } from '@/constants/navigation';
 
 function tabIcon(
   Icon: typeof ShieldCheck,
@@ -21,8 +22,10 @@ function tabIcon(
 }
 
 export default function GuardLayout() {
+  const scheme = useResolvedColorScheme();
+
   return (
-    <Tabs screenOptions={roleTabScreenOptions}>
+    <Tabs screenOptions={getRoleTabScreenOptions(scheme)}>
       <Tabs.Screen
         name="dashboard"
         options={{

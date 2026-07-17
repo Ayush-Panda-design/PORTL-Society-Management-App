@@ -2,7 +2,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
 import { Pressable, Text, View, type ViewProps } from 'react-native';
 
-import { Brand, FontFamily, Gradients } from '@/constants/theme';
+import { Brand, FontFamily, Gradients, getHeaderGradient } from '@/constants/theme';
+import { useResolvedColorScheme } from '@/hooks/use-resolved-color-scheme';
+import { useThemePalette } from '@/hooks/use-theme';
 
 type CardProps = ViewProps & {
   children: ReactNode;
@@ -10,15 +12,17 @@ type CardProps = ViewProps & {
 };
 
 export function AppCard({ children, className = '', style, ...rest }: CardProps) {
+  const palette = useThemePalette();
+
   return (
     <View
       {...rest}
-      className={`rounded-2xl border border-surface-border bg-white p-4 ${className}`}
+      className={`rounded-2xl border border-surface-border bg-surface-card p-4 ${className}`}
       style={[
         {
-          shadowColor: '#0F172A',
+          shadowColor: palette.shadow,
           shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.06,
+          shadowOpacity: palette.isDark ? 0.4 : 0.06,
           shadowRadius: 12,
           elevation: 2,
         },
@@ -69,8 +73,10 @@ type HeaderWashProps = {
 };
 
 export function HeaderWash({ children }: HeaderWashProps) {
+  const scheme = useResolvedColorScheme();
+
   return (
-    <LinearGradient colors={[...Gradients.header]} style={{ flex: 1 }}>
+    <LinearGradient colors={[...getHeaderGradient(scheme)]} style={{ flex: 1 }}>
       {children}
     </LinearGradient>
   );
@@ -86,8 +92,8 @@ export function InitialsAvatar({
   seed?: string;
 }) {
   const initial = (name?.trim()?.charAt(0) || '?').toUpperCase();
-  const palette = [Brand.primary, Brand.primaryDark, Brand.accent, '#0D9488', '#2563EB'];
-  const index = (seed ?? name).split('').reduce((a, c) => a + c.charCodeAt(0), 0) % palette.length;
+  const colors = [Brand.primary, Brand.primaryDark, Brand.accent, '#0D9488', '#2563EB'];
+  const index = (seed ?? name).split('').reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length;
 
   return (
     <View
@@ -95,7 +101,7 @@ export function InitialsAvatar({
         width: size,
         height: size,
         borderRadius: size / 2,
-        backgroundColor: palette[index],
+        backgroundColor: colors[index],
         alignItems: 'center',
         justifyContent: 'center',
       }}
@@ -124,14 +130,16 @@ export function PressableActionTile({
   icon: ReactNode;
   onPress: () => void;
 }) {
+  const palette = useThemePalette();
+
   return (
     <Pressable
       onPress={onPress}
-      className="mb-3 overflow-hidden rounded-2xl border border-surface-border bg-white"
+      className="mb-3 overflow-hidden rounded-2xl border border-surface-border bg-surface-card"
       style={{
-        shadowColor: '#0F172A',
+        shadowColor: palette.shadow,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.06,
+        shadowOpacity: palette.isDark ? 0.4 : 0.06,
         shadowRadius: 12,
         elevation: 2,
       }}

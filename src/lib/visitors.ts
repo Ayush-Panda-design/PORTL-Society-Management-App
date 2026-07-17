@@ -194,3 +194,30 @@ export async function notifyGuardOfVisitorDecision(params: {
     },
   });
 }
+
+/** Approve or reject a pending visitor and notify the creating guard. */
+export async function updateVisitorStatus(params: {
+  visitorId: string;
+  flatId: string;
+  status: 'approved' | 'rejected';
+  createdBy?: string | null;
+  visitorName?: string;
+}): Promise<{ error: string | null }> {
+  const { error } = await supabase
+    .from('visitors')
+    .update({ status: params.status })
+    .eq('id', params.visitorId)
+    .eq('flat_id', params.flatId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  void notifyGuardOfVisitorDecision({
+    createdBy: params.createdBy ?? null,
+    visitorName: params.visitorName ?? 'Visitor',
+    status: params.status,
+  });
+
+  return { error: null };
+}

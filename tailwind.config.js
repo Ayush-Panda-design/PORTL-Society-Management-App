@@ -2,12 +2,13 @@
 module.exports = {
   content: ['./src/**/*.{js,jsx,ts,tsx}'],
   presets: [require('nativewind/preset')],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
         brand: {
-          50: '#F0FDFA',
-          100: '#CCFBF1',
+          50: 'var(--color-brand-soft-bg)',
+          100: 'var(--color-brand-soft)',
           200: '#99F6E4',
           300: '#5EEAD4',
           400: '#2DD4BF',
@@ -19,7 +20,7 @@ module.exports = {
           950: '#042F2E',
         },
         accent: {
-          50: '#FFF7ED',
+          50: 'var(--color-accent-soft)',
           100: '#FFEDD5',
           200: '#FED7AA',
           300: '#FDBA74',
@@ -30,27 +31,27 @@ module.exports = {
         },
         status: {
           approved: '#059669',
-          approvedSoft: '#ECFDF5',
+          approvedSoft: 'var(--color-status-approved-soft)',
           pending: '#D97706',
-          pendingSoft: '#FFFBEB',
+          pendingSoft: 'var(--color-status-pending-soft)',
           rejected: '#DC2626',
-          rejectedSoft: '#FEF2F2',
+          rejectedSoft: 'var(--color-status-rejected-soft)',
           info: '#2563EB',
-          infoSoft: '#EFF6FF',
+          infoSoft: 'var(--color-status-info-soft)',
           entry: '#059669',
           exit: '#DC2626',
         },
         surface: {
-          DEFAULT: '#F7FAFC',
-          card: '#FFFFFF',
-          muted: '#EEF2F6',
-          border: '#E2E8F0',
+          DEFAULT: 'var(--color-surface)',
+          card: 'var(--color-surface-card)',
+          muted: 'var(--color-surface-muted)',
+          border: 'var(--color-surface-border)',
         },
         ink: {
-          DEFAULT: '#0F172A',
-          soft: '#334155',
-          muted: '#64748B',
-          faint: '#94A3B8',
+          DEFAULT: 'var(--color-ink)',
+          soft: 'var(--color-ink-soft)',
+          muted: 'var(--color-ink-muted)',
+          faint: 'var(--color-ink-faint)',
         },
       },
       fontFamily: {

@@ -118,7 +118,7 @@ export default function AdminComplaintsScreen() {
           renderItem={({ item }) => {
             const tone = complaintStatusTone(item.status);
             return (
-              <View className="rounded-2xl border border-slate-200 bg-white p-4">
+              <View className="rounded-2xl border border-slate-200 bg-surface-card p-4">
                 <View className="mb-1 flex-row justify-between gap-2">
                   <Text className="flex-1 text-base font-semibold text-slate-900">
                     {item.category}

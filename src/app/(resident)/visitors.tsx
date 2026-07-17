@@ -11,8 +11,7 @@ import { VisitorCard } from '@/components/visitors/visitor-card';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { Brand } from '@/constants/theme';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
-import { supabase } from '@/lib/supabase';
-import { notifyGuardOfVisitorDecision } from '@/lib/visitors';
+import { updateVisitorStatus } from '@/lib/visitors';
 import { useAuthStore } from '@/stores/authStore';
 
 export default function ResidentVisitorsScreen() {
@@ -35,28 +34,25 @@ export default function ResidentVisitorsScreen() {
   }, [refresh]);
 
   const updateStatus = async (visitorId: string, status: 'approved' | 'rejected') => {
+    if (!profile?.flat_id) return;
+
     setActionId(visitorId);
     setActionError(null);
 
     const visitor = visitors.find((v) => v.id === visitorId);
 
     try {
-      const { error: updateError } = await supabase
-        .from('visitors')
-        .update({ status })
-        .eq('id', visitorId)
-        .eq('flat_id', profile?.flat_id ?? '');
+      const { error: updateError } = await updateVisitorStatus({
+        visitorId,
+        flatId: profile.flat_id,
+        status,
+        createdBy: visitor?.created_by,
+        visitorName: visitor?.name,
+      });
 
       if (updateError) {
-        setActionError(updateError.message);
-        return;
+        setActionError(updateError);
       }
-
-      void notifyGuardOfVisitorDecision({
-        createdBy: visitor?.created_by ?? null,
-        visitorName: visitor?.name ?? 'Visitor',
-        status,
-      });
     } catch (e) {
       setActionError(e instanceof Error ? e.message : 'Failed to update request');
     } finally {
@@ -85,7 +81,7 @@ export default function ResidentVisitorsScreen() {
         <View className="flex-row gap-2">
           <Pressable
             onPress={() => router.push('/(resident)/visitor-history')}
-            className="h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white"
+            className="h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-surface-card"
           >
             <History color="#64748B" size={18} />
           </Pressable>

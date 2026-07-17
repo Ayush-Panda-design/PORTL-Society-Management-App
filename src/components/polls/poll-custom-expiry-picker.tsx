@@ -106,7 +106,7 @@ export function PollCustomExpiryPicker({ value, onChange }: Props) {
       <View className="flex-row gap-2">
         <Pressable
           onPress={() => setAndroidMode('date')}
-          className="flex-1 flex-row items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3"
+          className="flex-1 flex-row items-center gap-2 rounded-xl border border-slate-200 bg-surface-card px-4 py-3"
         >
           <Calendar color={Brand.primary} size={18} />
           <View className="min-w-0 flex-1">
@@ -129,7 +129,7 @@ export function PollCustomExpiryPicker({ value, onChange }: Props) {
 
         <Pressable
           onPress={() => setAndroidMode('time')}
-          className="flex-1 flex-row items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3"
+          className="flex-1 flex-row items-center gap-2 rounded-xl border border-slate-200 bg-surface-card px-4 py-3"
         >
           <Clock color={Brand.primary} size={18} />
           <View className="min-w-0 flex-1">

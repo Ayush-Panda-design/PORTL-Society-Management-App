@@ -14,7 +14,8 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
-import { Brand, FontFamily } from '@/constants/theme';
+import { FontFamily } from '@/constants/theme';
+import { useThemePalette } from '@/hooks/use-theme';
 
 export type SegmentOption<T extends string = string> = {
   value: T;
@@ -29,7 +30,7 @@ type Props<T extends string> = {
   className?: string;
 };
 
-/** iOS-style: muted track + elevated white thumb (not a brand paint fill). */
+/** iOS-style: muted track + elevated thumb — Instagram/WhatsApp appearance picker feel. */
 const SPRING = { damping: 20, stiffness: 260, mass: 0.65 };
 const INSET = 3;
 
@@ -40,6 +41,7 @@ export function SegmentedControl<T extends string>({
   style,
   className = '',
 }: Props<T>) {
+  const palette = useThemePalette();
   const [trackWidth, setTrackWidth] = useState(0);
   const index = Math.max(
     0,
@@ -74,8 +76,8 @@ export function SegmentedControl<T extends string>({
 
   return (
     <View
-      className={`h-11 flex-row rounded-[12px] bg-[#E8EDF2] ${className}`}
-      style={[{ padding: INSET }, style]}
+      className={`h-11 flex-row rounded-[12px] ${className}`}
+      style={[{ padding: INSET, backgroundColor: palette.segmentTrack }, style]}
       onLayout={onTrackLayout}
     >
       {segmentWidth > 0 ? (
@@ -88,10 +90,10 @@ export function SegmentedControl<T extends string>({
               bottom: INSET,
               left: 0,
               borderRadius: 10,
-              backgroundColor: '#FFFFFF',
-              shadowColor: '#0F172A',
+              backgroundColor: palette.card,
+              shadowColor: palette.shadow,
               shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.1,
+              shadowOpacity: palette.isDark ? 0.35 : 0.1,
               shadowRadius: 3,
               elevation: 2,
             },
@@ -116,7 +118,7 @@ export function SegmentedControl<T extends string>({
               style={{
                 fontFamily: selected ? FontFamily.heading : FontFamily.medium,
                 fontSize: 13,
-                color: selected ? Brand.ink : Brand.inkMuted,
+                color: selected ? palette.ink : palette.inkMuted,
               }}
             >
               {option.label}

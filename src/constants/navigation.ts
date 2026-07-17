@@ -1,16 +1,24 @@
 import type { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 
-import { Brand } from '@/constants/theme';
+import { Brand, getPalette } from '@/constants/theme';
 
 /** Shared tab navigator options — freezeOnBlur keeps scroll/form state when switching tabs. */
-export const roleTabScreenOptions: BottomTabNavigationOptions = {
-  headerShown: false,
-  lazy: true,
-  freezeOnBlur: true,
-  tabBarActiveTintColor: Brand.primary,
-  tabBarInactiveTintColor: Brand.inkMuted,
-  tabBarStyle: {
-    backgroundColor: Brand.card,
-    borderTopColor: Brand.border,
-  },
-};
+export function getRoleTabScreenOptions(
+  scheme: 'light' | 'dark' = 'light',
+): BottomTabNavigationOptions {
+  const palette = getPalette(scheme);
+  return {
+    headerShown: false,
+    lazy: true,
+    freezeOnBlur: true,
+    tabBarActiveTintColor: Brand.primary,
+    tabBarInactiveTintColor: palette.inkMuted,
+    tabBarStyle: {
+      backgroundColor: palette.card,
+      borderTopColor: palette.border,
+    },
+  };
+}
+
+/** @deprecated Prefer getRoleTabScreenOptions(scheme) for dark-mode awareness. */
+export const roleTabScreenOptions = getRoleTabScreenOptions('light');

@@ -8,12 +8,44 @@
   --color-brand-soft: #ccfbf1;
   --color-accent: #d97706;
   --color-surface: #f7fafc;
+  --color-surface-card: #ffffff;
+  --color-surface-muted: #eef2f6;
+  --color-surface-border: #e2e8f0;
   --color-ink: #0f172a;
+  --color-ink-soft: #334155;
   --color-ink-muted: #64748b;
+  --color-ink-faint: #94a3b8;
+  --color-brand-soft-bg: #f0fdfa;
+  --color-accent-soft: #fff7ed;
+  --color-status-approved-soft: #ecfdf5;
+  --color-status-pending-soft: #fffbeb;
+  --color-status-rejected-soft: #fef2f2;
+  --color-status-info-soft: #eff6ff;
+  --color-segment-track: #e8edf2;
   --color-border: #e2e8f0;
   --font-display: 'Manrope', ui-sans-serif, system-ui, sans-serif;
   --font-body: 'Manrope', ui-sans-serif, system-ui, sans-serif;
   --font-mono:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
   --font-serif: Georgia, 'Times New Roman', serif;
+}
+
+.dark {
+  --color-surface: #0a0a0a;
+  --color-surface-card: #161616;
+  --color-surface-muted: #1c1c1e;
+  --color-surface-border: #2a2a2a;
+  --color-ink: #f5f5f5;
+  --color-ink-soft: #e5e5e5;
+  --color-ink-muted: #a3a3a3;
+  --color-ink-faint: #737373;
+  --color-brand-soft-bg: #0d2f2c;
+  --color-brand-soft: #134e4a;
+  --color-accent-soft: #3d2a12;
+  --color-status-approved-soft: #0a2e22;
+  --color-status-pending-soft: #3d2a0a;
+  --color-status-rejected-soft: #3d1212;
+  --color-status-info-soft: #0a1e3d;
+  --color-segment-track: #262626;
+  --color-border: #2a2a2a;
 }

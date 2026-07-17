@@ -86,7 +86,7 @@ export function PollCreateForm({ onSubmit, onCancel, isSubmitting, error }: Prop
   const displayError = localError ?? error;
 
   return (
-    <View className="max-h-[92%] rounded-t-3xl bg-white pt-5">
+    <View className="max-h-[92%] rounded-t-3xl bg-surface-card pt-5">
       <View className="mb-3 items-center px-5">
         <View className="mb-3 h-1 w-10 rounded-full bg-slate-200" />
         <Text className="self-start text-xl text-slate-900" style={{ fontFamily: FontFamily.display }}>

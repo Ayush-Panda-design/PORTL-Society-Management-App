@@ -302,7 +302,7 @@ export default function AdminFlatsScreen() {
 
       <Modal visible={modalOpen} animationType="slide" transparent>
         <KeyboardAvoidingView behavior="padding" className="flex-1 justify-end bg-black/40">
-          <View className="max-h-[90%] rounded-t-3xl bg-white px-5 pb-10 pt-5">
+          <View className="max-h-[90%] rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
             <Text className="mb-4 text-xl font-bold text-slate-900">
               {editing ? 'Edit flat' : 'New flat'}
             </Text>

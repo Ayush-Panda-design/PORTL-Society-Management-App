@@ -18,6 +18,7 @@ import { VisitorSilhouette } from '@/components/illustrations';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { flatTowerName, notifyResidentOfVisitor } from '@/lib/visitors';
+import { uploadLocalImage } from '@/lib/storage-upload';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { FlatWithTower, VisitorType } from '@/types/database';
@@ -33,6 +34,8 @@ export default function RegisterVisitorScreen() {
   const [purpose, setPurpose] = useState('');
   const [type, setType] = useState<VisitorType>('guest');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoMimeType, setPhotoMimeType] = useState<string | null>(null);
+  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
   const [selectedFlat, setSelectedFlat] = useState<FlatWithTower | null>(null);
 
   const [flatQuery, setFlatQuery] = useState('');
@@ -100,13 +103,16 @@ export default function RegisterVisitorScreen() {
 
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
-      quality: 0.7,
+      quality: 0.6,
       allowsEditing: true,
       aspect: [1, 1],
+      base64: true,
     });
 
     if (!result.canceled && result.assets[0]) {
       setPhotoUri(result.assets[0].uri);
+      setPhotoMimeType(result.assets[0].mimeType ?? null);
+      setPhotoBase64(result.assets[0].base64 ?? null);
     }
   };
 
@@ -119,42 +125,36 @@ export default function RegisterVisitorScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      quality: 0.7,
+      quality: 0.6,
       allowsEditing: true,
       aspect: [1, 1],
+      base64: true,
     });
 
     if (!result.canceled && result.assets[0]) {
       setPhotoUri(result.assets[0].uri);
+      setPhotoMimeType(result.assets[0].mimeType ?? null);
+      setPhotoBase64(result.assets[0].base64 ?? null);
     }
   };
 
   const uploadPhoto = async (uri: string): Promise<string | null> => {
-    try {
-      const ext = uri.split('.').pop()?.toLowerCase() ?? 'jpg';
-      const path = `${profile?.society_id}/${Date.now()}.${ext}`;
+    if (!profile?.society_id) return null;
 
-      const response = await fetch(uri);
-      const blob = await response.blob();
+    const { publicUrl, error: uploadError } = await uploadLocalImage({
+      bucket: 'visitor-photos',
+      societyId: profile.society_id,
+      uri,
+      mimeType: photoMimeType,
+      base64: photoBase64,
+    });
 
-      const { error: uploadError } = await supabase.storage
-        .from('visitor-photos')
-        .upload(path, blob, {
-          contentType: blob.type || 'image/jpeg',
-          upsert: false,
-        });
-
-      if (uploadError) {
-        console.warn('Photo upload failed:', uploadError.message);
-        return null;
-      }
-
-      const { data } = supabase.storage.from('visitor-photos').getPublicUrl(path);
-      return data.publicUrl;
-    } catch (e) {
-      console.warn('Photo upload error:', e);
-      return null;
+    if (uploadError) {
+      console.warn('Photo upload failed:', uploadError);
+      throw new Error(uploadError);
     }
+
+    return publicUrl;
   };
 
   const resetForm = () => {
@@ -163,6 +163,8 @@ export default function RegisterVisitorScreen() {
     setPurpose('');
     setType('guest');
     setPhotoUri(null);
+    setPhotoMimeType(null);
+    setPhotoBase64(null);
     setSelectedFlat(null);
     setFlatQuery('');
     setFlatResults([]);
@@ -190,7 +192,16 @@ export default function RegisterVisitorScreen() {
     try {
       let photoUrl: string | null = null;
       if (photoUri) {
-        photoUrl = await uploadPhoto(photoUri);
+        try {
+          photoUrl = await uploadPhoto(photoUri);
+        } catch (uploadErr) {
+          setError(
+            uploadErr instanceof Error
+              ? `Photo upload failed: ${uploadErr.message}`
+              : 'Photo upload failed. Remove the photo or try again.',
+          );
+          return;
+        }
       }
 
       const { data, error: insertError } = await supabase
@@ -282,14 +293,18 @@ export default function RegisterVisitorScreen() {
               </Pressable>
               <Pressable
                 onPress={pickFromLibrary}
-                className="items-center rounded-xl border border-slate-200 bg-white py-2.5"
+                className="items-center rounded-xl border border-slate-200 bg-surface-card py-2.5"
               >
                 <Text className="text-sm font-semibold text-slate-700">Choose from gallery</Text>
               </Pressable>
             </View>
             {photoUri ? (
               <Pressable
-                onPress={() => setPhotoUri(null)}
+                onPress={() => {
+                  setPhotoUri(null);
+                  setPhotoMimeType(null);
+                  setPhotoBase64(null);
+                }}
                 className="h-9 w-9 items-center justify-center rounded-full bg-slate-200"
               >
                 <X color="#475569" size={16} />
@@ -299,7 +314,7 @@ export default function RegisterVisitorScreen() {
 
           <Field label="Name">
             <TextInput
-              className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
+              className="rounded-xl border border-slate-200 bg-surface-card px-4 py-3 text-base text-slate-900"
               placeholder="Visitor name"
               placeholderTextColor="#94A3B8"
               value={name}
@@ -309,7 +324,7 @@ export default function RegisterVisitorScreen() {
 
           <Field label="Phone">
             <TextInput
-              className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
+              className="rounded-xl border border-slate-200 bg-surface-card px-4 py-3 text-base text-slate-900"
               placeholder="Optional"
               placeholderTextColor="#94A3B8"
               keyboardType="phone-pad"
@@ -320,7 +335,7 @@ export default function RegisterVisitorScreen() {
 
           <Field label="Purpose">
             <TextInput
-              className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900"
+              className="rounded-xl border border-slate-200 bg-surface-card px-4 py-3 text-base text-slate-900"
               placeholder="Meeting, delivery, etc."
               placeholderTextColor="#94A3B8"
               value={purpose}
@@ -352,7 +367,7 @@ export default function RegisterVisitorScreen() {
             </View>
           ) : (
             <View className="mb-4">
-              <View className="mb-2 flex-row items-center rounded-xl border border-slate-200 bg-white px-3">
+              <View className="mb-2 flex-row items-center rounded-xl border border-slate-200 bg-surface-card px-3">
                 <Search color="#94A3B8" size={18} />
                 <TextInput
                   className="ml-2 flex-1 py-3 text-base text-slate-900"
@@ -365,7 +380,7 @@ export default function RegisterVisitorScreen() {
                 {searchingFlats ? <ActivityIndicator color={Brand.primary} /> : null}
               </View>
               {flatResults.length > 0 ? (
-                <View className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                <View className="overflow-hidden rounded-xl border border-slate-200 bg-surface-card">
                   <FlatList
                     data={flatResults}
                     keyExtractor={(item) => item.id}

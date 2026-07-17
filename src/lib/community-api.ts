@@ -1,5 +1,6 @@
 import { parseJsonStringArray } from '@/lib/community';
 import { invokeSendPush } from '@/lib/push-notifications';
+import { uploadLocalImage } from '@/lib/storage-upload';
 import { supabase } from '@/lib/supabase';
 import type {
   AdminDashboardStats,
@@ -13,6 +14,7 @@ import type {
   Notice,
   Poll,
   PollVote,
+  PollVoteWithProfile,
   Profile,
   ProfileWithFlat,
   StaffMember,
@@ -136,6 +138,73 @@ export async function fetchVotesForPolls(pollIds: string[]): Promise<PollVote[]>
   return (data as PollVote[]) ?? [];
 }
 
+type PollVoteProfileRow = PollVote & {
+  profiles: PollVoteWithProfile['profile'];
+};
+
+export async function fetchPollVotesWithProfiles(
+  pollIds: string[],
+): Promise<PollVoteWithProfile[]> {
+  if (pollIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('poll_votes')
+    .select(
+      `
+      id,
+      poll_id,
+      user_id,
+      option,
+      profiles (
+        full_name,
+        flats (
+          number,
+          towers (
+            name
+          )
+        )
+      )
+    `,
+    )
+    .in('poll_id', pollIds);
+
+  if (error) throw new Error(error.message);
+
+  return ((data as unknown as PollVoteProfileRow[]) ?? []).map((row) => {
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] ?? null : row.profiles;
+    const flats = profile?.flats;
+    if (!flats) {
+      return {
+        id: row.id,
+        poll_id: row.poll_id,
+        user_id: row.user_id,
+        option: row.option,
+        profile,
+      };
+    }
+
+    const flat = Array.isArray(flats) ? flats[0] ?? null : flats;
+    if (!flat) {
+      return {
+        id: row.id,
+        poll_id: row.poll_id,
+        user_id: row.user_id,
+        option: row.option,
+        profile: profile ? { ...profile, flats: null } : null,
+      };
+    }
+
+    const towers = Array.isArray(flat.towers) ? flat.towers[0] ?? null : flat.towers;
+    return {
+      id: row.id,
+      poll_id: row.poll_id,
+      user_id: row.user_id,
+      option: row.option,
+      profile: profile ? { ...profile, flats: { ...flat, towers } } : null,
+    };
+  });
+}
+
 export async function createPoll(input: {
   societyId: string;
   question: string;
@@ -153,16 +222,21 @@ export async function createPoll(input: {
   if (error) throw new Error(error.message);
 }
 
-export async function castVote(input: {
-  pollId: string;
-  userId: string;
-  option: string;
-}): Promise<void> {
-  const { error } = await supabase.from('poll_votes').insert({
-    poll_id: input.pollId,
-    user_id: input.userId,
-    option: input.option,
-  });
+export async function castVote(input: { pollId: string; option: string }): Promise<void> {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) throw new Error('You must be signed in to vote.');
+
+  const { error } = await supabase.from('poll_votes').upsert(
+    {
+      poll_id: input.pollId,
+      user_id: user.id,
+      option: input.option,
+    },
+    { onConflict: 'poll_id,user_id' },
+  );
   if (error) throw new Error(error.message);
 }
 
@@ -555,24 +629,12 @@ async function uploadPublicImage(
   societyId: string,
   uri: string,
 ): Promise<string | null> {
-  try {
-    const ext = uri.split('.').pop()?.toLowerCase() ?? 'jpg';
-    const path = `${societyId}/${Date.now()}.${ext}`;
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    const { error } = await supabase.storage.from(bucket).upload(path, blob, {
-      contentType: blob.type || 'image/jpeg',
-      upsert: false,
-    });
-    if (error) {
-      console.warn(`${bucket} upload failed:`, error.message);
-      return null;
-    }
-    return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
-  } catch (e) {
-    console.warn(`${bucket} upload error:`, e);
+  const { publicUrl, error } = await uploadLocalImage({ bucket, societyId, uri });
+  if (error) {
+    console.warn(`${bucket} upload failed:`, error);
     return null;
   }
+  return publicUrl;
 }
 
 export async function uploadStaffPhoto(

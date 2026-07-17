@@ -49,7 +49,7 @@ export function VisitorCard({ visitor, actions, showStatus = true }: Props) {
 
   return (
     <View
-      className="rounded-2xl border border-surface-border bg-white p-4"
+      className="rounded-2xl border border-surface-border bg-surface-card p-4"
       style={{
         shadowColor: '#0F172A',
         shadowOffset: { width: 0, height: 4 },
