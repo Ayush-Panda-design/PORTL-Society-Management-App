@@ -17,6 +17,7 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { AppCard } from '@/components/ui/brand';
 import { ChipSelector } from '@/components/ui/chip-selector';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { SearchField } from '@/components/ui/search-field';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
@@ -39,6 +40,7 @@ export default function AdminFlatsScreen() {
   const towersKey = queryKeys.towers(societyId ?? 'none');
 
   const [towerFilter, setTowerFilter] = useState(params.towerId ?? 'all');
+  const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<FlatWithTower | null>(null);
   const [towerId, setTowerId] = useState('');
@@ -58,10 +60,18 @@ export default function AdminFlatsScreen() {
   });
 
   const filtered = useMemo(() => {
-    const rows = listQuery.data ?? [];
-    if (towerFilter === 'all') return rows;
-    return rows.filter((f) => f.tower_id === towerFilter);
-  }, [listQuery.data, towerFilter]);
+    let rows = listQuery.data ?? [];
+    if (towerFilter !== 'all') {
+      rows = rows.filter((f) => f.tower_id === towerFilter);
+    }
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((f) => {
+      const tower = flatTowerName(f.towers) ?? '';
+      const haystack = `${f.number} ${tower}`.toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [listQuery.data, towerFilter, search]);
 
   const towerOptions = useMemo(
     () => [
@@ -226,6 +236,8 @@ export default function AdminFlatsScreen() {
         <Pressable
           onPress={openCreate}
           disabled={noTowers}
+          accessibilityRole="button"
+          accessibilityLabel="Add flat"
           className={`h-10 w-10 items-center justify-center rounded-full ${
             noTowers ? 'bg-slate-300' : 'bg-brand-700'
           }`}
@@ -241,6 +253,15 @@ export default function AdminFlatsScreen() {
           options={towerOptions}
           value={towerFilter}
           onChange={setTowerFilter}
+        />
+      </View>
+
+      <View className="px-4">
+        <SearchField
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search by flat number or tower"
+          accessibilityLabel="Search flats"
         />
       </View>
 
@@ -264,11 +285,16 @@ export default function AdminFlatsScreen() {
           ItemSeparatorComponent={() => <View className="h-3" />}
           refreshing={listQuery.isRefetching}
           onRefresh={() => void listQuery.refetch()}
+          keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <EmptyState
               visual="amenities"
-              title="No flats yet"
-              subtitle="Tap + to add flat numbers for a tower."
+              title={search.trim() ? 'No matches' : 'No flats yet'}
+              subtitle={
+                search.trim()
+                  ? 'Try a different flat number or tower.'
+                  : 'Tap + to add flat numbers for a tower.'
+              }
             />
           }
           renderItem={({ item }) => (

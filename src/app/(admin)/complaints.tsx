@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
 
+import { InitialsAvatar } from '@/components/ui/brand';
 import { ChipSelector } from '@/components/ui/chip-selector';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SegmentedControl } from '@/components/ui/segmented-control';
@@ -17,10 +18,12 @@ import {
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
 import { useCommunityUiStore } from '@/stores/communityUiStore';
+import { useReadStateStore } from '@/stores/readStateStore';
 import {
   COMPLAINT_CATEGORIES,
   COMPLAINT_STATUSES,
   type ComplaintStatus,
+  type ComplaintWithFlat,
 } from '@/types/database';
 
 export default function AdminComplaintsScreen() {
@@ -30,9 +33,13 @@ export default function AdminComplaintsScreen() {
   const categoryFilter = useCommunityUiStore((s) => s.complaintCategoryFilter);
   const setStatusFilter = useCommunityUiStore((s) => s.setComplaintStatusFilter);
   const setCategoryFilter = useCommunityUiStore((s) => s.setComplaintCategoryFilter);
+  const isComplaintUnread = useReadStateStore((s) => s.isComplaintUnread);
+  const markComplaintSeen = useReadStateStore((s) => s.markComplaintSeen);
+
+  const complaintsKey = queryKeys.complaints(`society:${societyId ?? 'none'}`);
 
   const listQuery = useQuery({
-    queryKey: queryKeys.complaints(`society:${societyId ?? 'none'}`),
+    queryKey: complaintsKey,
     queryFn: () => fetchComplaintsForSociety(),
     enabled: Boolean(societyId),
   });
@@ -45,7 +52,23 @@ export default function AdminComplaintsScreen() {
 
   const updateMutation = useMutation({
     mutationFn: updateComplaint,
-    onSuccess: async () => {
+    onMutate: async (input) => {
+      const key = queryKeys.complaints(`society:${societyId}`);
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<ComplaintWithFlat[]>(key);
+      queryClient.setQueryData<ComplaintWithFlat[]>(key, (old = []) =>
+        old.map((c) =>
+          c.id === input.id
+            ? { ...c, status: input.status, assigned_to: input.assignedTo }
+            : c,
+        ),
+      );
+      return { previous, key };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.previous && ctx.key) queryClient.setQueryData(ctx.key, ctx.previous);
+    },
+    onSettled: async () => {
       await queryClient.invalidateQueries({
         queryKey: queryKeys.complaints(`society:${societyId}`),
       });
@@ -117,12 +140,22 @@ export default function AdminComplaintsScreen() {
           }
           renderItem={({ item }) => {
             const tone = complaintStatusTone(item.status);
+            const unread = isComplaintUnread(item.id);
             return (
-              <View className="rounded-2xl border border-slate-200 bg-surface-card p-4">
-                <View className="mb-1 flex-row justify-between gap-2">
-                  <Text className="flex-1 text-base font-semibold text-slate-900">
-                    {item.category}
-                  </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${item.category} complaint, Flat ${item.flats?.number ?? 'unknown'}, status ${tone.label}${unread ? ', unread' : ''}`}
+                onPress={() => markComplaintSeen(item.id)}
+                onFocus={() => markComplaintSeen(item.id)}
+                className="rounded-2xl border border-slate-200 bg-surface-card p-4"
+              >
+                <View className="mb-1 flex-row items-center justify-between gap-2">
+                  <View className="flex-1 flex-row items-center gap-2">
+                    <InitialsAvatar name={item.category} seed={item.id} size={32} hasUnread={unread} />
+                    <Text className="flex-1 text-base font-semibold text-slate-900">
+                      {item.category}
+                    </Text>
+                  </View>
                   <View className={`rounded-full border px-2 py-0.5 ${tone.bg} ${tone.border}`}>
                     <Text className={`text-xs font-medium ${tone.text}`}>{tone.label}</Text>
                   </View>
@@ -147,13 +180,14 @@ export default function AdminComplaintsScreen() {
                     label: s.label,
                   }))}
                   value={item.status}
-                  onChange={(status) =>
+                  onChange={(status) => {
+                    markComplaintSeen(item.id);
                     updateMutation.mutate({
                       id: item.id,
                       status,
                       assignedTo: item.assigned_to,
-                    })
-                  }
+                    });
+                  }}
                 />
 
                 <Text className="mb-2 text-xs font-semibold uppercase text-slate-500">
@@ -170,15 +204,16 @@ export default function AdminComplaintsScreen() {
                     })),
                   ]}
                   value={item.assigned_to ?? ''}
-                  onChange={(assignedTo) =>
+                  onChange={(assignedTo) => {
+                    markComplaintSeen(item.id);
                     updateMutation.mutate({
                       id: item.id,
                       status: item.status as ComplaintStatus,
                       assignedTo: assignedTo || null,
-                    })
-                  }
+                    });
+                  }}
                 />
-              </View>
+              </Pressable>
             );
           }}
         />

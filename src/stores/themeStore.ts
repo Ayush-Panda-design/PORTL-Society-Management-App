@@ -1,49 +1,10 @@
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
 import { create } from 'zustand';
-import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
+
+import { appStorage } from '@/lib/app-storage';
 
 /** Instagram / WhatsApp / iOS-style appearance preference. */
 export type ThemeMode = 'light' | 'dark' | 'system';
-
-/**
- * Uses expo-secure-store (already in the native binary) instead of AsyncStorage,
- * so theme prefs work in the current Expo dev client without a rebuild.
- */
-const themeStorage: StateStorage = {
-  getItem: (key) => {
-    if (Platform.OS === 'web') {
-      try {
-        return Promise.resolve(localStorage.getItem(key));
-      } catch {
-        return Promise.resolve(null);
-      }
-    }
-    return SecureStore.getItemAsync(key);
-  },
-  setItem: (key, value) => {
-    if (Platform.OS === 'web') {
-      try {
-        localStorage.setItem(key, value);
-      } catch {
-        // ignore quota / private mode
-      }
-      return Promise.resolve();
-    }
-    return SecureStore.setItemAsync(key, value);
-  },
-  removeItem: (key) => {
-    if (Platform.OS === 'web') {
-      try {
-        localStorage.removeItem(key);
-      } catch {
-        // ignore
-      }
-      return Promise.resolve();
-    }
-    return SecureStore.deleteItemAsync(key);
-  },
-};
 
 type ThemeState = {
   mode: ThemeMode;
@@ -63,7 +24,7 @@ export const useThemeStore = create<ThemeState>()(
     }),
     {
       name: 'portl-theme',
-      storage: createJSONStorage(() => themeStorage),
+      storage: createJSONStorage(() => appStorage),
       partialize: (state) => ({ mode: state.mode }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);

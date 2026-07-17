@@ -1,17 +1,21 @@
 import { useCallback, useState } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { QrCode } from 'lucide-react-native';
 
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { VisitorCard } from '@/components/visitors/visitor-card';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
+import { Brand } from '@/constants/theme';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { useAuthStore } from '@/stores/authStore';
 
 export default function GuardDashboard() {
   const profile = useAuthStore((s) => s.profile);
+  const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
 
   const { visitors, isLoading, error, refresh } = useVisitorsRealtime({
@@ -39,12 +43,20 @@ export default function GuardDashboard() {
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
-      <View className="px-4 pb-2 pt-3">
-        <Text className="text-2xl font-bold text-slate-900">Pending</Text>
-        <Text className="text-sm text-slate-500">
-          Waiting for resident approval · live
-        </Text>
+      <View className="flex-row items-center justify-between px-4 pb-2 pt-3">
+        <View className="flex-1">
+          <Text className="text-2xl font-bold text-slate-900">Pending</Text>
+          <Text className="text-sm text-slate-500">Waiting for resident approval</Text>
+        </View>
       </View>
+
+      <Pressable
+        onPress={() => router.push('/(guard)/scan-pass')}
+        className="mx-4 mb-3 flex-row items-center justify-center gap-2 rounded-xl border border-brand-200 bg-brand-50 py-3"
+      >
+        <QrCode color={Brand.primary} size={18} />
+        <Text className="text-sm font-semibold text-brand-800">Scan QR Pass</Text>
+      </Pressable>
 
       {error ? <ErrorBanner message={error} onRetry={refresh} /> : null}
 

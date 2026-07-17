@@ -13,6 +13,7 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { AppCard, InitialsAvatar } from '@/components/ui/brand';
 import { ChipSelector } from '@/components/ui/chip-selector';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { SearchField } from '@/components/ui/search-field';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
@@ -32,11 +33,21 @@ function flatLabel(profile: ProfileWithFlat): string {
   return tower ? `${tower} · Flat ${profile.flats.number}` : `Flat ${profile.flats.number}`;
 }
 
+function matchesSearch(profile: ProfileWithFlat, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const haystack = [profile.full_name ?? '', profile.phone ?? '', flatLabel(profile)]
+    .join(' ')
+    .toLowerCase();
+  return haystack.includes(q);
+}
+
 export default function AdminResidentsScreen() {
   const societyId = useAuthStore((s) => s.profile?.society_id);
   const queryClient = useQueryClient();
   const residentsKey = queryKeys.residents(societyId ?? 'none');
 
+  const [search, setSearch] = useState('');
   const [assignOpen, setAssignOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selected, setSelected] = useState<ProfileWithFlat | null>(null);
@@ -67,6 +78,11 @@ export default function AdminResidentsScreen() {
       }),
     ],
     [flatsQuery.data],
+  );
+
+  const filtered = useMemo(
+    () => (listQuery.data ?? []).filter((p) => matchesSearch(p, search)),
+    [listQuery.data, search],
   );
 
   const assignMutation = useMutation({
@@ -165,6 +181,15 @@ export default function AdminResidentsScreen() {
 
   return (
     <ScreenHeader title="Residents" subtitle="Assign members to flats">
+      <View className="px-4">
+        <SearchField
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search by name, phone, or flat"
+          accessibilityLabel="Search residents"
+        />
+      </View>
+
       {listQuery.error ? (
         <ErrorBanner message={listQuery.error.message} onRetry={() => void listQuery.refetch()} />
       ) : null}
@@ -173,26 +198,37 @@ export default function AdminResidentsScreen() {
         <SkeletonList count={5} />
       ) : (
         <FlatList
-          data={listQuery.data ?? []}
+          data={filtered}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
           ItemSeparatorComponent={() => <View className="h-3" />}
           refreshing={listQuery.isRefetching}
           onRefresh={() => void listQuery.refetch()}
+          keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <EmptyState
               visual="visitors"
-              title="No residents yet"
-              subtitle="Residents appear here after they sign up with the resident role."
+              title={search.trim() ? 'No matches' : 'No residents yet'}
+              subtitle={
+                search.trim()
+                  ? 'Try a different name, phone, or flat.'
+                  : 'Residents appear here after they sign up with the resident role.'
+              }
             />
           }
           renderItem={({ item }) => (
             <AppCard>
-              <Pressable onPress={() => openDetail(item)} className="flex-row items-center gap-3">
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`View ${item.full_name ?? 'resident'} profile`}
+                onPress={() => openDetail(item)}
+                className="flex-row items-center gap-3"
+              >
                 <InitialsAvatar
                   name={item.full_name ?? 'Resident'}
                   seed={item.id}
                   size={44}
+                  hasUnread={!item.flat_id}
                 />
                 <View className="min-w-0 flex-1">
                   <Text className="text-base font-semibold text-ink" numberOfLines={1}>
@@ -207,6 +243,12 @@ export default function AdminResidentsScreen() {
                 </View>
               </Pressable>
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={
+                  item.flat_id
+                    ? `Reassign flat for ${item.full_name ?? 'resident'}`
+                    : `Assign flat for ${item.full_name ?? 'resident'}`
+                }
                 onPress={() => openAssign(item)}
                 className="mt-3 items-center rounded-xl border border-surface-border py-2.5"
               >
@@ -221,7 +263,12 @@ export default function AdminResidentsScreen() {
 
       <Modal visible={detailOpen} animationType="slide" transparent>
         <View className="flex-1 justify-end bg-black/40">
-          <Pressable className="absolute inset-0" onPress={() => setDetailOpen(false)} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close profile"
+            className="absolute inset-0"
+            onPress={() => setDetailOpen(false)}
+          />
           <View className="rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
             <View className="mb-4 items-center">
               <View className="mb-3 h-1 w-10 rounded-full bg-slate-200" />
@@ -251,12 +298,16 @@ export default function AdminResidentsScreen() {
 
             <View className="flex-row gap-2">
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close"
                 onPress={() => setDetailOpen(false)}
                 className="flex-1 items-center rounded-xl border border-slate-200 py-3"
               >
                 <Text className="font-semibold text-slate-700">Close</Text>
               </Pressable>
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Assign flat"
                 onPress={() => {
                   if (!selected) return;
                   setDetailOpen(false);
@@ -302,12 +353,16 @@ export default function AdminResidentsScreen() {
 
             <View className="flex-row gap-2">
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Cancel"
                 onPress={() => setAssignOpen(false)}
                 className="flex-1 items-center rounded-xl border border-slate-200 py-3"
               >
                 <Text className="font-semibold text-slate-700">Cancel</Text>
               </Pressable>
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Save flat assignment"
                 onPress={() => assignMutation.mutate()}
                 disabled={assignMutation.isPending || (flatsQuery.data?.length ?? 0) === 0}
                 className="flex-1 items-center rounded-xl bg-brand-700 py-3"

@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
-import { AppCard } from '@/components/ui/brand';
+import { AppCard, InitialsAvatar } from '@/components/ui/brand';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
@@ -25,6 +25,7 @@ import { deleteNotice, fetchNotices, uploadNoticeCover, upsertNotice } from '@/l
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
 import { useCommunityUiStore } from '@/stores/communityUiStore';
+import { useReadStateStore } from '@/stores/readStateStore';
 import type { Notice } from '@/types/database';
 
 export default function AdminNoticesScreen() {
@@ -34,6 +35,8 @@ export default function AdminNoticesScreen() {
   const queryClient = useQueryClient();
   const editingNoticeId = useCommunityUiStore((s) => s.editingNoticeId);
   const setEditingNoticeId = useCommunityUiStore((s) => s.setEditingNoticeId);
+  const isNoticeUnread = useReadStateStore((s) => s.isNoticeUnread);
+  const markNoticeSeen = useReadStateStore((s) => s.markNoticeSeen);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [title, setTitle] = useState('');
@@ -42,8 +45,10 @@ export default function AdminNoticesScreen() {
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const noticesKey = queryKeys.notices(societyId ?? 'none');
+
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
-    queryKey: queryKeys.notices(societyId ?? 'none'),
+    queryKey: noticesKey,
     queryFn: () => fetchNotices(societyId!),
     enabled: Boolean(societyId),
   });
@@ -72,17 +77,44 @@ export default function AdminNoticesScreen() {
         coverUrl: nextCover,
       });
     },
+    onMutate: async () => {
+      if (!editingNoticeId) return { previous: undefined };
+      await queryClient.cancelQueries({ queryKey: noticesKey });
+      const previous = queryClient.getQueryData<Notice[]>(noticesKey);
+      queryClient.setQueryData<Notice[]>(noticesKey, (old = []) =>
+        old.map((n) =>
+          n.id === editingNoticeId
+            ? { ...n, title: title.trim(), body: body.trim(), cover_url: coverUri ?? n.cover_url }
+            : n,
+        ),
+      );
+      return { previous };
+    },
+    onError: (e: Error, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(noticesKey, context.previous);
+      setFormError(e.message);
+    },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.notices(societyId!) });
+      await queryClient.invalidateQueries({ queryKey: noticesKey });
       closeModal();
     },
-    onError: (e: Error) => setFormError(e.message),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteNotice(id),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.notices(societyId!) });
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: noticesKey });
+      const previous = queryClient.getQueryData<Notice[]>(noticesKey);
+      queryClient.setQueryData<Notice[]>(noticesKey, (old = []) =>
+        old.filter((n) => n.id !== id),
+      );
+      return { previous };
+    },
+    onError: (_e: Error, _id, context) => {
+      if (context?.previous) queryClient.setQueryData(noticesKey, context.previous);
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: noticesKey });
     },
   });
 
@@ -97,6 +129,7 @@ export default function AdminNoticesScreen() {
   };
 
   const openEdit = (notice: Notice) => {
+    markNoticeSeen(notice.id);
     setEditingNoticeId(notice.id);
     setTitle(notice.title);
     setBody(notice.body);
@@ -143,6 +176,8 @@ export default function AdminNoticesScreen() {
       subtitle="Create and manage announcements"
       right={
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Add notice"
           onPress={openCreate}
           className="h-10 w-10 items-center justify-center rounded-full bg-brand-700"
         >
@@ -172,38 +207,60 @@ export default function AdminNoticesScreen() {
               subtitle="Tap + to post the first society notice."
             />
           }
-          renderItem={({ item }) => (
-            <AppCard className="overflow-hidden p-0">
-              {item.cover_url ? (
-                <Image
-                  source={{ uri: item.cover_url }}
-                  style={{ width: '100%', height: 120 }}
-                  contentFit="cover"
-                />
-              ) : null}
-              <View className="p-4">
-                <Text className="mb-1 text-base font-semibold text-ink">{item.title}</Text>
-                <Text className="mb-3 text-sm text-ink-soft">{item.body}</Text>
-                <Text className="mb-3 text-xs text-ink-faint">
-                  {formatNoticeDate(item.created_at)}
-                </Text>
-                <View className="flex-row gap-2">
+          renderItem={({ item }) => {
+            const unread = isNoticeUnread(item.id);
+            return (
+              <AppCard className="overflow-hidden p-0">
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.title} notice${unread ? ', unread' : ''}`}
+                  onPress={() => markNoticeSeen(item.id)}
+                  onFocus={() => markNoticeSeen(item.id)}
+                >
+                  {item.cover_url ? (
+                    <Image
+                      source={{ uri: item.cover_url }}
+                      style={{ width: '100%', height: 120 }}
+                      contentFit="cover"
+                    />
+                  ) : null}
+                  <View className="p-4">
+                    <View className="mb-1 flex-row items-center gap-2">
+                      <InitialsAvatar name={item.title} seed={item.id} size={32} hasUnread={unread} />
+                      <Text className="flex-1 text-base font-semibold text-ink" numberOfLines={1}>
+                        {item.title}
+                      </Text>
+                    </View>
+                    <Text className="mb-3 text-sm text-ink-soft">{item.body}</Text>
+                    <Text className="mb-3 text-xs text-ink-faint">
+                      {formatNoticeDate(item.created_at)}
+                    </Text>
+                  </View>
+                </Pressable>
+                <View className="flex-row gap-2 px-4 pb-4">
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Edit ${item.title}`}
                     onPress={() => openEdit(item)}
                     className="flex-1 items-center rounded-xl border border-surface-border py-2.5"
                   >
                     <Text className="text-sm font-semibold text-ink-soft">Edit</Text>
                   </Pressable>
                   <Pressable
-                    onPress={() => deleteMutation.mutate(item.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete ${item.title}`}
+                    onPress={() => {
+                      markNoticeSeen(item.id);
+                      deleteMutation.mutate(item.id);
+                    }}
                     className="flex-1 items-center rounded-xl bg-status-rejectedSoft py-2.5"
                   >
                     <Text className="text-sm font-semibold text-status-rejected">Delete</Text>
                   </Pressable>
                 </View>
-              </View>
-            </AppCard>
-          )}
+              </AppCard>
+            );
+          }}
         />
       )}
 
@@ -227,6 +284,8 @@ export default function AdminNoticesScreen() {
                     contentFit="cover"
                   />
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Remove cover image"
                     onPress={() => {
                       setCoverUri(null);
                       setCoverUrl(null);

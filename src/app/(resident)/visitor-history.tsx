@@ -10,9 +10,10 @@ import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { VisitorCard } from '@/components/visitors/visitor-card';
+import { QRCodeModal } from '@/components/visitors/qr-code-modal';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { useAuthStore } from '@/stores/authStore';
-import type { VisitorStatus } from '@/types/database';
+import type { VisitorStatus, VisitorWithFlat } from '@/types/database';
 import { VISITOR_STATUSES } from '@/types/database';
 
 export default function ResidentVisitorHistoryScreen() {
@@ -20,6 +21,7 @@ export default function ResidentVisitorHistoryScreen() {
   const profile = useAuthStore((s) => s.profile);
   const [statusFilter, setStatusFilter] = useState<VisitorStatus | 'all'>('all');
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedVisitor, setSelectedVisitor] = useState<VisitorWithFlat | null>(null);
 
   const statuses = useMemo(
     () => (statusFilter === 'all' ? undefined : [statusFilter]),
@@ -53,6 +55,8 @@ export default function ResidentVisitorHistoryScreen() {
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
       <View className="flex-row items-center gap-3 px-4 pb-2 pt-3">
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
           onPress={() => router.back()}
           className="h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-surface-card"
         >
@@ -96,9 +100,31 @@ export default function ResidentVisitorHistoryScreen() {
               subtitle="Approved, rejected, and checked-in guests will appear here."
             />
           }
-          renderItem={({ item }) => <VisitorCard visitor={item} />}
+          renderItem={({ item }) => (
+            <VisitorCard 
+              visitor={item} 
+              actions={
+                item.status === 'approved' 
+                  ? [
+                      {
+                        label: 'Show Pass',
+                        icon: 'qr-code',
+                        variant: 'primary',
+                        onPress: () => setSelectedVisitor(item),
+                      }
+                    ] 
+                  : undefined
+              }
+            />
+          )}
         />
       )}
+
+      <QRCodeModal 
+        visible={!!selectedVisitor} 
+        onClose={() => setSelectedVisitor(null)} 
+        visitor={selectedVisitor} 
+      />
     </SafeAreaView>
   );
 }

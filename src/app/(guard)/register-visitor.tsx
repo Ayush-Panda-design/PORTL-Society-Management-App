@@ -300,6 +300,8 @@ export default function RegisterVisitorScreen() {
             </View>
             {photoUri ? (
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Remove photo"
                 onPress={() => {
                   setPhotoUri(null);
                   setPhotoMimeType(null);

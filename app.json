@@ -46,7 +46,13 @@
           "defaultChannel": "default"
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Portl to access your camera to scan passes and take visitor photos."
+        }
+      ]
     ],
     "extra": {
       "eas": {

@@ -2,9 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { Plus, Trash2 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -14,8 +15,9 @@ import {
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
-import { AppCard, InitialsAvatar } from '@/components/ui/brand';
+import { AppCard, AvatarRing, InitialsAvatar } from '@/components/ui/brand';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { SearchField } from '@/components/ui/search-field';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
@@ -29,10 +31,19 @@ import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
 import type { StaffMember } from '@/types/database';
 
+function matchesSearch(item: StaffMember, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const haystack = [item.name, item.role, item.phone ?? ''].join(' ').toLowerCase();
+  return haystack.includes(q);
+}
+
 export default function AdminStaffScreen() {
   const societyId = useAuthStore((s) => s.profile?.society_id);
   const queryClient = useQueryClient();
+  const staffKey = queryKeys.staff(societyId ?? 'none');
 
+  const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<StaffMember | null>(null);
   const [name, setName] = useState('');
@@ -43,10 +54,15 @@ export default function AdminStaffScreen() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const listQuery = useQuery({
-    queryKey: queryKeys.staff(societyId ?? 'none'),
+    queryKey: staffKey,
     queryFn: () => fetchStaff(societyId!),
     enabled: Boolean(societyId),
   });
+
+  const filtered = useMemo(
+    () => (listQuery.data ?? []).filter((item) => matchesSearch(item, search)),
+    [listQuery.data, search],
+  );
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -67,19 +83,74 @@ export default function AdminStaffScreen() {
         photoUrl: nextPhoto,
       });
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.staff(societyId!) });
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: staffKey });
+      const previous = queryClient.getQueryData<StaffMember[]>(staffKey);
+      const trimmedName = name.trim();
+      const trimmedRole = role.trim();
+      if (!societyId || !trimmedName || !trimmedRole) return { previous };
+
+      if (editing) {
+        queryClient.setQueryData<StaffMember[]>(staffKey, (old = []) =>
+          old.map((s) =>
+            s.id === editing.id
+              ? {
+                  ...s,
+                  name: trimmedName,
+                  role: trimmedRole,
+                  phone: phone.trim() || null,
+                  photo_url: photoUrl ?? s.photo_url,
+                }
+              : s,
+          ),
+        );
+      } else {
+        const optimistic: StaffMember = {
+          id: `temp-${Date.now()}`,
+          society_id: societyId,
+          name: trimmedName,
+          role: trimmedRole,
+          phone: phone.trim() || null,
+          photo_url: photoUrl,
+        };
+        queryClient.setQueryData<StaffMember[]>(staffKey, (old = []) =>
+          [...old, optimistic].sort(
+            (a, b) => a.role.localeCompare(b.role) || a.name.localeCompare(b.name),
+          ),
+        );
+      }
+      return { previous };
+    },
+    onError: (e: Error, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(staffKey, context.previous);
+      setFormError(e.message);
+    },
+    onSuccess: () => {
       setModalOpen(false);
       setEditing(null);
       setFormError(null);
     },
-    onError: (e: Error) => setFormError(e.message),
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: staffKey });
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteStaff,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.staff(societyId!) });
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: staffKey });
+      const previous = queryClient.getQueryData<StaffMember[]>(staffKey);
+      queryClient.setQueryData<StaffMember[]>(staffKey, (old = []) =>
+        old.filter((s) => s.id !== id),
+      );
+      return { previous };
+    },
+    onError: (e: Error, _id, context) => {
+      if (context?.previous) queryClient.setQueryData(staffKey, context.previous);
+      Alert.alert('Could not delete staff member', e.message);
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: staffKey });
     },
   });
 
@@ -138,12 +209,23 @@ export default function AdminStaffScreen() {
       right={
         <Pressable
           onPress={openCreate}
+          accessibilityRole="button"
+          accessibilityLabel="Add staff member"
           className="h-10 w-10 items-center justify-center rounded-full bg-brand-700"
         >
           <Plus color="#fff" size={20} />
         </Pressable>
       }
     >
+      <View className="px-4">
+        <SearchField
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search by name, role, or phone"
+          accessibilityLabel="Search staff"
+        />
+      </View>
+
       {listQuery.error ? (
         <ErrorBanner message={listQuery.error.message} onRetry={() => void listQuery.refetch()} />
       ) : null}
@@ -152,29 +234,34 @@ export default function AdminStaffScreen() {
         <SkeletonList count={3} />
       ) : (
         <FlatList
-          data={listQuery.data ?? []}
+          data={filtered}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
           ItemSeparatorComponent={() => <View className="h-3" />}
           refreshing={listQuery.isRefetching}
           onRefresh={() => void listQuery.refetch()}
+          keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <EmptyState
               visual="helpdesk"
-              title="No staff yet"
-              subtitle="Tap + to add a contact."
+              title={search.trim() ? 'No matches' : 'No staff yet'}
+              subtitle={
+                search.trim()
+                  ? 'Try a different name, role, or phone.'
+                  : 'Tap + to add a contact.'
+              }
             />
           }
           renderItem={({ item }) => (
             <AppCard className="flex-row items-center gap-3 p-3">
               {item.photo_url ? (
-                <View className="h-12 w-12 overflow-hidden rounded-full bg-surface-muted">
+                <AvatarRing size={48}>
                   <Image
                     source={{ uri: item.photo_url }}
                     style={{ width: 48, height: 48 }}
                     contentFit="cover"
                   />
-                </View>
+                </AvatarRing>
               ) : (
                 <InitialsAvatar name={item.name} size={48} seed={item.id} />
               )}
@@ -185,10 +272,20 @@ export default function AdminStaffScreen() {
                   {item.phone ? ` · ${item.phone}` : ''}
                 </Text>
               </View>
-              <Pressable onPress={() => openEdit(item)} className="px-2 py-1">
+              <Pressable
+                onPress={() => openEdit(item)}
+                accessibilityRole="button"
+                accessibilityLabel={`Edit ${item.name}`}
+                className="px-2 py-1"
+              >
                 <Text className="text-sm font-semibold text-brand-700">Edit</Text>
               </Pressable>
-              <Pressable onPress={() => deleteMutation.mutate(item.id)} className="px-2 py-1">
+              <Pressable
+                onPress={() => deleteMutation.mutate(item.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`Delete ${item.name}`}
+                className="px-2 py-1"
+              >
                 <Trash2 color="#B91C1C" size={16} />
               </Pressable>
             </AppCard>

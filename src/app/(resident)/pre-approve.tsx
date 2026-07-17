@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, CheckCircle2 } from 'lucide-react-native';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,9 +14,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChipSelector } from '@/components/ui/chip-selector';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
+import { QRCodeModal } from '@/components/visitors/qr-code-modal';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
-import type { VisitorType } from '@/types/database';
+import type { VisitorType, VisitorWithFlat } from '@/types/database';
 import { VISITOR_TYPES } from '@/types/database';
 
 export default function PreApproveGuestScreen() {
@@ -30,11 +31,13 @@ export default function PreApproveGuestScreen() {
   const [type, setType] = useState<VisitorType>('guest');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  
+  const [createdVisitor, setCreatedVisitor] = useState<VisitorWithFlat | null>(null);
+  const [qrModalVisible, setQrModalVisible] = useState(false);
 
   const onSubmit = async () => {
     setError(null);
-    setSuccess(null);
+    setCreatedVisitor(null);
 
     if (!profile?.flat_id || !profile.society_id || !user) {
       setError('Your profile must be linked to a flat and society.');
@@ -48,7 +51,7 @@ export default function PreApproveGuestScreen() {
     setSubmitting(true);
 
     try {
-      const { error: insertError } = await supabase.from('visitors').insert({
+      const { data, error: insertError } = await supabase.from('visitors').insert({
         name: name.trim(),
         phone: phone.trim() || null,
         photo_url: null,
@@ -58,14 +61,18 @@ export default function PreApproveGuestScreen() {
         flat_id: profile.flat_id,
         created_by: user.id,
         society_id: profile.society_id,
-      });
+      }).select('*, flats(*)').single();
 
       if (insertError) {
         setError(insertError.message);
         return;
       }
 
-      setSuccess(`${name.trim()} is pre-approved. The guard will see them ready for entry.`);
+      if (data) {
+        setCreatedVisitor(data as VisitorWithFlat);
+        setQrModalVisible(true);
+      }
+      
       setName('');
       setPhone('');
       setPurpose('');
@@ -92,6 +99,8 @@ export default function PreApproveGuestScreen() {
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
       <View className="flex-row items-center gap-3 px-4 pb-2 pt-3">
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
           onPress={() => router.back()}
           className="h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-surface-card"
         >
@@ -109,10 +118,22 @@ export default function PreApproveGuestScreen() {
         contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
       >
           {error ? <ErrorBanner message={error} /> : null}
-          {success ? (
-            <View className="mb-3 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3">
-              <Text className="text-sm text-teal-800">{success}</Text>
-            </View>
+          
+          {createdVisitor ? (
+            <Pressable 
+              onPress={() => setQrModalVisible(true)}
+              className="mb-6 flex-row items-center justify-between rounded-2xl border border-teal-200 bg-teal-50 p-4"
+            >
+              <View className="flex-row items-center gap-3">
+                <View className="h-10 w-10 items-center justify-center rounded-full bg-teal-100">
+                  <CheckCircle2 color="#0F766E" size={20} />
+                </View>
+                <View>
+                  <Text className="font-semibold text-teal-900">Guest Pre-approved!</Text>
+                  <Text className="text-sm text-teal-700">Tap to view QR Pass</Text>
+                </View>
+              </View>
+            </Pressable>
           ) : null}
 
           <Text className="mb-2 text-sm font-medium text-slate-700">Guest name</Text>
@@ -166,6 +187,12 @@ export default function PreApproveGuestScreen() {
             )}
           </Pressable>
       </KeyboardAwareScrollView>
+
+      <QRCodeModal 
+        visible={qrModalVisible} 
+        onClose={() => setQrModalVisible(false)} 
+        visitor={createdVisitor} 
+      />
     </SafeAreaView>
   );
 }

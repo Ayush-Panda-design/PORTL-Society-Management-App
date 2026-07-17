@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { Check, CheckCircle2, Clock3, LogIn, LogOut, X, XCircle } from 'lucide-react-native';
+import { Check, CheckCircle2, Clock3, LogIn, LogOut, X, XCircle, QrCode } from 'lucide-react-native';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { VisitorSilhouette } from '@/components/illustrations';
@@ -18,7 +18,7 @@ type Action = {
   onPress: () => void;
   variant?: 'primary' | 'danger' | 'secondary';
   loading?: boolean;
-  icon?: 'check' | 'x';
+  icon?: 'check' | 'x' | 'qr-code';
 };
 
 type Props = {
@@ -137,6 +137,9 @@ export function VisitorCard({ visitor, actions, showStatus = true }: Props) {
                     ) : null}
                     {action.icon === 'x' ? (
                       <X color={isDanger || isPrimary ? '#fff' : Brand.primary} size={16} />
+                    ) : null}
+                    {action.icon === 'qr-code' ? (
+                      <QrCode color={isDanger || isPrimary ? '#fff' : Brand.primary} size={16} />
                     ) : null}
                     <Text className={`text-sm font-semibold ${text}`}>{action.label}</Text>
                   </>

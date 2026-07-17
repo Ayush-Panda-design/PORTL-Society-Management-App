@@ -11,6 +11,8 @@ export function getRoleTabScreenOptions(
     headerShown: false,
     lazy: true,
     freezeOnBlur: true,
+    // Instagram-style cross-fade between tabs (RN Navigation bottom-tabs v7).
+    animation: 'fade',
     tabBarActiveTintColor: Brand.primary,
     tabBarInactiveTintColor: palette.inkMuted,
     tabBarStyle: {

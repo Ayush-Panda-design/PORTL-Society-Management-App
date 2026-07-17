@@ -80,12 +80,16 @@ export default function ResidentVisitorsScreen() {
         </View>
         <View className="flex-row gap-2">
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="View visitor history"
             onPress={() => router.push('/(resident)/visitor-history')}
             className="h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-surface-card"
           >
             <History color="#64748B" size={18} />
           </Pressable>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Pre-approve a guest"
             onPress={() => router.push('/(resident)/pre-approve')}
             className="h-10 w-10 items-center justify-center rounded-full bg-teal-700"
           >

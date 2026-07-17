@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
@@ -10,9 +11,11 @@ import { VisitorCard } from '@/components/visitors/visitor-card';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
+import type { VisitorWithFlat } from '@/types/database';
 
 export default function GuardVerifyScreen() {
   const profile = useAuthStore((s) => s.profile);
+  const router = useRouter();
   const [actionId, setActionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -29,14 +32,21 @@ export default function GuardVerifyScreen() {
     setRefreshing(false);
   }, [refresh]);
 
-  const markEntry = async (visitorId: string) => {
+  const markEntry = async (visitor: VisitorWithFlat) => {
     if (!profile?.id) return;
-    setActionId(visitorId);
+    
+    // Check if photo is missing (pre-approved visitor)
+    if (!visitor.photo_url) {
+      router.push(`/(guard)/scan-pass?visitorId=${visitor.id}`);
+      return;
+    }
+
+    setActionId(visitor.id);
     setError(null);
 
     try {
       const { error: logError } = await supabase.from('visitor_logs').insert({
-        visitor_id: visitorId,
+        visitor_id: visitor.id,
         entry_time: new Date().toISOString(),
         guard_id: profile.id,
       });
@@ -49,7 +59,7 @@ export default function GuardVerifyScreen() {
       const { error: updateError } = await supabase
         .from('visitors')
         .update({ status: 'checked_in' })
-        .eq('id', visitorId);
+        .eq('id', visitor.id);
 
       if (updateError) {
         setError(updateError.message);
@@ -110,7 +120,7 @@ export default function GuardVerifyScreen() {
                   variant: 'primary',
                   icon: 'check',
                   loading: actionId === item.id,
-                  onPress: () => markEntry(item.id),
+                  onPress: () => markEntry(item),
                 },
               ]}
             />

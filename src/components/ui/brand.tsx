@@ -86,35 +86,108 @@ export function InitialsAvatar({
   name,
   size = 48,
   seed,
+  hasUnread = false,
+  showOnlineDot = false,
 }: {
   name: string;
   size?: number;
   seed?: string;
+  /** Instagram-style story ring for unread / new content. */
+  hasUnread?: boolean;
+  /** WhatsApp-style presence / attention dot. */
+  showOnlineDot?: boolean;
 }) {
   const initial = (name?.trim()?.charAt(0) || '?').toUpperCase();
   const colors = [Brand.primary, Brand.primaryDark, Brand.accent, '#0D9488', '#2563EB'];
   const index = (seed ?? name).split('').reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length;
+  const ringPad = hasUnread ? 3 : 0;
+  const outer = size + ringPad * 2;
+  const inner = size;
+
+  return (
+    <View style={{ width: outer, height: outer, position: 'relative' }}>
+      <View
+        style={{
+          width: outer,
+          height: outer,
+          borderRadius: outer / 2,
+          padding: ringPad,
+          borderWidth: hasUnread ? 2.5 : 0,
+          borderColor: Brand.primary,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <View
+          style={{
+            width: inner,
+            height: inner,
+            borderRadius: inner / 2,
+            backgroundColor: colors[index],
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          accessibilityLabel={`${name} avatar${hasUnread ? ', unread' : ''}`}
+        >
+          <Text
+            style={{
+              color: '#fff',
+              fontFamily: FontFamily.heading,
+              fontSize: inner * 0.4,
+            }}
+          >
+            {initial}
+          </Text>
+        </View>
+      </View>
+      {showOnlineDot ? (
+        <View
+          accessibilityLabel="Online"
+          style={{
+            position: 'absolute',
+            right: 0,
+            bottom: 0,
+            width: Math.max(10, size * 0.28),
+            height: Math.max(10, size * 0.28),
+            borderRadius: 99,
+            backgroundColor: '#22C55E',
+            borderWidth: 2,
+            borderColor: '#FFFFFF',
+          }}
+        />
+      ) : null}
+    </View>
+  );
+}
+
+/** Photo or child avatar with optional Instagram-style unread ring. */
+export function AvatarRing({
+  size = 48,
+  hasUnread = false,
+  children,
+}: {
+  size?: number;
+  hasUnread?: boolean;
+  children: ReactNode;
+}) {
+  const ringPad = hasUnread ? 3 : 0;
+  const outer = size + ringPad * 2;
 
   return (
     <View
       style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: colors[index],
+        width: outer,
+        height: outer,
+        borderRadius: outer / 2,
+        padding: ringPad,
+        borderWidth: hasUnread ? 2.5 : 0,
+        borderColor: Brand.primary,
         alignItems: 'center',
         justifyContent: 'center',
+        overflow: 'hidden',
       }}
     >
-      <Text
-        style={{
-          color: '#fff',
-          fontFamily: FontFamily.heading,
-          fontSize: size * 0.4,
-        }}
-      >
-        {initial}
-      </Text>
+      {children}
     </View>
   );
 }
