@@ -73,7 +73,7 @@ export default function LoginScreen() {
               >
                 Portl
               </Text>
-              <Text className="mb-4 text-center text-sm text-teal-50/90">
+              <Text className="mb-4 text-center text-sm text-white/85">
                 Your society gate, in your pocket
               </Text>
               <GateAuthIllustration width={260} height={150} />
@@ -81,18 +81,23 @@ export default function LoginScreen() {
           </SafeAreaView>
         </LinearGradient>
 
-        <View className="-mt-4 flex-1 rounded-t-3xl bg-surface px-6 pb-10 pt-8">
-          <Text className="mb-6 text-base text-ink-soft">Sign in to your society account</Text>
+        <View className="-mt-5 flex-1 rounded-t-[36px] bg-surface px-6 pb-10 pt-8">
+          <Text
+            className="mb-6 text-2xl text-ink"
+            style={{ fontFamily: FontFamily.display }}
+          >
+            Welcome back
+          </Text>
 
           <View className="mb-4 gap-2">
             <Text className="text-sm font-medium text-ink-soft">Email</Text>
             <TextInput
-              className="rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+              className="rounded-soft border border-surface-border bg-surface-card px-4 py-3.5 text-base text-ink"
               autoCapitalize="none"
               autoComplete="email"
               keyboardType="email-address"
               placeholder="you@example.com"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor="#9AAFA7"
               value={email}
               onChangeText={setEmail}
             />
@@ -101,11 +106,11 @@ export default function LoginScreen() {
           <View className="mb-6 gap-2">
             <Text className="text-sm font-medium text-ink-soft">Password</Text>
             <TextInput
-              className="rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+              className="rounded-soft border border-surface-border bg-surface-card px-4 py-3.5 text-base text-ink"
               secureTextEntry
               autoComplete="password"
               placeholder="••••••••"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor="#9AAFA7"
               value={password}
               onChangeText={setPassword}
             />
@@ -114,14 +119,26 @@ export default function LoginScreen() {
           {error ? <Text className="mb-4 text-sm text-status-rejected">{error}</Text> : null}
 
           <Pressable
-            className={`items-center rounded-xl bg-accent-600 py-3.5 ${submitting ? 'opacity-70' : ''}`}
+            className={`items-center rounded-bubbly bg-charcoal py-4 ${submitting ? 'opacity-70' : ''}`}
             disabled={submitting}
             onPress={onLogin}
+            style={{
+              shadowColor: Brand.charcoal,
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.22,
+              shadowRadius: 12,
+              elevation: 4,
+            }}
           >
             {submitting ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text className="text-base font-semibold text-white">Sign in</Text>
+              <Text
+                className="text-base text-white"
+                style={{ fontFamily: FontFamily.heading }}
+              >
+                Sign in
+              </Text>
             )}
           </Pressable>
 

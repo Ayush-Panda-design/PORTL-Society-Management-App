@@ -166,7 +166,7 @@ export function PollCreateForm({ onSubmit, onCancel, isSubmitting, error }: Prop
           className="mb-4 flex-row items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 py-2.5"
         >
           <Plus color={Brand.primary} size={16} />
-          <Text className="font-semibold text-teal-700" style={{ fontFamily: FontFamily.heading }}>
+          <Text className="font-semibold text-brand-700" style={{ fontFamily: FontFamily.heading }}>
             Add option
           </Text>
         </Pressable>
@@ -205,7 +205,7 @@ export function PollCreateForm({ onSubmit, onCancel, isSubmitting, error }: Prop
         <Pressable
           onPress={handleSubmit}
           disabled={isSubmitting}
-          className="flex-1 items-center rounded-xl bg-teal-700 py-3"
+          className="flex-1 items-center rounded-xl bg-charcoal py-3"
         >
           {isSubmitting ? (
             <ActivityIndicator color="#fff" />

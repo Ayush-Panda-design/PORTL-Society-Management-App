@@ -53,41 +53,36 @@ function InviteCodeCard({
   const isResident = invite.role === 'resident';
 
   return (
-    <View className="mb-4">
+    <View className="mb-5 overflow-hidden rounded-bubbly">
       {/* Top Half */}
       <View
-        className={`rounded-t-2xl p-6 ${isResident ? 'bg-brand-700' : 'bg-status-pending'}`}
+        className={`p-6 ${isResident ? 'bg-charcoal' : 'bg-accent-500'}`}
       >
-        <Text className="text-white/80 font-medium uppercase tracking-wider text-xs mb-1">
+        <Text className="mb-1 text-xs font-medium uppercase tracking-wider text-white/75">
           {roleLabel(invite.role)} Access
         </Text>
-        <Text className="text-white text-3xl tracking-[0.2em] mb-2" style={{ fontFamily: FontFamily.display }}>
+        <Text className="mb-2 text-3xl tracking-[0.2em] text-white" style={{ fontFamily: FontFamily.display }}>
           {invite.code}
         </Text>
-        <Text className="text-white/70 text-xs">
+        <Text className="text-xs text-white/70">
           Share only with verified {isResident ? 'residents' : 'security staff'}
         </Text>
       </View>
 
       {/* Perforated Divider */}
-      <View className="flex-row items-center h-8 bg-surface-card overflow-hidden">
-        {/* Left Cutout */}
-        <View className="w-4 h-8 rounded-r-full bg-surface absolute left-0 -ml-2" />
-        
-        {/* Dashed Line */}
-        <View className="flex-1 mx-4 h-[1px] border-b border-dashed border-surface-border" />
-        
-        {/* Right Cutout */}
-        <View className="w-4 h-8 rounded-l-full bg-surface absolute right-0 -mr-2" />
+      <View className="h-8 flex-row items-center overflow-hidden bg-surface-card">
+        <View className="absolute left-0 -ml-2 h-8 w-4 rounded-r-full bg-surface" />
+        <View className="mx-4 h-[1px] flex-1 border-b border-dashed border-surface-border" />
+        <View className="absolute right-0 -mr-2 h-8 w-4 rounded-l-full bg-surface" />
       </View>
 
       {/* Bottom Half */}
-      <View className="rounded-b-2xl bg-surface-card p-4 pt-1 flex-row items-center justify-between">
+      <View className="flex-row items-center justify-between bg-surface-card px-4 pb-4 pt-1">
         <View />
         <AnimatedPressable onPress={() => void share()}>
-          <View className="px-4 py-2 rounded-lg bg-brand-700 flex-row items-center">
+          <View className="flex-row items-center rounded-soft bg-charcoal px-4 py-2.5">
             <Share2 color="#fff" size={16} className="mr-2" />
-            <Text className="text-white font-bold">Share</Text>
+            <Text className="font-bold text-white">Share</Text>
           </View>
         </AnimatedPressable>
       </View>

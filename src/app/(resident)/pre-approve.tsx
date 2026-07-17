@@ -128,7 +128,7 @@ export default function PreApproveGuestScreen() {
             >
               <View className="flex-row items-center gap-3">
                 <View className="h-10 w-10 items-center justify-center rounded-full bg-brand-100">
-                  <CheckCircle2 color="#0F766E" size={20} />
+                  <CheckCircle2 color="#2D6A5A" size={20} />
                 </View>
                 <View>
                   <Text className="font-semibold text-ink">Guest Pre-approved!</Text>
@@ -178,7 +178,7 @@ export default function PreApproveGuestScreen() {
           <Pressable
             disabled={submitting}
             onPress={onSubmit}
-            className={`items-center rounded-xl bg-teal-700 py-3.5 ${
+            className={`items-center rounded-bubbly bg-charcoal py-3.5 ${
               submitting ? 'opacity-70' : ''
             }`}
           >

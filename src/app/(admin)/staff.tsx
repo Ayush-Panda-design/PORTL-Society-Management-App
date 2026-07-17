@@ -347,7 +347,7 @@ export default function AdminStaffScreen() {
               <Pressable
                 onPress={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending}
-                className="flex-1 items-center rounded-xl bg-brand-700 py-3"
+                className="flex-1 items-center rounded-bubbly bg-charcoal py-3.5"
               >
                 {saveMutation.isPending ? (
                   <ActivityIndicator color="#fff" />

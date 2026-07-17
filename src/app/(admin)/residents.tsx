@@ -313,7 +313,7 @@ export default function AdminResidentsScreen() {
                   setDetailOpen(false);
                   openAssign(selected);
                 }}
-                className="flex-1 items-center rounded-xl bg-brand-700 py-3"
+                className="flex-1 items-center rounded-bubbly bg-charcoal py-3.5"
               >
                 <Text className="font-semibold text-white">
                   {selected?.flat_id ? 'Reassign' : 'Assign flat'}
@@ -365,7 +365,7 @@ export default function AdminResidentsScreen() {
                 accessibilityLabel="Save flat assignment"
                 onPress={() => assignMutation.mutate()}
                 disabled={assignMutation.isPending || (flatsQuery.data?.length ?? 0) === 0}
-                className="flex-1 items-center rounded-xl bg-brand-700 py-3"
+                className="flex-1 items-center rounded-bubbly bg-charcoal py-3.5"
               >
                 {assignMutation.isPending ? (
                   <ActivityIndicator color="#fff" />

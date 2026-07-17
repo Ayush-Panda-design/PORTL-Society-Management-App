@@ -1,30 +1,112 @@
 /**
- * Portl brand tokens — source of truth for colors, gradients, and type.
- * Prefer these (or Tailwind brand-* / surface / ink classes) over hardcoded hex.
- *
- * Dark palette follows Instagram / WhatsApp conventions:
- * near-black canvas, slightly elevated cards, soft muted borders, readable secondary text.
+ * Portl brand tokens — deep forest green primary, terracotta accent.
+ * Brand spec: primary #1F4B3F, accent #E4823D, off-white #FAF9F6 / near-black #101512.
+ * Type scale: 32 / 24 / 16 / 13px · 4 levels.
+ * Elevation: shadow-only cards, no hairline borders.
+ * Icon stroke: 1.5px throughout (Lucide).
  */
 
 import '@/global.css';
 
 import { Platform } from 'react-native';
 
-/** Static brand accents — stay teal in both modes (like WhatsApp green / IG blue). */
+// ─── Brand ─────────────────────────────────────────────────────────────────
+/** Static brand accents — deep forest green primary, terracotta accent. */
 export const Brand = {
-  primary: '#0F766E',
-  primaryDark: '#115E59',
-  primarySoft: '#CCFBF1',
-  accent: '#D97706',
-  accentSoft: '#FFF7ED',
-  surface: '#F7FAFC',
+  // Primary — deep forest green
+  primary: '#1F4B3F',
+  primaryDark: '#163830',
+  primarySoft: '#C8DDD8',
+  primaryMid: '#2E6B5B',
+
+  // Accent — terracotta (CTAs & alerts)
+  accent: '#E4823D',
+  accentDark: '#C46B2B',
+  accentSoft: '#FDEBD8',
+
+  // Neutrals
+  charcoal: '#1E2322',
+  charcoalSoft: '#2E3532',
+  surface: '#FAF9F6',
   card: '#FFFFFF',
-  border: '#E2E8F0',
-  ink: '#0F172A',
-  inkSoft: '#334155',
-  inkMuted: '#64748B',
+  border: '#E5E8E4',
+  ink: '#101512',
+  inkSoft: '#374140',
+  inkMuted: '#6B7A77',
 } as const;
 
+// Per-role identity tints (used in tab bar active color)
+export const RoleTints = {
+  resident: '#1F4B3F', // forest green
+  admin: '#1F3A6B',    // deep blue — authority/trust
+  guard: '#8B4513',    // dark amber/sienna — alertness
+} as const;
+
+// ─── Pastels ────────────────────────────────────────────────────────────────
+/** Soft pastel washes for category / stat cards. */
+export const Pastels = {
+  mint: '#E3F0EC',
+  peach: '#FDEBD8',
+  sky: '#DDE8F4',
+  rose: '#F8E4E4',
+  butter: '#F9F0DC',
+  lilac: '#EBE4F6',
+  sage: '#E0EDEA',
+  coral: '#FAE4DC',
+} as const;
+
+// ─── Type Scale ─────────────────────────────────────────────────────────────
+/** 4-level type scale (px) per design spec. */
+export const TypeScale = {
+  display: 32,
+  heading: 24,
+  body: 16,
+  caption: 13,
+} as const;
+
+// ─── Elevation ──────────────────────────────────────────────────────────────
+/** Shadow-only elevation system — no hairline borders on cards. */
+export const Elevation = {
+  sm: {
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  md: {
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 4,
+  },
+  lg: {
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 6,
+  },
+  // Dark-mode variants (stronger shadow for contrast on dark bg)
+  smDark: {
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  mdDark: {
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 14,
+    elevation: 4,
+  },
+  lgDark: {
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.6,
+    shadowRadius: 24,
+    elevation: 6,
+  },
+} as const;
+
+// ─── Palette (semantic, theme-aware) ────────────────────────────────────────
 /** Semantic surfaces / text that flip with appearance. */
 export type ThemePalette = {
   surface: string;
@@ -42,43 +124,46 @@ export type ThemePalette = {
   shadow: string;
   primarySoft: string;
   primarySoftText: string;
+  charcoal: string;
+  isDark?: boolean;
 };
 
 export const Palette = {
   light: {
-    surface: '#F7FAFC',
+    surface: '#FAF9F6',
     card: '#FFFFFF',
-    muted: '#EEF2F6',
-    border: '#E2E8F0',
-    ink: '#0F172A',
-    inkSoft: '#334155',
-    inkMuted: '#64748B',
-    inkFaint: '#94A3B8',
-    brandSoft: '#CCFBF1',
-    brandSoftBg: '#F0FDFA',
-    accentSoft: '#FFF7ED',
-    segmentTrack: '#E8EDF2',
-    shadow: '#0F172A',
-    primarySoft: '#CCFBF1',
-    primarySoftText: '#115E59',
+    muted: '#EFF2F0',
+    border: '#E5E8E4',
+    ink: '#101512',
+    inkSoft: '#374140',
+    inkMuted: '#6B7A77',
+    inkFaint: '#9EAAA7',
+    brandSoft: '#C8DDD8',
+    brandSoftBg: '#E3F0EC',
+    accentSoft: '#FDEBD8',
+    segmentTrack: '#E5E8E4',
+    shadow: '#101512',
+    primarySoft: '#C8DDD8',
+    primarySoftText: '#1F4B3F',
+    charcoal: '#1E2322',
   },
   dark: {
-    // Instagram-like near-black canvas + WhatsApp-like elevated layers
-    surface: '#0A0A0A',
-    card: '#161616',
-    muted: '#1C1C1E',
-    border: '#2A2A2A',
-    ink: '#F5F5F5',
-    inkSoft: '#E5E5E5',
-    inkMuted: '#A3A3A3',
-    inkFaint: '#737373',
-    brandSoft: '#134E4A',
-    brandSoftBg: '#0D2F2C',
-    accentSoft: '#3D2A12',
-    segmentTrack: '#262626',
+    surface: '#101512',
+    card: '#181C1A',
+    muted: '#1E2421',
+    border: '#272E2B',
+    ink: '#F0F4F2',
+    inkSoft: '#D4DDD9',
+    inkMuted: '#8A9C97',
+    inkFaint: '#5E706B',
+    brandSoft: '#1A342C',
+    brandSoftBg: '#122920',
+    accentSoft: '#3A2318',
+    segmentTrack: '#222925',
     shadow: '#000000',
-    primarySoft: '#0F3D38',
-    primarySoftText: '#5EEAD4',
+    primarySoft: '#1A342C',
+    primarySoftText: '#7ABFAC',
+    charcoal: '#E8EFEC',
   },
 } as const satisfies Record<'light' | 'dark', ThemePalette>;
 
@@ -96,11 +181,12 @@ export const themeCssVars = {
     '--color-brand-soft-bg': Palette.light.brandSoftBg,
     '--color-brand-soft': Palette.light.brandSoft,
     '--color-accent-soft': Palette.light.accentSoft,
-    '--color-status-approved-soft': '#ECFDF5',
-    '--color-status-pending-soft': '#FFFBEB',
-    '--color-status-rejected-soft': '#FEF2F2',
-    '--color-status-info-soft': '#EFF6FF',
+    '--color-status-approved-soft': '#E3F0EC',
+    '--color-status-pending-soft': '#F9F0DC',
+    '--color-status-rejected-soft': '#F8E4E4',
+    '--color-status-info-soft': '#DDE8F4',
     '--color-segment-track': Palette.light.segmentTrack,
+    '--color-charcoal': Palette.light.charcoal,
   },
   dark: {
     '--color-surface': Palette.dark.surface,
@@ -114,11 +200,12 @@ export const themeCssVars = {
     '--color-brand-soft-bg': Palette.dark.brandSoftBg,
     '--color-brand-soft': Palette.dark.brandSoft,
     '--color-accent-soft': Palette.dark.accentSoft,
-    '--color-status-approved-soft': '#0A2E22',
-    '--color-status-pending-soft': '#3D2A0A',
-    '--color-status-rejected-soft': '#3D1212',
-    '--color-status-info-soft': '#0A1E3D',
+    '--color-status-approved-soft': '#0A2E1E',
+    '--color-status-pending-soft': '#3A2A08',
+    '--color-status-rejected-soft': '#3A1010',
+    '--color-status-info-soft': '#0A1E3A',
     '--color-segment-track': Palette.dark.segmentTrack,
+    '--color-charcoal': Palette.dark.charcoal,
   },
 } as const;
 
@@ -126,53 +213,63 @@ export function getPalette(scheme: 'light' | 'dark'): ThemePalette {
   return Palette[scheme];
 }
 
+// ─── Status Colors ───────────────────────────────────────────────────────────
 export const StatusColors = {
-  approved: { solid: '#059669', soft: '#ECFDF5', text: '#065F46' },
-  pending: { solid: '#D97706', soft: '#FFFBEB', text: '#92400E' },
-  rejected: { solid: '#DC2626', soft: '#FEF2F2', text: '#991B1B' },
-  info: { solid: '#2563EB', soft: '#EFF6FF', text: '#1E40AF' },
-  entry: { solid: '#059669', soft: '#ECFDF5', text: '#065F46' },
-  exit: { solid: '#DC2626', soft: '#FEF2F2', text: '#991B1B' },
-  checked_in: { solid: '#2563EB', soft: '#EFF6FF', text: '#1E40AF' },
-  checked_out: { solid: '#64748B', soft: '#F1F5F9', text: '#334155' },
-  open: { solid: '#D97706', soft: '#FFFBEB', text: '#92400E' },
-  in_progress: { solid: '#2563EB', soft: '#EFF6FF', text: '#1E40AF' },
-  resolved: { solid: '#059669', soft: '#ECFDF5', text: '#065F46' },
+  approved: { solid: '#1F4B3F', soft: '#E3F0EC', text: '#163830' },
+  pending: { solid: '#C4861A', soft: '#F9F0DC', text: '#92600E' },
+  rejected: { solid: '#C0392B', soft: '#F8E4E4', text: '#8B1A1A' },
+  info: { solid: '#2563EB', soft: '#DDE8F4', text: '#1E3A8A' },
+  entry: { solid: '#1F4B3F', soft: '#E3F0EC', text: '#163830' },
+  exit: { solid: '#C0392B', soft: '#F8E4E4', text: '#8B1A1A' },
+  checked_in: { solid: '#2563EB', soft: '#DDE8F4', text: '#1E3A8A' },
+  checked_out: { solid: '#6B7A77', soft: '#EFF2F0', text: '#374140' },
+  open: { solid: '#C4861A', soft: '#F9F0DC', text: '#92600E' },
+  in_progress: { solid: '#2563EB', soft: '#DDE8F4', text: '#1E3A8A' },
+  resolved: { solid: '#1F4B3F', soft: '#E3F0EC', text: '#163830' },
 } as const;
 
 export const StatusColorsDark = {
-  approved: { solid: '#34D399', soft: '#0A2E22', text: '#6EE7B7' },
-  pending: { solid: '#FBBF24', soft: '#3D2A0A', text: '#FCD34D' },
-  rejected: { solid: '#F87171', soft: '#3D1212', text: '#FCA5A5' },
-  info: { solid: '#60A5FA', soft: '#0A1E3D', text: '#93C5FD' },
-  entry: { solid: '#34D399', soft: '#0A2E22', text: '#6EE7B7' },
-  exit: { solid: '#F87171', soft: '#3D1212', text: '#FCA5A5' },
-  checked_in: { solid: '#60A5FA', soft: '#0A1E3D', text: '#93C5FD' },
-  checked_out: { solid: '#94A3B8', soft: '#1C1C1E', text: '#CBD5E1' },
-  open: { solid: '#FBBF24', soft: '#3D2A0A', text: '#FCD34D' },
-  in_progress: { solid: '#60A5FA', soft: '#0A1E3D', text: '#93C5FD' },
-  resolved: { solid: '#34D399', soft: '#0A2E22', text: '#6EE7B7' },
+  approved: { solid: '#7ABFAC', soft: '#0A2E1E', text: '#A5D5C8' },
+  pending: { solid: '#FBBF24', soft: '#3A2A08', text: '#FCD34D' },
+  rejected: { solid: '#F87171', soft: '#3A1010', text: '#FCA5A5' },
+  info: { solid: '#60A5FA', soft: '#0A1E3A', text: '#93C5FD' },
+  entry: { solid: '#7ABFAC', soft: '#0A2E1E', text: '#A5D5C8' },
+  exit: { solid: '#F87171', soft: '#3A1010', text: '#FCA5A5' },
+  checked_in: { solid: '#60A5FA', soft: '#0A1E3A', text: '#93C5FD' },
+  checked_out: { solid: '#8A9C97', soft: '#1E2421', text: '#D4DDD9' },
+  open: { solid: '#FBBF24', soft: '#3A2A08', text: '#FCD34D' },
+  in_progress: { solid: '#60A5FA', soft: '#0A1E3A', text: '#93C5FD' },
+  resolved: { solid: '#7ABFAC', soft: '#0A2E1E', text: '#A5D5C8' },
 } as const;
 
 export function getStatusColors(scheme: 'light' | 'dark') {
   return scheme === 'dark' ? StatusColorsDark : StatusColors;
 }
 
-/** Soft header / hero washes (use with expo-linear-gradient). */
+// ─── Gradients ───────────────────────────────────────────────────────────────
+/** Header / hero gradients (use with expo-linear-gradient). */
 export const Gradients = {
-  hero: ['#0F766E', '#134E4A'] as const,
-  heroWarm: ['#0F766E', '#0D9488', '#D97706'] as const,
-  header: ['#F0FDFA', '#F7FAFC'] as const,
-  headerDark: ['#0D2F2C', '#0A0A0A'] as const,
-  cardAccent: ['#FFFFFF', '#F0FDFA'] as const,
-  cardAccentDark: ['#161616', '#0D2F2C'] as const,
-  auth: ['#042F2E', '#0F766E', '#14B8A6'] as const,
+  // Resident hero — deep forest green
+  hero: ['#2E6B5B', '#1F4B3F'] as const,
+  heroSoft: ['#E3F0EC', '#C8DDD8'] as const,
+  heroWarm: ['#1F4B3F', '#2E6B5B', '#E4823D'] as const,
+  // Admin hero — deep blue-green
+  adminHero: ['#1F3A6B', '#14285A'] as const,
+  // Guard hero — dark amber
+  guardHero: ['#8B4513', '#6B3010'] as const,
+  header: ['#F0F4F2', '#FAF9F6'] as const,
+  headerDark: ['#141A17', '#101512'] as const,
+  cardAccent: ['#FFFFFF', '#F0F4F2'] as const,
+  cardAccentDark: ['#181C1A', '#141A17'] as const,
+  auth: ['#163830', '#1F4B3F', '#2E6B5B'] as const,
+  accentWarm: ['#E4823D', '#C46B2B'] as const,
 } as const;
 
 export function getHeaderGradient(scheme: 'light' | 'dark') {
   return scheme === 'dark' ? Gradients.headerDark : Gradients.header;
 }
 
+// ─── Colors (legacy compat) ──────────────────────────────────────────────────
 export const Colors = {
   light: {
     text: Palette.light.ink,
@@ -194,11 +291,12 @@ export const Colors = {
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
+// ─── Typography ──────────────────────────────────────────────────────────────
 export const FontFamily = {
-  display: 'Manrope_700Bold',
-  heading: 'Manrope_600SemiBold',
-  medium: 'Manrope_500Medium',
-  body: 'Manrope_400Regular',
+  display: 'Inter_700Bold',
+  heading: 'Inter_600SemiBold',
+  medium: 'Inter_500Medium',
+  body: 'Inter_400Regular',
 } as const;
 
 export const Fonts = Platform.select({
@@ -222,6 +320,7 @@ export const Fonts = Platform.select({
   },
 });
 
+// ─── Spacing ─────────────────────────────────────────────────────────────────
 export const Spacing = {
   half: 2,
   one: 4,
@@ -232,6 +331,18 @@ export const Spacing = {
   six: 64,
 } as const;
 
+// ─── Radii ───────────────────────────────────────────────────────────────────
+/** Crisp-professional corner radii — 12px base per design spec. */
+export const Radii = {
+  xs: 8,
+  sm: 12,   // cards (spec: 12px)
+  md: 16,   // panels
+  lg: 20,   // hero cards
+  xl: 28,   // modals / bottom-sheets
+  pill: 999,
+} as const;
+
+// ─── Misc ────────────────────────────────────────────────────────────────────
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
 

@@ -161,7 +161,7 @@ export default function AdminTowersScreen() {
           accessibilityRole="button"
           accessibilityLabel="Add tower"
           onPress={openCreate}
-          className="h-10 w-10 items-center justify-center rounded-full bg-brand-700"
+          className="h-11 w-11 items-center justify-center rounded-full bg-charcoal"
         >
           <Plus color="#fff" size={20} />
         </Pressable>
@@ -237,7 +237,7 @@ export default function AdminTowersScreen() {
               <Pressable
                 onPress={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending}
-                className="flex-1 items-center rounded-xl bg-brand-700 py-3"
+                className="flex-1 items-center rounded-bubbly bg-charcoal py-3.5"
               >
                 {saveMutation.isPending ? (
                   <ActivityIndicator color="#fff" />

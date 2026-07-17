@@ -30,7 +30,7 @@ export default function OnboardingLanding() {
             >
               Portl
             </Text>
-            <Text className="mb-3 text-center text-sm text-teal-50/90">
+            <Text className="mb-3 text-center text-sm text-white/85">
               {rejected
                 ? 'Your previous join request was declined'
                 : 'Set up or join your society'}
@@ -40,26 +40,26 @@ export default function OnboardingLanding() {
         </SafeAreaView>
       </LinearGradient>
 
-      <View className="-mt-4 flex-1 rounded-t-3xl bg-surface px-6 pb-10 pt-7">
-        <Text className="mb-2 text-xl text-ink" style={{ fontFamily: FontFamily.heading }}>
+      <View className="-mt-5 flex-1 rounded-t-[36px] bg-surface px-6 pb-10 pt-7">
+        <Text className="mb-2 text-2xl text-ink" style={{ fontFamily: FontFamily.display }}>
           {rejected ? 'Try again' : `Hi${profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}`}
         </Text>
-        <Text className="mb-6 text-sm text-ink-muted">
+        <Text className="mb-6 text-sm leading-5 text-ink-muted">
           Create a society as admin, or join one with an invite code from your society office.
         </Text>
 
         <Pressable
           onPress={() => router.push('/(onboarding)/create')}
-          className="mb-3 flex-row items-center gap-4 rounded-2xl border border-brand-700 bg-brand-50 px-4 py-4"
+          className="mb-3.5 flex-row items-center gap-4 rounded-bubbly border border-brand-200 bg-pastel-mint px-4 py-4"
         >
-          <View className="h-11 w-11 items-center justify-center rounded-xl bg-brand-700">
+          <View className="h-12 w-12 items-center justify-center rounded-soft bg-charcoal">
             <Building2 color="#fff" size={22} />
           </View>
           <View className="min-w-0 flex-1">
-            <Text className="text-base text-brand-800" style={{ fontFamily: FontFamily.heading }}>
+            <Text className="text-base text-ink" style={{ fontFamily: FontFamily.heading }}>
               Create a society
             </Text>
-            <Text className="text-sm text-ink-muted">
+            <Text className="mt-0.5 text-sm text-ink-muted">
               You become the admin and get invite links
             </Text>
           </View>
@@ -67,16 +67,16 @@ export default function OnboardingLanding() {
 
         <Pressable
           onPress={() => router.push('/(onboarding)/join')}
-          className="mb-8 flex-row items-center gap-4 rounded-2xl border border-surface-border bg-surface-card px-4 py-4"
+          className="mb-8 flex-row items-center gap-4 rounded-bubbly border border-surface-border bg-surface-card px-4 py-4"
         >
-          <View className="h-11 w-11 items-center justify-center rounded-xl bg-surface-muted">
+          <View className="h-12 w-12 items-center justify-center rounded-soft bg-pastel-peach">
             <KeyRound color={Brand.primary} size={22} />
           </View>
           <View className="min-w-0 flex-1">
             <Text className="text-base text-ink" style={{ fontFamily: FontFamily.heading }}>
               Join a society
             </Text>
-            <Text className="text-sm text-ink-muted">
+            <Text className="mt-0.5 text-sm text-ink-muted">
               Enter a resident or guard invite code
             </Text>
           </View>

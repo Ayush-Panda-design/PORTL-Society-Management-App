@@ -69,9 +69,11 @@ export function EmptyState({ title, subtitle, visual = 'default', action, action
       {actionLabel && onAction ? (
         <Pressable 
           onPress={onAction}
-          className="mt-6 bg-brand-50 border border-brand-200 px-6 py-3 rounded-full active:opacity-70"
+          className="mt-6 rounded-bubbly bg-charcoal px-7 py-3.5 active:opacity-70"
         >
-          <Text className="text-brand-700 font-bold text-[15px]">{actionLabel}</Text>
+          <Text className="text-[15px] text-white" style={{ fontFamily: FontFamily.heading }}>
+            {actionLabel}
+          </Text>
         </Pressable>
       ) : null}
 

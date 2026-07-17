@@ -101,7 +101,7 @@ export function VisitorSwipeDeck({ visitors, busy = false, onDecision }: Props) 
         <Pressable
           disabled={busy}
           onPress={() => void handleDecision('approved')}
-          className={`flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-brand-700 py-3 ${
+          className={`flex-1 flex-row items-center justify-center gap-2 rounded-bubbly bg-charcoal py-3 ${
             busy ? 'opacity-60' : ''
           }`}
         >

@@ -109,7 +109,7 @@ export default function JoinSocietyScreen() {
           <SafeAreaView edges={['top']}>
             <View className="px-6 pt-2">
               <Pressable onPress={() => router.back()} className="mb-4 self-start">
-                <Text className="text-sm text-teal-50">Back</Text>
+                <Text className="text-sm text-white/90">Back</Text>
               </Pressable>
               <Text
                 className="mb-1 text-3xl text-white"
@@ -117,7 +117,7 @@ export default function JoinSocietyScreen() {
               >
                 Join society
               </Text>
-              <Text className="text-sm text-teal-50/90">
+              <Text className="text-sm text-white/85">
                 Use the resident or guard invite code shared with you
               </Text>
             </View>
@@ -189,7 +189,7 @@ export default function JoinSocietyScreen() {
           {error ? <Text className="mb-4 text-sm text-status-rejected">{error}</Text> : null}
 
           <Pressable
-            className={`items-center rounded-xl bg-accent-600 py-3.5 ${
+            className={`items-center rounded-bubbly bg-charcoal py-3.5 ${
               submitting || !resolved ? 'opacity-70' : ''
             }`}
             disabled={submitting || !resolved}

@@ -93,7 +93,7 @@ export default function ResidentVisitorsScreen() {
             accessibilityRole="button"
             accessibilityLabel="Pre-approve a guest"
             onPress={() => router.push('/(resident)/pre-approve')}
-            className="h-10 w-10 items-center justify-center rounded-full bg-teal-700"
+            className="h-10 w-10 items-center justify-center rounded-full bg-charcoal"
           >
             <UserPlus color="#fff" size={18} />
           </Pressable>

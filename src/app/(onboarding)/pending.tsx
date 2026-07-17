@@ -53,7 +53,7 @@ export default function PendingApprovalScreen() {
             >
               Waiting for approval
             </Text>
-            <Text className="text-center text-sm text-teal-50/90">
+            <Text className="text-center text-sm text-white/85">
               Your join request was sent to the society admin
             </Text>
           </View>

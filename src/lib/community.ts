@@ -68,9 +68,9 @@ export function complaintStatusTone(status: ComplaintStatus): {
       };
     case 'resolved':
       return {
-        bg: 'bg-teal-50',
-        text: 'text-teal-800',
-        border: 'border-teal-200',
+        bg: 'bg-brand-50',
+        text: 'text-brand-800',
+        border: 'border-brand-200',
         label: 'Resolved',
       };
     default:

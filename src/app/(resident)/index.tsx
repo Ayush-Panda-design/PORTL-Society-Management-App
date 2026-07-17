@@ -1,23 +1,114 @@
 import { useRouter } from 'expo-router';
-import { Bell, Building2, ClipboardList, UserPlus, Users, Search } from 'lucide-react-native';
+import {
+  Bell,
+  Building2,
+  ClipboardList,
+  Clock,
+  Search,
+  UserPlus,
+  Users,
+} from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { QuietGateIllustration } from '@/components/illustrations';
-import { HeroBanner, PressableActionTile } from '@/components/ui/brand';
+import { QuietGateIllustration, CalendarIllustration } from '@/components/illustrations';
+import { HeroBanner, SoftPromoCard, InitialsAvatar } from '@/components/ui/brand';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { VisitorSwipeDeck } from '@/components/visitors/visitor-swipe-deck';
 import type { SwipeDecision } from '@/components/visitors/swipeable-visitor-card';
-import { GlassCard } from '@/components/ui/glass-card';
 import { AnimatedPressable } from '@/components/ui/animated-pressable';
-import { GradientText } from '@/components/ui/gradient-text';
 import Toast from 'react-native-toast-message';
-import { Brand, FontFamily } from '@/constants/theme';
+import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { updateVisitorStatus } from '@/lib/visitors';
 import { useAuthStore } from '@/stores/authStore';
 import type { VisitorWithFlat } from '@/types/database';
+
+/** Quick action tile with varied pastel tones per category. */
+function QuickTile({
+  label,
+  icon,
+  bg,
+  iconColor,
+  onPress,
+  badge,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  bg: string;
+  iconColor: string;
+  onPress: () => void;
+  badge?: number;
+}) {
+  return (
+    <AnimatedPressable onPress={onPress}>
+      <View
+        className="mr-3 items-center justify-center rounded-panel px-4 py-4"
+        style={{
+          backgroundColor: bg,
+          width: 92,
+          minHeight: 88,
+          shadowColor: iconColor,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
+          elevation: 2,
+        }}
+      >
+        <View
+          className="mb-2 h-11 w-11 items-center justify-center rounded-card"
+          style={{ backgroundColor: 'rgba(255,255,255,0.75)' }}
+        >
+          {icon}
+          {badge !== undefined && badge > 0 ? (
+            <View
+              className="absolute -right-1 -top-1 h-4.5 min-w-[18px] items-center justify-center rounded-pill px-1"
+              style={{ backgroundColor: Brand.accent }}
+            >
+              <Text className="text-[10px] font-bold text-white">{badge}</Text>
+            </View>
+          ) : null}
+        </View>
+        <Text
+          className="text-center text-xs text-ink"
+          style={{ fontFamily: FontFamily.heading }}
+          numberOfLines={2}
+        >
+          {label}
+        </Text>
+      </View>
+    </AnimatedPressable>
+  );
+}
+
+/** Small avatar chip shown in "Today at a glance" strip. */
+function GuestChip({ visitor }: { visitor: VisitorWithFlat }) {
+  const initials = visitor.name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+  return (
+    <View className="mr-2 items-center">
+      <InitialsAvatar name={visitor.name} size={36} seed={visitor.id} />
+      <Text
+        className="mt-1 max-w-[52px] text-center text-[10px] text-ink-muted"
+        numberOfLines={1}
+      >
+        {initials}
+      </Text>
+    </View>
+  );
+}
 
 export default function ResidentHome() {
   const router = useRouter();
@@ -82,30 +173,46 @@ export default function ResidentHome() {
     [actionId, profile?.flat_id],
   );
 
-  const subtitle = !profile?.flat_id
-    ? 'Link a flat to start approving visitors'
+  // Live status chip text
+  const statusChip = !profile?.flat_id
+    ? 'Link a flat to get started'
     : isLoading && visitors.length === 0
-      ? 'Checking for visitor requests…'
+      ? 'Checking for arrivals…'
       : pendingCount > 0
-        ? `${pendingCount} visitor request${pendingCount === 1 ? '' : 's'} waiting — swipe to decide`
-        : 'Your society is quiet right now — pre-approve a guest anytime';
+        ? `${pendingCount} visitor${pendingCount === 1 ? '' : 's'} waiting — swipe to decide`
+        : 'All quiet · your society is secure';
+
+  const statusDot = pendingCount > 0 ? Brand.accent : '#22C55E';
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 28 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* ── Hero card ── */}
         <HeroBanner
-          title={`Hi, ${name}`}
-          subtitle={subtitle}
-          illustration={<QuietGateIllustration width={110} height={78} />}
-        />
+          title={`Hi, ${name} 👋`}
+          subtitle=""
+          illustration={<QuietGateIllustration width={108} height={76} />}
+        >
+          {/* Live status chip inside hero */}
+          <View className="flex-row items-center self-start rounded-pill bg-white/20 px-3 py-1.5">
+            <View
+              className="mr-2 h-2 w-2 rounded-pill"
+              style={{ backgroundColor: statusDot }}
+            />
+            <Text className="text-xs text-white/90" style={{ fontFamily: FontFamily.medium }}>
+              {statusChip}
+            </Text>
+          </View>
+        </HeroBanner>
 
+        {/* ── Error banners ── */}
         {(error || actionError) && (
-          <View className="mt-3">
+          <View className="mt-1">
             <ErrorBanner
               message={actionError ?? error ?? ''}
               onRetry={() => {
@@ -116,74 +223,116 @@ export default function ResidentHome() {
           </View>
         )}
 
+        {/* ── Pending visitor deck ── */}
         {isLoading && visitors.length === 0 ? (
           <View className="mt-8 items-center py-8">
             <ActivityIndicator color={Brand.primary} />
           </View>
         ) : pendingCount > 0 ? (
-          <View className="mt-5">
+          <View className="mt-4">
             <VisitorSwipeDeck
               visitors={pendingVisitors}
               busy={Boolean(actionId)}
               onDecision={handleDecision}
             />
           </View>
-        ) : null}
+        ) : (
+          <SoftPromoCard
+            title="Ready when guests arrive"
+            subtitle="Pre-approve visitors so the gate never has to wait on you."
+            tone="sky"
+            illustration={<CalendarIllustration width={88} height={64} />}
+            onPress={() => router.push('/(resident)/pre-approve')}
+          />
+        )}
 
-        <View className="mt-8 flex-row justify-between items-center mb-4">
-          <GradientText
-            colors={['#14B8A6', '#F59E0B']}
-            className="text-xl font-bold"
-            style={{ fontFamily: FontFamily.heading }}
+        {/* ── Today at a glance (pre-approved for today) ── */}
+        {visitors.filter((v) => v.status === 'approved').length > 0 && (
+          <View className="mb-4 mt-2">
+            <View className="mb-2 flex-row items-center gap-2">
+              <Clock color={Brand.inkMuted} size={13} strokeWidth={1.5} />
+              <Text
+                className="text-xs font-semibold uppercase tracking-wider text-ink-muted"
+                style={{ fontFamily: FontFamily.heading }}
+              >
+                Today's approved guests
+              </Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {visitors
+                .filter((v) => v.status === 'approved')
+                .slice(0, 8)
+                .map((v) => (
+                  <GuestChip key={v.id} visitor={v} />
+                ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* ── Quick actions ── */}
+        <View className="mb-3 flex-row items-center justify-between">
+          <Text className="text-xl text-ink" style={{ fontFamily: FontFamily.display }}>
+            Quick actions
+          </Text>
+          <AnimatedPressable
+            onPress={() => Toast.show({ type: 'info', text1: 'Search opened' })}
           >
-            Quick Actions
-          </GradientText>
-          <AnimatedPressable onPress={() => Toast.show({ type: 'info', text1: 'Command Palette opened' })}>
-            <View className="bg-surface-muted px-3 py-1.5 rounded-full flex-row items-center">
-              <Search color={Brand.primary} size={16} />
-              <Text className="text-xs text-ink-muted ml-2">Cmd + K</Text>
+            <View className="flex-row items-center rounded-pill bg-surface-muted px-3.5 py-2">
+              <Search color={Brand.primary} size={14} strokeWidth={1.5} />
+              <Text className="ml-1.5 text-xs text-ink-muted">Search</Text>
             </View>
           </AnimatedPressable>
         </View>
 
-        <View className="flex-row flex-wrap justify-between gap-y-4">
-          <AnimatedPressable
-            containerStyle={{ width: '48%' }}
+        {/* Horizontal scrollable quick-action chips */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="mb-5"
+          contentContainerStyle={{ paddingRight: 8 }}
+        >
+          <QuickTile
+            label="Visitors"
+            icon={<Users color={Brand.primary} size={22} strokeWidth={1.5} />}
+            bg={Pastels.sky}
+            iconColor={Brand.primary}
             onPress={() => router.push('/(resident)/visitors')}
-          >
-            <GlassCard className="h-32 justify-center items-center">
-              <Users color={Brand.primary} size={32} className="mb-2" />
-              <Text className="text-ink font-bold text-center">Visitors</Text>
-            </GlassCard>
-          </AnimatedPressable>
-
-          <AnimatedPressable
-            containerStyle={{ width: '48%' }}
+            badge={pendingCount}
+          />
+          <QuickTile
+            label="Pre-approve"
+            icon={<UserPlus color={Brand.accent} size={22} strokeWidth={1.5} />}
+            bg={Pastels.peach}
+            iconColor={Brand.accent}
             onPress={() => router.push('/(resident)/pre-approve')}
-          >
-            <GlassCard className="h-32 justify-center items-center bg-brand-soft-bg">
-              <UserPlus color={Brand.primary} size={32} className="mb-2" />
-              <Text className="text-brand-900 font-bold text-center">Pre-approve</Text>
-            </GlassCard>
-          </AnimatedPressable>
-
-          <AnimatedPressable
-            containerStyle={{ width: '100%' }}
+          />
+          <QuickTile
+            label="Notices"
+            icon={<Bell color="#7C6BA8" size={22} strokeWidth={1.5} />}
+            bg={Pastels.lilac}
+            iconColor="#7C6BA8"
+            onPress={() => router.push('/(resident)/notices')}
+          />
+          <QuickTile
+            label="Helpdesk"
+            icon={<ClipboardList color="#B08020" size={22} strokeWidth={1.5} />}
+            bg={Pastels.butter}
+            iconColor="#B08020"
+            onPress={() => router.push('/(resident)/helpdesk')}
+          />
+          <QuickTile
+            label="Amenities"
+            icon={<Building2 color="#4A6FA8" size={22} strokeWidth={1.5} />}
+            bg={Pastels.sky}
+            iconColor="#4A6FA8"
             onPress={() => router.push('/(resident)/amenities')}
-          >
-            <GlassCard className="h-28 flex-row items-center px-6 bg-accent-soft">
-              <Building2 color="#F59E0B" size={40} className="mr-4" />
-              <View>
-                <Text className="text-ink font-bold text-lg">Book an amenity</Text>
-                <Text className="text-ink-muted text-sm">Gym, clubhouse, and more</Text>
-              </View>
-            </GlassCard>
-          </AnimatedPressable>
-        </View>
+          />
+        </ScrollView>
 
-        <Pressable onPress={() => router.push('/(resident)/more')} className="mt-6 items-center py-3">
-          <Text className="text-sm text-brand-700" style={{ fontFamily: FontFamily.medium }}>
-            More community tools
+        {/* ── More link ── */}
+        <Pressable onPress={() => router.push('/(resident)/more')} className="items-center py-3">
+          <Text className="text-sm text-brand-600" style={{ fontFamily: FontFamily.medium }}>
+            More community tools →
           </Text>
         </Pressable>
       </ScrollView>

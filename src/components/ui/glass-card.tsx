@@ -6,31 +6,31 @@ import { useColorScheme } from 'nativewind';
 interface GlassCardProps extends BlurViewProps {
   children: React.ReactNode;
   className?: string;
-  style?: any;
+  style?: ViewProps['style'];
 }
 
 export const GlassCard = ({ children, className, style, ...props }: GlassCardProps) => {
   const { colorScheme } = useColorScheme();
   const tint = colorScheme === 'dark' ? 'dark' : 'light';
-  
+
   return (
-    <View 
+    <View
       style={[
-        styles.shadowContainer, 
+        styles.shadowContainer,
         {
-          shadowColor: colorScheme === 'dark' ? '#000' : '#0F172A',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: colorScheme === 'dark' ? 0.4 : 0.08,
-          shadowRadius: 16,
+          shadowColor: colorScheme === 'dark' ? '#000' : '#1A2E28',
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: colorScheme === 'dark' ? 0.4 : 0.07,
+          shadowRadius: 20,
           elevation: 3,
         },
-        style
-      ]} 
+        style,
+      ]}
       className={className}
     >
       <View style={styles.innerContainer}>
-        <BlurView tint={tint} intensity={50} style={StyleSheet.absoluteFill} {...props} />
-        <View className="z-10 w-full h-full p-4 border border-surface-border rounded-3xl">
+        <BlurView tint={tint} intensity={40} style={StyleSheet.absoluteFill} {...props} />
+        <View className="z-10 h-full w-full rounded-bubbly border border-surface-border p-4">
           {children}
         </View>
       </View>
@@ -41,11 +41,11 @@ export const GlassCard = ({ children, className, style, ...props }: GlassCardPro
 const styles = StyleSheet.create({
   shadowContainer: {
     backgroundColor: 'transparent',
-    borderRadius: 24,
+    borderRadius: 28,
   },
   innerContainer: {
     overflow: 'hidden',
-    borderRadius: 24, // 3xl
+    borderRadius: 28,
     flex: 1,
   },
 });

@@ -9,6 +9,7 @@ import { SkeletonList } from '@/components/visitors/loading-state';
 import { VisitorCard } from '@/components/visitors/visitor-card';
 import { ChipSelector } from '@/components/ui/chip-selector';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { formatDateTime } from '@/lib/visitors';
 import { supabase } from '@/lib/supabase';
@@ -175,8 +176,10 @@ export default function GuardLogsScreen() {
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
       <View className="px-4 pb-2 pt-3">
-        <Text className="text-2xl font-bold text-ink">Visitor logs</Text>
-        <Text className="mb-3 text-sm text-ink-muted">Society history · filters live</Text>
+        <Text className="text-2xl text-ink" style={{ fontFamily: FontFamily.display }}>
+          Visitor logs
+        </Text>
+        <Text className="mb-4 mt-0.5 text-sm text-ink-muted">Society history · filters live</Text>
 
         <View className="mb-3">
           <SegmentedControl
@@ -246,9 +249,9 @@ export default function GuardLogsScreen() {
                   }
                 />
                 {(meta?.entry || meta?.exit) && (
-                  <View className="-mt-1 mb-1 rounded-b-2xl border border-t-0 border-surface-border bg-surface px-4 py-2">
-                    <Text className="text-xs text-ink-muted">
-                      In {formatDateTime(meta.entry)} · Out {formatDateTime(meta.exit)}
+                  <View className="-mt-1 mb-1 rounded-b-card bg-surface-muted px-4 py-2" style={{ borderWidth: 1, borderColor: '#E5E8E4', borderTopWidth: 0 }}>
+                    <Text className="text-xs text-ink-muted" style={{ fontFamily: FontFamily.heading }}>
+                      In {formatDateTime(meta.entry)} {meta?.exit ? `· Out ${formatDateTime(meta.exit)}` : ''}
                     </Text>
                   </View>
                 )}

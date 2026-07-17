@@ -1,11 +1,11 @@
 import { useRouter, type Href } from 'expo-router';
-import { Monitor, Moon, Sun, type LucideIcon } from 'lucide-react-native';
+import { ChevronRight, LogOut, Monitor, Moon, Sun, type LucideIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { Brand, FontFamily } from '@/constants/theme';
+import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore, type ThemeMode } from '@/stores/themeStore';
 
@@ -14,12 +14,23 @@ export type SettingsLink = {
   title: string;
   subtitle: string;
   Icon: LucideIcon;
+  /** Background tint for the icon container. Defaults to mint. */
+  tone?: keyof typeof Pastels;
+  /** Icon color override. */
+  iconColor?: string;
+};
+
+type SectionGroup = {
+  title: string;
+  links: SettingsLink[];
 };
 
 type Props = {
   title: string;
   subtitle: string;
   links: SettingsLink[];
+  /** Optional grouped sections. If provided, `links` is ignored. */
+  sections?: SectionGroup[];
 };
 
 const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
@@ -30,12 +41,55 @@ const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
 
 function ThemeIcon({ mode }: { mode: ThemeMode }) {
   const color = Brand.primary;
-  if (mode === 'dark') return <Moon color={color} size={18} />;
-  if (mode === 'light') return <Sun color={color} size={18} />;
-  return <Monitor color={color} size={18} />;
+  if (mode === 'dark') return <Moon color={color} size={18} strokeWidth={1.5} />;
+  if (mode === 'light') return <Sun color={color} size={18} strokeWidth={1.5} />;
+  return <Monitor color={color} size={18} strokeWidth={1.5} />;
 }
 
-export function SettingsHub({ title, subtitle, links }: Props) {
+function LinkRow({
+  href,
+  title,
+  subtitle,
+  Icon,
+  tone = 'mint',
+  iconColor,
+  onPress,
+}: SettingsLink & { onPress: () => void }) {
+  const bgColor = Pastels[tone];
+  const iconCol = iconColor ?? Brand.primary;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      className="flex-row items-center gap-3.5 rounded-card bg-surface-card px-4 py-3.5 mb-2"
+      style={{
+        shadowColor: '#101512',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        elevation: 1,
+      }}
+    >
+      <View
+        className="h-10 w-10 items-center justify-center rounded-card"
+        style={{ backgroundColor: bgColor }}
+      >
+        <Icon color={iconCol} size={17} strokeWidth={1.5} />
+      </View>
+      <View className="flex-1">
+        <Text className="text-[15px] text-ink" style={{ fontFamily: FontFamily.heading }}>
+          {title}
+        </Text>
+        <Text className="mt-0.5 text-xs text-ink-muted" numberOfLines={1}>
+          {subtitle}
+        </Text>
+      </View>
+      <ChevronRight color={Brand.inkMuted} size={16} strokeWidth={1.5} />
+    </Pressable>
+  );
+}
+
+export function SettingsHub({ title, subtitle, links, sections }: Props) {
   const router = useRouter();
   const signOut = useAuthStore((s) => s.signOut);
   const mode = useThemeStore((s) => s.mode);
@@ -49,37 +103,63 @@ export function SettingsHub({ title, subtitle, links }: Props) {
       await signOut();
       router.replace('/(auth)/login');
     } catch {
-      // AuthGate still redirects once session is cleared; keep button usable.
       setSigningOut(false);
     }
   };
+
+  const renderLinks = (items: SettingsLink[]) =>
+    items.map(({ href, title: linkTitle, subtitle: linkSubtitle, Icon, tone, iconColor }) => (
+      <LinkRow
+        key={String(href)}
+        href={href}
+        title={linkTitle}
+        subtitle={linkSubtitle}
+        Icon={Icon}
+        tone={tone}
+        iconColor={iconColor}
+        onPress={() => router.push(href)}
+      />
+    ));
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 32, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 28, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <Text
-          className="mb-1 text-3xl text-ink"
+          className="mb-0.5 text-[32px] tracking-tight text-ink"
           style={{ fontFamily: FontFamily.display }}
         >
           {title}
         </Text>
-        <Text className="mb-6 text-base text-ink-muted">{subtitle}</Text>
+        <Text className="mb-7 text-base leading-5 text-ink-muted">{subtitle}</Text>
 
-        <View className="mb-6 rounded-2xl border border-surface-border bg-surface-card px-4 py-4">
+        {/* Appearance section */}
+        <Text className="mb-2 text-xs font-bold uppercase tracking-widest text-ink-muted" style={{ fontFamily: FontFamily.heading }}>
+          Preferences
+        </Text>
+        <View
+          className="mb-6 rounded-panel bg-surface-card p-4"
+          style={{
+            shadowColor: '#101512',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.06,
+            shadowRadius: 8,
+            elevation: 2,
+          }}
+        >
           <View className="mb-3 flex-row items-center gap-3">
-            <View className="h-10 w-10 items-center justify-center rounded-full bg-brand-50">
+            <View className="h-10 w-10 items-center justify-center rounded-card" style={{ backgroundColor: Pastels.mint }}>
               <ThemeIcon mode={mode} />
             </View>
             <View className="flex-1">
-              <Text className="text-ink" style={{ fontFamily: FontFamily.heading }}>
+              <Text className="text-[15px] text-ink" style={{ fontFamily: FontFamily.heading }}>
                 Appearance
               </Text>
-              <Text className="text-sm text-ink-muted">
+              <Text className="mt-0.5 text-xs text-ink-muted">
                 Light, Dark, or match your device
               </Text>
             </View>
@@ -91,46 +171,47 @@ export function SettingsHub({ title, subtitle, links }: Props) {
           />
         </View>
 
-        <View className="mb-6 gap-2">
-          {links.map(({ href, title: linkTitle, subtitle: linkSubtitle, Icon }) => (
-            <Pressable
-              key={linkTitle}
-              onPress={() => router.push(href)}
-              className="flex-row items-center gap-3 rounded-2xl border border-surface-border bg-surface-card px-4 py-3.5"
-            >
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-brand-50">
-                <Icon color={Brand.primary} size={18} />
-              </View>
-              <View className="flex-1">
-                <Text
-                  className="text-ink"
-                  style={{ fontFamily: FontFamily.heading }}
-                >
-                  {linkTitle}
+        {/* Sections or flat links */}
+        {sections
+          ? sections.map((section) => (
+              <View key={section.title} className="mb-5">
+                <Text className="mb-2 text-xs font-bold uppercase tracking-widest text-ink-muted" style={{ fontFamily: FontFamily.heading }}>
+                  {section.title}
                 </Text>
-                <Text className="text-sm text-ink-muted">{linkSubtitle}</Text>
+                {renderLinks(section.links)}
               </View>
-            </Pressable>
-          ))}
-        </View>
+            ))
+          : (
+            <View className="mb-5">
+              {renderLinks(links)}
+            </View>
+          )
+        }
 
+        {/* Sign out — terracotta accent, visually separated */}
+        <View
+          className="mb-2 mt-4 h-px"
+          style={{ backgroundColor: '#E5E8E4' }}
+        />
         <Pressable
           accessibilityRole="button"
           disabled={signingOut}
-          className="items-center rounded-xl border border-status-rejectedSoft bg-status-rejectedSoft py-3.5"
-          onPress={() => {
-            void onSignOut();
-          }}
+          className="mt-4 items-center rounded-card py-4"
+          style={{ backgroundColor: `${Brand.accent}15` }}
+          onPress={() => { void onSignOut(); }}
         >
           {signingOut ? (
-            <ActivityIndicator color="#DC2626" />
+            <ActivityIndicator color={Brand.accent} />
           ) : (
-            <Text
-              className="text-base text-status-rejected"
-              style={{ fontFamily: FontFamily.heading }}
-            >
-              Sign out
-            </Text>
+            <View className="flex-row items-center gap-2">
+              <LogOut color={Brand.accent} size={16} strokeWidth={1.5} />
+              <Text
+                className="text-base"
+                style={{ color: Brand.accent, fontFamily: FontFamily.heading }}
+              >
+                Sign out
+              </Text>
+            </View>
           )}
         </Pressable>
       </ScrollView>

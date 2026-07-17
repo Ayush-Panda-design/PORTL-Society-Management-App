@@ -14,7 +14,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
-import { FontFamily } from '@/constants/theme';
+import { FontFamily, Brand } from '@/constants/theme';
 import { useThemePalette } from '@/hooks/use-theme';
 
 export type SegmentOption<T extends string = string> = {
@@ -76,7 +76,7 @@ export function SegmentedControl<T extends string>({
 
   return (
     <View
-      className={`h-11 flex-row rounded-[12px] ${className}`}
+      className={`h-12 flex-row rounded-bubbly ${className}`}
       style={[{ padding: INSET, backgroundColor: palette.segmentTrack }, style]}
       onLayout={onTrackLayout}
     >
@@ -89,12 +89,12 @@ export function SegmentedControl<T extends string>({
               top: INSET,
               bottom: INSET,
               left: 0,
-              borderRadius: 10,
-              backgroundColor: palette.card,
+              borderRadius: 22,
+              backgroundColor: palette.isDark ? palette.card : Brand.charcoal,
               shadowColor: palette.shadow,
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: palette.isDark ? 0.35 : 0.1,
-              shadowRadius: 3,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: palette.isDark ? 0.35 : 0.16,
+              shadowRadius: 6,
               elevation: 2,
             },
             indicatorStyle,
@@ -111,14 +111,18 @@ export function SegmentedControl<T extends string>({
             accessibilityState={{ selected }}
             onPress={() => select(option.value)}
             className="flex-1 items-center justify-center px-1"
-            style={{ minHeight: 38 }}
+            style={{ minHeight: 40 }}
           >
             <Text
               numberOfLines={1}
               style={{
                 fontFamily: selected ? FontFamily.heading : FontFamily.medium,
                 fontSize: 13,
-                color: selected ? palette.ink : palette.inkMuted,
+                color: selected
+                  ? palette.isDark
+                    ? palette.ink
+                    : '#FFFFFF'
+                  : palette.inkMuted,
               }}
             >
               {option.label}

@@ -102,7 +102,7 @@ export default function SignupScreen() {
               >
                 Portl
               </Text>
-              <Text className="mb-3 text-center text-sm text-teal-50/90">
+              <Text className="mb-3 text-center text-sm text-white/85">
                 Create your account, then join or start a society
               </Text>
               <GateAuthIllustration width={220} height={120} />
@@ -110,16 +110,21 @@ export default function SignupScreen() {
           </SafeAreaView>
         </LinearGradient>
 
-        <View className="-mt-4 flex-1 rounded-t-3xl bg-surface px-6 pb-10 pt-7">
-          <Text className="mb-5 text-base text-ink-soft">Create your Portl account</Text>
+        <View className="-mt-5 flex-1 rounded-t-[36px] bg-surface px-6 pb-10 pt-7">
+          <Text
+            className="mb-5 text-2xl text-ink"
+            style={{ fontFamily: FontFamily.display }}
+          >
+            Create account
+          </Text>
 
           <View className="mb-4 gap-2">
             <Text className="text-sm font-medium text-ink-soft">Full name</Text>
             <TextInput
-              className="rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+              className="rounded-soft border border-surface-border bg-surface-card px-4 py-3.5 text-base text-ink"
               autoComplete="name"
               placeholder="Alex Kumar"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor="#9AAFA7"
               value={fullName}
               onChangeText={setFullName}
             />
@@ -128,12 +133,12 @@ export default function SignupScreen() {
           <View className="mb-4 gap-2">
             <Text className="text-sm font-medium text-ink-soft">Email</Text>
             <TextInput
-              className="rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+              className="rounded-soft border border-surface-border bg-surface-card px-4 py-3.5 text-base text-ink"
               autoCapitalize="none"
               autoComplete="email"
               keyboardType="email-address"
               placeholder="you@example.com"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor="#9AAFA7"
               value={email}
               onChangeText={setEmail}
             />
@@ -142,11 +147,11 @@ export default function SignupScreen() {
           <View className="mb-6 gap-2">
             <Text className="text-sm font-medium text-ink-soft">Password</Text>
             <TextInput
-              className="rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+              className="rounded-soft border border-surface-border bg-surface-card px-4 py-3.5 text-base text-ink"
               secureTextEntry
               autoComplete="new-password"
               placeholder="••••••••"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor="#9AAFA7"
               value={password}
               onChangeText={setPassword}
             />
@@ -155,14 +160,26 @@ export default function SignupScreen() {
           {error ? <Text className="mb-4 text-sm text-status-rejected">{error}</Text> : null}
 
           <Pressable
-            className={`items-center rounded-xl bg-accent-600 py-3.5 ${submitting ? 'opacity-70' : ''}`}
+            className={`items-center rounded-bubbly bg-charcoal py-4 ${submitting ? 'opacity-70' : ''}`}
             disabled={submitting}
             onPress={() => void onSignup()}
+            style={{
+              shadowColor: Brand.charcoal,
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.22,
+              shadowRadius: 12,
+              elevation: 4,
+            }}
           >
             {submitting ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text className="text-base font-semibold text-white">Create account</Text>
+              <Text
+                className="text-base text-white"
+                style={{ fontFamily: FontFamily.heading }}
+              >
+                Create account
+              </Text>
             )}
           </Pressable>
 

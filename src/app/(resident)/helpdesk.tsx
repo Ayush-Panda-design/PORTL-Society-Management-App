@@ -9,8 +9,17 @@ import {
   View,
 } from 'react-native';
 import { KeyboardAwareScrollView, KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import {
+  Car,
+  CheckCircle,
+  Clock,
+  Droplets,
+  Leaf,
+  ShieldAlert,
+  Wrench,
+  Zap,
+} from 'lucide-react-native';
 
-import { ChipSelector } from '@/components/ui/chip-selector';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
@@ -21,6 +30,82 @@ import { createComplaint, fetchComplaintsForFlat } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
 import { COMPLAINT_CATEGORIES } from '@/types/database';
+import { Brand, FontFamily, Pastels } from '@/constants/theme';
+
+// Map complaint category → icon + color
+const CATEGORY_ICONS: Record<string, { Icon: typeof Wrench; color: string; bg: string }> = {
+  Parking: { Icon: Car, color: '#6B5CC4', bg: Pastels.lilac },
+  Water: { Icon: Droplets, color: '#2563EB', bg: Pastels.sky },
+  Electricity: { Icon: Zap, color: '#C4861A', bg: Pastels.butter },
+  Cleanliness: { Icon: Leaf, color: Brand.primary, bg: Pastels.mint },
+  Security: { Icon: ShieldAlert, color: '#C0392B', bg: Pastels.rose },
+  Maintenance: { Icon: Wrench, color: '#B06020', bg: Pastels.peach },
+};
+
+function getCategory(cat: string) {
+  return CATEGORY_ICONS[cat] ?? { Icon: Wrench, color: Brand.inkMuted, bg: Pastels.sage };
+}
+
+/** Icon-based category selector chips — replaces dropdown. */
+function CategoryChipGrid({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <View className="mb-4 flex-row flex-wrap gap-2">
+      {COMPLAINT_CATEGORIES.map((cat) => {
+        const { Icon, color, bg } = getCategory(cat);
+        const selected = value === cat;
+        return (
+          <Pressable
+            key={cat}
+            onPress={() => onChange(cat)}
+            className="flex-row items-center gap-1.5 rounded-pill px-3 py-2"
+            style={{
+              backgroundColor: selected ? color : bg,
+              borderWidth: selected ? 0 : 1,
+              borderColor: 'transparent',
+            }}
+          >
+            <Icon color={selected ? '#fff' : color} size={14} strokeWidth={1.5} />
+            <Text
+              className="text-xs font-semibold"
+              style={{ color: selected ? '#fff' : color, fontFamily: FontFamily.heading }}
+            >
+              {cat}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/** Status pill badge — icon + color + text. */
+function StatusBadge({ status }: { status: string }) {
+  const tone = complaintStatusTone(status);
+  const isResolved = status === 'resolved';
+  const isPending = status === 'open' || status === 'pending';
+  const BadgeIcon = isResolved ? CheckCircle : isPending ? Clock : Wrench;
+
+  return (
+    <View
+      className="flex-row items-center gap-1 rounded-pill px-2.5 py-1"
+      style={{ backgroundColor: tone.bgRaw ?? Pastels.mint }}
+    >
+      <BadgeIcon color={tone.colorRaw ?? Brand.primary} size={12} strokeWidth={1.5} />
+      <Text
+        className="text-[11px] font-semibold"
+        style={{ color: tone.colorRaw ?? Brand.primary, fontFamily: FontFamily.heading }}
+      >
+        {tone.label}
+      </Text>
+    </View>
+  );
+}
 
 export default function ResidentHelpdeskScreen() {
   const profile = useAuthStore((s) => s.profile);
@@ -50,7 +135,7 @@ export default function ResidentHelpdeskScreen() {
     },
     onSuccess: async () => {
       setDescription('');
-      setSuccess('Complaint submitted.');
+      setSuccess('Complaint submitted successfully.');
       setFormError(null);
       await queryClient.invalidateQueries({
         queryKey: queryKeys.complaints(`flat:${flatId}`),
@@ -66,7 +151,8 @@ export default function ResidentHelpdeskScreen() {
     return (
       <ScreenHeader title="Helpdesk" showBack>
         <EmptyState
-          visual="disconnected" title="No flat linked"
+          visual="disconnected"
+          title="No flat linked"
           subtitle="Ask an admin to link your flat before filing complaints."
         />
       </ScreenHeader>
@@ -92,25 +178,40 @@ export default function ResidentHelpdeskScreen() {
             />
           }
           ListHeaderComponent={
-            <View className="mb-4 rounded-2xl border border-surface-border bg-surface-card p-4">
-              <Text className="mb-2 text-base font-semibold text-ink">New complaint</Text>
-              {formError ? <Text className="mb-2 text-sm text-status-rejected">{formError}</Text> : null}
-              {success ? <Text className="mb-2 text-sm text-teal-700">{success}</Text> : null}
+            <View
+              className="mb-4 rounded-panel bg-surface-card p-4"
+              style={{
+                shadowColor: Brand.primary,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.06,
+                shadowRadius: 8,
+                elevation: 2,
+              }}
+            >
+              <Text className="mb-3 text-lg text-ink" style={{ fontFamily: FontFamily.display }}>
+                Raise a complaint
+              </Text>
 
-              <Text className="mb-2 text-sm font-medium text-ink-soft">Category</Text>
-              <ChipSelector
-                className="mb-3"
-                title="Category"
-                presentation="sheet"
-                options={COMPLAINT_CATEGORIES.map((c) => ({ value: c, label: c }))}
-                value={category}
-                onChange={setCategory}
-              />
+              {formError ? (
+                <View className="mb-3 rounded-card bg-status-rejectedSoft px-3 py-2">
+                  <Text className="text-sm text-status-rejected">{formError}</Text>
+                </View>
+              ) : null}
+              {success ? (
+                <View className="mb-3 rounded-card bg-status-approvedSoft px-3 py-2">
+                  <Text className="text-sm text-status-approved">{success}</Text>
+                </View>
+              ) : null}
+
+              <Text className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-muted" style={{ fontFamily: FontFamily.heading }}>
+                Category
+              </Text>
+              <CategoryChipGrid value={category} onChange={setCategory} />
 
               <TextInput
-                className="mb-3 min-h-[90px] rounded-xl border border-surface-border px-4 py-3 text-base text-ink"
-                placeholder="Describe the issue…"
-                placeholderTextColor="#94A3B8"
+                className="mb-4 min-h-[90px] rounded-card bg-surface-muted px-4 py-3 text-base text-ink"
+                placeholder="Describe the issue in detail…"
+                placeholderTextColor={Brand.inkMuted}
                 multiline
                 textAlignVertical="top"
                 value={description}
@@ -120,16 +221,21 @@ export default function ResidentHelpdeskScreen() {
               <Pressable
                 onPress={() => createMutation.mutate()}
                 disabled={createMutation.isPending}
-                className="items-center rounded-xl bg-teal-700 py-3"
+                className={`items-center rounded-card py-3.5 ${createMutation.isPending ? 'opacity-60' : ''}`}
+                style={{ backgroundColor: Brand.accent }}
               >
                 {createMutation.isPending ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text className="font-semibold text-white">Submit</Text>
+                  <Text className="font-semibold text-white" style={{ fontFamily: FontFamily.heading }}>
+                    Submit complaint
+                  </Text>
                 )}
               </Pressable>
 
-              <Text className="mb-1 mt-5 text-base font-semibold text-ink">Your complaints</Text>
+              <Text className="mb-1 mt-6 text-base text-ink" style={{ fontFamily: FontFamily.display }}>
+                Your complaints
+              </Text>
             </View>
           }
           ListEmptyComponent={
@@ -145,21 +251,44 @@ export default function ResidentHelpdeskScreen() {
             )
           }
           renderItem={({ item }) => {
-            const tone = complaintStatusTone(item.status);
+            const { Icon: CatIcon, color: catColor, bg: catBg } = getCategory(item.category);
+            const ageMs = Date.now() - new Date(item.created_at).getTime();
+            const ageDays = Math.floor(ageMs / 86400000);
+            const ageText = ageDays === 0 ? 'Today' : ageDays === 1 ? 'Yesterday' : `${ageDays}d ago`;
+
             return (
-              <View className="rounded-2xl border border-surface-border bg-surface-card p-4">
-                <View className="mb-2 flex-row items-center justify-between gap-2">
-                  <Text className="flex-1 text-base font-semibold text-ink">
-                    {item.category}
-                  </Text>
-                  <View className={`rounded-full border px-2 py-0.5 ${tone.bg} ${tone.border}`}>
-                    <Text className={`text-xs font-medium ${tone.text}`}>{tone.label}</Text>
+              <View
+                className="rounded-panel bg-surface-card"
+                style={{
+                  shadowColor: '#101512',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.06,
+                  shadowRadius: 8,
+                  elevation: 2,
+                }}
+              >
+                <View className="flex-row items-start gap-3 p-4">
+                  {/* Category icon pill */}
+                  <View
+                    className="h-10 w-10 items-center justify-center rounded-panel"
+                    style={{ backgroundColor: catBg }}
+                  >
+                    <CatIcon color={catColor} size={18} strokeWidth={1.5} />
+                  </View>
+                  <View className="flex-1">
+                    <View className="mb-1.5 flex-row items-center justify-between">
+                      <Text className="text-base font-semibold text-ink" style={{ fontFamily: FontFamily.heading }}>
+                        {item.category}
+                      </Text>
+                      <StatusBadge status={item.status} />
+                    </View>
+                    <Text className="mb-2 text-sm leading-5 text-ink-soft" numberOfLines={2}>
+                      {item.description}
+                    </Text>
+                    {/* Progress age line */}
+                    <Text className="text-xs text-ink-faint">{ageText}</Text>
                   </View>
                 </View>
-                <Text className="text-sm text-ink-soft">{item.description}</Text>
-                <Text className="mt-2 text-xs text-ink-faint">
-                  {new Date(item.created_at).toLocaleString()}
-                </Text>
               </View>
             );
           }}

@@ -239,7 +239,7 @@ export default function AdminFlatsScreen() {
           accessibilityRole="button"
           accessibilityLabel="Add flat"
           className={`h-10 w-10 items-center justify-center rounded-full ${
-            noTowers ? 'bg-surface-muted' : 'bg-brand-700'
+            noTowers ? 'bg-surface-muted' : 'bg-charcoal'
           }`}
         >
           <Plus color="#fff" size={20} />
@@ -363,7 +363,7 @@ export default function AdminFlatsScreen() {
               <Pressable
                 onPress={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending}
-                className="flex-1 items-center rounded-xl bg-brand-700 py-3"
+                className="flex-1 items-center rounded-bubbly bg-charcoal py-3.5"
               >
                 {saveMutation.isPending ? (
                   <ActivityIndicator color="#fff" />

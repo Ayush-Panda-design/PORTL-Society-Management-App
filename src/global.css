@@ -3,49 +3,80 @@
 @tailwind utilities;
 
 :root {
-  --color-brand: #0f766e;
-  --color-brand-dark: #115e59;
-  --color-brand-soft: #ccfbf1;
-  --color-accent: #d97706;
-  --color-surface: #f7fafc;
+  /* Primary — deep forest green */
+  --color-brand: #1f4b3f;
+  --color-brand-dark: #163830;
+  --color-brand-soft: #c8ddd8;
+
+  /* Accent — terracotta */
+  --color-accent: #e4823d;
+  --color-accent-dark: #c46b2b;
+  --color-accent-soft: #fdebd8;
+
+  /* Charcoal */
+  --color-charcoal: #1e2322;
+
+  /* Surfaces */
+  --color-surface: #faf9f6;
   --color-surface-card: #ffffff;
-  --color-surface-muted: #eef2f6;
-  --color-surface-border: #e2e8f0;
-  --color-ink: #0f172a;
-  --color-ink-soft: #334155;
-  --color-ink-muted: #64748b;
-  --color-ink-faint: #94a3b8;
-  --color-brand-soft-bg: #f0fdfa;
-  --color-accent-soft: #fff7ed;
-  --color-status-approved-soft: #ecfdf5;
-  --color-status-pending-soft: #fffbeb;
-  --color-status-rejected-soft: #fef2f2;
-  --color-status-info-soft: #eff6ff;
-  --color-segment-track: #e8edf2;
-  --color-border: #e2e8f0;
-  --font-display: 'Manrope', ui-sans-serif, system-ui, sans-serif;
-  --font-body: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --color-surface-muted: #eff2f0;
+  --color-surface-border: #e5e8e4;
+
+  /* Ink */
+  --color-ink: #101512;
+  --color-ink-soft: #374140;
+  --color-ink-muted: #6b7a77;
+  --color-ink-faint: #9eaaa7;
+
+  /* Brand soft */
+  --color-brand-soft-bg: #e3f0ec;
+
+  /* Status */
+  --color-status-approved-soft: #e3f0ec;
+  --color-status-pending-soft: #f9f0dc;
+  --color-status-rejected-soft: #f8e4e4;
+  --color-status-info-soft: #dde8f4;
+
+  /* Segment */
+  --color-segment-track: #e5e8e4;
+  --color-border: #e5e8e4;
+
+  /* Typography — Inter */
+  --font-display: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-mono:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
   --font-serif: Georgia, 'Times New Roman', serif;
 }
 
 .dark {
-  --color-surface: #000000;
-  --color-surface-card: #0A0A0A;
-  --color-surface-muted: #141414;
-  --color-surface-border: rgba(255, 255, 255, 0.1);
-  --color-ink: #ffffff;
-  --color-ink-soft: #e5e5e5;
-  --color-ink-muted: #a3a3a3;
-  --color-ink-faint: #737373;
-  --color-brand-soft-bg: rgba(13, 148, 136, 0.1);
-  --color-brand-soft: rgba(13, 148, 136, 0.2);
-  --color-accent-soft: rgba(245, 158, 11, 0.1);
-  --color-status-approved-soft: #0a2e22;
-  --color-status-pending-soft: #3d2a0a;
-  --color-status-rejected-soft: #3d1212;
-  --color-status-info-soft: #0a1e3d;
-  --color-segment-track: #262626;
-  --color-border: #2a2a2a;
+  /* Surfaces */
+  --color-surface: #101512;
+  --color-surface-card: #181c1a;
+  --color-surface-muted: #1e2421;
+  --color-surface-border: #272e2b;
+
+  /* Ink */
+  --color-ink: #f0f4f2;
+  --color-ink-soft: #d4ddd9;
+  --color-ink-muted: #8a9c97;
+  --color-ink-faint: #5e706b;
+
+  /* Brand soft */
+  --color-brand-soft-bg: #122920;
+  --color-brand-soft: #1a342c;
+  --color-accent-soft: #3a2318;
+
+  /* Charcoal (flips to light in dark mode for text usage) */
+  --color-charcoal: #e8efec;
+
+  /* Status */
+  --color-status-approved-soft: #0a2e1e;
+  --color-status-pending-soft: #3a2a08;
+  --color-status-rejected-soft: #3a1010;
+  --color-status-info-soft: #0a1e3a;
+
+  /* Segment */
+  --color-segment-track: #222925;
+  --color-border: #272e2b;
 }

@@ -1,9 +1,11 @@
 import { Tabs } from 'expo-router';
 import { ClipboardList, MoreHorizontal, ScanLine, ShieldCheck, UserPlus } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useResolvedColorScheme } from '@/hooks/use-resolved-color-scheme';
-import { getRoleTabScreenOptions } from '@/constants/navigation';
+import { getGuardTabOptions } from '@/constants/navigation';
 
+/** Consistent 1.5px stroke weight per design spec (Lucide icon family). */
 function tabIcon(
   Icon: typeof ShieldCheck,
   color: string,
@@ -14,18 +16,19 @@ function tabIcon(
     <Icon
       color={color}
       size={size}
+      strokeWidth={1.5}
       fill={focused ? color : 'transparent'}
-      fillOpacity={focused ? 0.22 : 0}
-      strokeWidth={focused ? 2.4 : 2}
+      fillOpacity={focused ? 0.18 : 0}
     />
   );
 }
 
 export default function GuardLayout() {
   const scheme = useResolvedColorScheme();
+  const insets = useSafeAreaInsets();
 
   return (
-    <Tabs screenOptions={getRoleTabScreenOptions(scheme)}>
+    <Tabs screenOptions={getGuardTabOptions({ scheme, bottomInset: insets.bottom })}>
       <Tabs.Screen
         name="dashboard"
         options={{

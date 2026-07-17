@@ -21,8 +21,8 @@ export function ScreenHeader({ title, subtitle, children, right, showBack }: Pro
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
-      <View className="flex-row items-start justify-between gap-3 px-4 pb-2 pt-3">
-        <View className="min-w-0 flex-1 flex-row items-start gap-2">
+      <View className="flex-row items-start justify-between gap-3 px-5 pb-3 pt-4">
+        <View className="min-w-0 flex-1 flex-row items-start gap-3">
           {showBack ? (
             <Pressable
               accessibilityRole="button"
@@ -34,14 +34,21 @@ export function ScreenHeader({ title, subtitle, children, right, showBack }: Pro
                   router.replace('/');
                 }
               }}
-              className="mt-0.5 h-9 w-9 items-center justify-center rounded-full border border-surface-border bg-surface-card"
+              className="mt-0.5 h-11 w-11 items-center justify-center rounded-full bg-surface-card"
+              style={{
+                shadowColor: palette.shadow,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: palette.isDark ? 0.35 : 0.06,
+                shadowRadius: 10,
+                elevation: 2,
+              }}
             >
-              <ChevronLeft color={palette.inkMuted} size={20} />
+              <ChevronLeft color={palette.ink} size={22} />
             </Pressable>
           ) : null}
-          <View className="min-w-0 flex-1">
+          <View className="min-w-0 flex-1 pt-0.5">
             <Text
-              className="text-2xl text-ink"
+              className="text-[28px] text-ink tracking-tight"
               numberOfLines={1}
               style={{ fontFamily: FontFamily.display }}
               accessibilityRole="header"
@@ -49,7 +56,7 @@ export function ScreenHeader({ title, subtitle, children, right, showBack }: Pro
               {title}
             </Text>
             {subtitle ? (
-              <Text className="text-sm text-ink-muted" numberOfLines={2}>
+              <Text className="mt-1 text-[15px] leading-5 text-ink-muted" numberOfLines={2}>
                 {subtitle}
               </Text>
             ) : null}

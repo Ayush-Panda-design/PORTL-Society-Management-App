@@ -9,10 +9,14 @@ import {
   Phone,
   UserPlus,
   Users,
+  TrendingUp,
+  AlertCircle,
+  Clock,
+  LayoutGrid,
+  Settings2,
 } from 'lucide-react-native';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { TrendingUp, AlertCircle, Clock, ShieldAlert, LayoutGrid, Settings2 } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 
 import { EmptyMailboxIllustration } from '@/components/illustrations';
@@ -20,7 +24,7 @@ import { AppCard, HeroBanner, PressableActionTile } from '@/components/ui/brand'
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
-import { Brand, FontFamily } from '@/constants/theme';
+import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { fetchAdminDashboardStats } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
@@ -63,21 +67,21 @@ export default function AdminHome() {
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 28 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <ThemedRefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
         }
       >
         <HeroBanner
-          title={`Welcome, ${name}`}
+          title={`Hello, ${name}`}
           subtitle="Structure, notices, and day-to-day society ops"
-          illustration={<EmptyMailboxIllustration width={110} height={78} />}
+          illustration={<EmptyMailboxIllustration width={108} height={76} />}
         />
 
         <Text
-          className="mb-3 mt-5 text-base text-ink"
-          style={{ fontFamily: FontFamily.heading }}
+          className="mb-3 mt-2 text-lg text-ink"
+          style={{ fontFamily: FontFamily.display }}
         >
           Today at a glance
         </Text>
@@ -90,7 +94,7 @@ export default function AdminHome() {
         ) : null}
 
         {statsQuery.isLoading && !stats ? (
-          <View className="mb-2 h-36 items-center justify-center rounded-2xl border border-surface-border bg-surface-card">
+          <View className="mb-2 h-36 items-center justify-center rounded-bubbly border border-surface-border bg-surface-card">
             <ActivityIndicator color={Brand.primary} />
           </View>
         ) : (
@@ -99,16 +103,16 @@ export default function AdminHome() {
               label="Residents"
               value={stats?.totalResidents ?? 0}
               onPress={() => go('/(admin)/residents')}
-              color="brand"
+              pastel={Pastels.mint}
               width="100%"
-              icon={<Users color="#0F766E" size={24} />}
+              icon={<Users color={Brand.primary} size={24} />}
               trend="+2 this week"
             />
             <StatCard
               label="Pending visitors"
               value={stats?.pendingVisitorsToday ?? 0}
               hint="Today"
-              color="pending"
+              pastel={Pastels.butter}
               width="48%"
               icon={<Clock color="#D97706" size={20} />}
             />
@@ -116,93 +120,93 @@ export default function AdminHome() {
               label="Open complaints"
               value={stats?.openComplaints ?? 0}
               onPress={() => go('/(admin)/complaints')}
-              color="rejected"
+              pastel={Pastels.rose}
               width="48%"
               icon={<AlertCircle color="#DC2626" size={20} />}
             />
           </View>
         )}
 
-        <View className="flex-row items-center mb-3 mt-4">
-          <View className="bg-brand-50 p-1.5 rounded-lg mr-2">
+        <View className="mb-3 mt-1 flex-row items-center">
+          <View className="mr-2 rounded-soft bg-pastel-mint p-2">
             <LayoutGrid color={Brand.primary} size={16} />
           </View>
-          <Text
-            className="text-lg font-bold text-ink"
-            style={{ fontFamily: FontFamily.heading }}
-          >
+          <Text className="text-lg text-ink" style={{ fontFamily: FontFamily.display }}>
             Structure
           </Text>
         </View>
-        <View className="bg-surface-muted/30 rounded-2xl p-2 mb-4">
-        <PressableActionTile
-          title="Towers"
-          subtitle="Add and rename society buildings"
-          icon={<Building2 color={Brand.primary} size={20} />}
-          onPress={() => go('/(admin)/towers' as Href)}
-        />
-        <PressableActionTile
-          title="Flats"
-          subtitle="Map units to towers"
-          icon={<Layers color={Brand.primary} size={20} />}
-          onPress={() => go('/(admin)/flats' as Href)}
-        />
-        <PressableActionTile
-          title="Invite links"
-          subtitle="Share resident and guard codes"
-          icon={<KeyRound color={Brand.primary} size={20} />}
-          onPress={() => go('/(admin)/invites' as Href)}
-        />
-        <PressableActionTile
-          title="Join requests"
-          subtitle="Approve new residents and guards"
-          icon={<UserPlus color={Brand.primary} size={20} />}
-          onPress={() => go('/(admin)/join-requests' as Href)}
-        />
-        <PressableActionTile
-          title="Residents"
-          subtitle="Assign members to flats"
-          icon={<Users color={Brand.primary} size={20} />}
-          onPress={() => go('/(admin)/residents')}
-        />
-
+        <View className="mb-5 rounded-bubbly bg-pastel-mint/50 p-2.5 dark:bg-surface-muted">
+          <PressableActionTile
+            title="Towers"
+            subtitle="Add and rename society buildings"
+            icon={<Building2 color={Brand.primary} size={20} />}
+            onPress={() => go('/(admin)/towers' as Href)}
+            tone="sky"
+          />
+          <PressableActionTile
+            title="Flats"
+            subtitle="Map units to towers"
+            icon={<Layers color={Brand.primary} size={20} />}
+            onPress={() => go('/(admin)/flats' as Href)}
+            tone="lilac"
+          />
+          <PressableActionTile
+            title="Invite links"
+            subtitle="Share resident and guard codes"
+            icon={<KeyRound color={Brand.primary} size={20} />}
+            onPress={() => go('/(admin)/invites' as Href)}
+            tone="peach"
+          />
+          <PressableActionTile
+            title="Join requests"
+            subtitle="Approve new residents and guards"
+            icon={<UserPlus color={Brand.primary} size={20} />}
+            onPress={() => go('/(admin)/join-requests' as Href)}
+            tone="butter"
+          />
+          <PressableActionTile
+            title="Residents"
+            subtitle="Assign members to flats"
+            icon={<Users color={Brand.primary} size={20} />}
+            onPress={() => go('/(admin)/residents')}
+            tone="mint"
+          />
         </View>
 
-        <View className="flex-row items-center mb-3 mt-2">
-          <View className="bg-accent-soft p-1.5 rounded-lg mr-2">
-            <Settings2 color="#D97706" size={16} />
+        <View className="mb-3 mt-1 flex-row items-center">
+          <View className="mr-2 rounded-soft bg-pastel-peach p-2">
+            <Settings2 color={Brand.accent} size={16} />
           </View>
-          <Text
-            className="text-lg font-bold text-ink"
-            style={{ fontFamily: FontFamily.heading }}
-          >
+          <Text className="text-lg text-ink" style={{ fontFamily: FontFamily.display }}>
             Operations
           </Text>
         </View>
-        <View className="bg-surface-muted/30 rounded-2xl p-2 mb-4">
-        <PressableActionTile
-          title="Post a notice"
-          subtitle="Reach every resident"
-          icon={<Bell color={Brand.primary} size={20} />}
-          onPress={() => go('/(admin)/notices')}
-        />
-        <PressableActionTile
-          title="Complaints queue"
-          subtitle="Triage helpdesk tickets"
-          icon={<ClipboardList color={Brand.primary} size={20} />}
-          onPress={() => go('/(admin)/complaints')}
-        />
-        <PressableActionTile
-          title="Staff directory"
-          subtitle="Contacts residents can call"
-          icon={<Phone color={Brand.primary} size={20} />}
-          onPress={() => go('/(admin)/staff')}
-        />
-
+        <View className="mb-4 rounded-bubbly bg-pastel-peach/40 p-2.5 dark:bg-surface-muted">
+          <PressableActionTile
+            title="Post a notice"
+            subtitle="Reach every resident"
+            icon={<Bell color={Brand.primary} size={20} />}
+            onPress={() => go('/(admin)/notices')}
+            tone="sky"
+          />
+          <PressableActionTile
+            title="Complaints queue"
+            subtitle="Triage helpdesk tickets"
+            icon={<ClipboardList color={Brand.primary} size={20} />}
+            onPress={() => go('/(admin)/complaints')}
+            tone="rose"
+          />
+          <PressableActionTile
+            title="Staff directory"
+            subtitle="Contacts residents can call"
+            icon={<Phone color={Brand.primary} size={20} />}
+            onPress={() => go('/(admin)/staff')}
+            tone="mint"
+          />
         </View>
 
         <Text className="mt-1 text-center text-sm text-ink-muted">
-          More tools live under the Manage tab
+          More tools live under the More tab
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -214,7 +218,7 @@ function StatCard({
   value,
   hint,
   onPress,
-  color = 'brand',
+  pastel,
   width = '47.5%',
   icon,
   trend,
@@ -223,51 +227,52 @@ function StatCard({
   value: number;
   hint?: string;
   onPress?: () => void;
-  color?: 'brand' | 'pending' | 'rejected' | 'info';
+  pastel: string;
   width?: string | number;
   icon?: React.ReactNode;
   trend?: string;
 }) {
-  const bgClasses = {
-    brand: 'bg-brand-soft-bg',
-    pending: 'bg-yellow-50 dark:bg-yellow-900/20',
-    rejected: 'bg-red-50 dark:bg-red-900/20',
-    info: 'bg-blue-50 dark:bg-blue-900/20',
-  };
-
-  const textClasses = {
-    brand: 'text-brand-900',
-    pending: 'text-amber-900',
-    rejected: 'text-red-900',
-    info: 'text-blue-900',
-  };
-
   const content = (
-    <AppCard className={`w-full flex-1 p-4 ${bgClasses[color]}`}>
-      <View className="flex-row justify-between items-start">
+    <AppCard className="w-full flex-1 border-0 p-5" style={{ backgroundColor: pastel }}>
+      <View className="flex-row items-start justify-between">
         <View>
-          <Text className={`text-[32px] ${textClasses[color]} tracking-tight`} style={{ fontFamily: FontFamily.display }}>
+          <Text
+            className="text-[34px] tracking-tight text-ink"
+            style={{ fontFamily: FontFamily.display }}
+          >
             {value}
           </Text>
-          <Text className={`mt-1 text-[15px] font-medium ${textClasses[color]} opacity-80`} numberOfLines={1}>
+          <Text className="mt-1 text-[15px] text-ink-soft" numberOfLines={1} style={{ fontFamily: FontFamily.medium }}>
             {label}
           </Text>
-          {hint ? <Text className={`mt-1 text-[12px] ${textClasses[color]} opacity-60`}>{hint}</Text> : null}
+          {hint ? <Text className="mt-1 text-[12px] text-ink-muted">{hint}</Text> : null}
           {trend ? (
-            <View className="flex-row items-center mt-2 bg-white/40 self-start px-2 py-1 rounded-md">
-              <TrendingUp color="#0F766E" size={14} className="mr-1" />
-              <Text className="text-xs text-brand-900 font-bold">{trend}</Text>
+            <View className="mt-2.5 flex-row items-center self-start rounded-full bg-white/55 px-2.5 py-1">
+              <TrendingUp color={Brand.primary} size={14} />
+              <Text className="ml-1 text-xs text-brand-800" style={{ fontFamily: FontFamily.heading }}>
+                {trend}
+              </Text>
             </View>
           ) : null}
         </View>
-        {icon ? <View className="opacity-80">{icon}</View> : null}
+        {icon ? (
+          <View className="h-11 w-11 items-center justify-center rounded-soft bg-white/50">
+            {icon}
+          </View>
+        ) : null}
       </View>
     </AppCard>
   );
 
   return (
-    <View style={{ width: width as any }}>
-      {onPress ? <Pressable className="flex-1" onPress={onPress}>{content}</Pressable> : <View className="flex-1">{content}</View>}
+    <View style={{ width: width as number | `${number}%` }}>
+      {onPress ? (
+        <Pressable className="flex-1" onPress={onPress}>
+          {content}
+        </Pressable>
+      ) : (
+        <View className="flex-1">{content}</View>
+      )}
     </View>
   );
 }
