@@ -21,8 +21,8 @@ export function SearchField({
   const palette = useThemePalette();
 
   return (
-    <View className="mb-3 flex-row items-center gap-2 rounded-2xl border border-surface-border bg-surface-card px-3 py-2.5">
-      <Search color={palette.inkMuted} size={18} accessibilityElementsHidden />
+    <View className="mb-3 flex-row items-center gap-2 rounded-full border-0 bg-surface-muted/50 px-4 py-3">
+      <Search color={palette.inkMuted} size={20} accessibilityElementsHidden />
       <TextInput
         accessibilityLabel={accessibilityLabel}
         className="min-h-[22px] flex-1 text-base text-ink"

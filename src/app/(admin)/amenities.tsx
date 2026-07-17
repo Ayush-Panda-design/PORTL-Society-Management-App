@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
-import { AppCard } from '@/components/ui/brand';
+import { AppCard, FloatingActionBtn } from '@/components/ui/brand';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
@@ -106,16 +106,6 @@ export default function AdminAmenitiesScreen() {
       title="Amenities"
       subtitle="Manage bookable facilities"
       showBack
-      right={
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Add amenity"
-          onPress={openCreate}
-          className="h-10 w-10 items-center justify-center rounded-full bg-brand-700"
-        >
-          <Plus color="#fff" size={20} />
-        </Pressable>
-      }
     >
       {listQuery.error ? (
         <ErrorBanner message={listQuery.error.message} onRetry={() => void listQuery.refetch()} />
@@ -136,6 +126,8 @@ export default function AdminAmenitiesScreen() {
               visual="amenities"
               title="No amenities"
               subtitle="Tap + to add gym, clubhouse, etc."
+              actionLabel="Add your first amenity"
+              onAction={openCreate}
             />
           }
           renderItem={({ item }) => (
@@ -231,6 +223,7 @@ export default function AdminAmenitiesScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      <FloatingActionBtn onPress={openCreate} icon={<Plus color="#fff" size={24} />} label="Add Amenity" />
     </ScreenHeader>
   );
 }

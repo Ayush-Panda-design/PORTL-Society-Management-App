@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 
+import { AnimatedPressable } from '@/components/ui/animated-pressable';
 import { AppCard } from '@/components/ui/brand';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
@@ -49,35 +50,52 @@ function InviteCodeCard({
     }
   };
 
-  return (
-    <AppCard className="mb-3">
-      <Text className="text-xs uppercase text-ink-faint">{roleLabel(invite.role)} invite</Text>
-      <Text
-        className="mt-2 text-center text-3xl tracking-widest text-ink"
-        style={{ fontFamily: FontFamily.display }}
-        selectable
-      >
-        {invite.code}
-      </Text>
-      <Text className="mt-2 text-center text-xs text-ink-muted">
-        Long-press the code to copy · share with{' '}
-        {invite.role === 'resident' ? 'residents' : 'guards'} only
-      </Text>
+  const isResident = invite.role === 'resident';
 
-      <Pressable
-        onPress={() => void share()}
-        className="mt-4 flex-row items-center justify-center gap-2 rounded-xl bg-brand-700 py-3"
+  return (
+    <View className="mb-4">
+      {/* Top Half */}
+      <View
+        className={`rounded-t-2xl p-6 ${isResident ? 'bg-brand-700' : 'bg-status-pending'}`}
       >
-        <Share2 color="#fff" size={16} />
-        <Text className="text-sm text-white" style={{ fontFamily: FontFamily.medium }}>
-          Share invite
+        <Text className="text-white/80 font-medium uppercase tracking-wider text-xs mb-1">
+          {roleLabel(invite.role)} Access
         </Text>
-      </Pressable>
+        <Text className="text-white text-3xl tracking-[0.2em] mb-2" style={{ fontFamily: FontFamily.display }}>
+          {invite.code}
+        </Text>
+        <Text className="text-white/70 text-xs">
+          Share only with verified {isResident ? 'residents' : 'security staff'}
+        </Text>
+      </View>
+
+      {/* Perforated Divider */}
+      <View className="flex-row items-center h-8 bg-surface-card overflow-hidden">
+        {/* Left Cutout */}
+        <View className="w-4 h-8 rounded-r-full bg-surface absolute left-0 -ml-2" />
+        
+        {/* Dashed Line */}
+        <View className="flex-1 mx-4 h-[1px] border-b border-dashed border-surface-border" />
+        
+        {/* Right Cutout */}
+        <View className="w-4 h-8 rounded-l-full bg-surface absolute right-0 -mr-2" />
+      </View>
+
+      {/* Bottom Half */}
+      <View className="rounded-b-2xl bg-surface-card p-4 pt-1 flex-row items-center justify-between">
+        <View />
+        <AnimatedPressable onPress={() => void share()}>
+          <View className="px-4 py-2 rounded-lg bg-brand-700 flex-row items-center">
+            <Share2 color="#fff" size={16} className="mr-2" />
+            <Text className="text-white font-bold">Share</Text>
+          </View>
+        </AnimatedPressable>
+      </View>
 
       <Pressable
         disabled={busyRole === invite.role}
         onPress={() => onRegenerate(invite.role)}
-        className={`mt-3 flex-row items-center justify-center gap-2 py-2 ${
+        className={`mt-2 flex-row items-center justify-center gap-2 py-2 ${
           busyRole === invite.role ? 'opacity-60' : ''
         }`}
       >
@@ -86,9 +104,9 @@ function InviteCodeCard({
         ) : (
           <RefreshCw color={Brand.inkMuted} size={14} />
         )}
-        <Text className="text-xs text-ink-muted">Regenerate code</Text>
+        <Text className="text-xs text-ink-muted">Regenerate code (invalidates old code)</Text>
       </Pressable>
-    </AppCard>
+    </View>
   );
 }
 

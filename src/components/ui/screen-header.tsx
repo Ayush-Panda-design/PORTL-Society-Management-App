@@ -27,7 +27,13 @@ export function ScreenHeader({ title, subtitle, children, right, showBack }: Pro
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Go back"
-              onPress={() => router.back()}
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/');
+                }
+              }}
               className="mt-0.5 h-9 w-9 items-center justify-center rounded-full border border-surface-border bg-surface-card"
             >
               <ChevronLeft color={palette.inkMuted} size={20} />

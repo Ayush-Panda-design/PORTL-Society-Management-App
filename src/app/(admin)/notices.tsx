@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
-import { AppCard, InitialsAvatar } from '@/components/ui/brand';
+import { AppCard, InitialsAvatar, FloatingActionBtn } from '@/components/ui/brand';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
@@ -174,16 +174,6 @@ export default function AdminNoticesScreen() {
     <ScreenHeader
       title="Notices"
       subtitle="Create and manage announcements"
-      right={
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Add notice"
-          onPress={openCreate}
-          className="h-10 w-10 items-center justify-center rounded-full bg-brand-700"
-        >
-          <Plus color="#fff" size={20} />
-        </Pressable>
-      }
     >
       {error ? <ErrorBanner message={error.message} onRetry={() => void refetch()} /> : null}
       {deleteMutation.error ? (
@@ -346,6 +336,7 @@ export default function AdminNoticesScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      <FloatingActionBtn onPress={openCreate} icon={<Plus color="#fff" size={24} />} label="Post" />
     </ScreenHeader>
   );
 }

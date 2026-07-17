@@ -10,9 +10,10 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react-native';
-import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { TrendingUp, AlertCircle, Clock, ShieldAlert, LayoutGrid, Settings2 } from 'lucide-react-native';
+import { useCallback, useState } from 'react';
 
 import { EmptyMailboxIllustration } from '@/components/illustrations';
 import { AppCard, HeroBanner, PressableActionTile } from '@/components/ui/brand';
@@ -93,36 +94,47 @@ export default function AdminHome() {
             <ActivityIndicator color={Brand.primary} />
           </View>
         ) : (
-          <View className="mb-2 flex-row flex-wrap gap-3">
+          <View className="mb-6 flex-row flex-wrap justify-between gap-y-3">
             <StatCard
               label="Residents"
               value={stats?.totalResidents ?? 0}
               onPress={() => go('/(admin)/residents')}
+              color="brand"
+              width="100%"
+              icon={<Users color="#0F766E" size={24} />}
+              trend="+2 this week"
             />
             <StatCard
               label="Pending visitors"
               value={stats?.pendingVisitorsToday ?? 0}
               hint="Today"
+              color="pending"
+              width="48%"
+              icon={<Clock color="#D97706" size={20} />}
             />
             <StatCard
               label="Open complaints"
               value={stats?.openComplaints ?? 0}
               onPress={() => go('/(admin)/complaints')}
-            />
-            <StatCard
-              label="Active polls"
-              value={stats?.activePolls ?? 0}
-              onPress={() => go('/(admin)/polls')}
+              color="rejected"
+              width="48%"
+              icon={<AlertCircle color="#DC2626" size={20} />}
             />
           </View>
         )}
 
-        <Text
-          className="mb-3 mt-4 text-base text-ink"
-          style={{ fontFamily: FontFamily.heading }}
-        >
-          Structure
-        </Text>
+        <View className="flex-row items-center mb-3 mt-4">
+          <View className="bg-brand-50 p-1.5 rounded-lg mr-2">
+            <LayoutGrid color={Brand.primary} size={16} />
+          </View>
+          <Text
+            className="text-lg font-bold text-ink"
+            style={{ fontFamily: FontFamily.heading }}
+          >
+            Structure
+          </Text>
+        </View>
+        <View className="bg-surface-muted/30 rounded-2xl p-2 mb-4">
         <PressableActionTile
           title="Towers"
           subtitle="Add and rename society buildings"
@@ -154,12 +166,20 @@ export default function AdminHome() {
           onPress={() => go('/(admin)/residents')}
         />
 
-        <Text
-          className="mb-3 mt-2 text-base text-ink"
-          style={{ fontFamily: FontFamily.heading }}
-        >
-          Operations
-        </Text>
+        </View>
+
+        <View className="flex-row items-center mb-3 mt-2">
+          <View className="bg-accent-soft p-1.5 rounded-lg mr-2">
+            <Settings2 color="#D97706" size={16} />
+          </View>
+          <Text
+            className="text-lg font-bold text-ink"
+            style={{ fontFamily: FontFamily.heading }}
+          >
+            Operations
+          </Text>
+        </View>
+        <View className="bg-surface-muted/30 rounded-2xl p-2 mb-4">
         <PressableActionTile
           title="Post a notice"
           subtitle="Reach every resident"
@@ -179,6 +199,8 @@ export default function AdminHome() {
           onPress={() => go('/(admin)/staff')}
         />
 
+        </View>
+
         <Text className="mt-1 text-center text-sm text-ink-muted">
           More tools live under the Manage tab
         </Text>
@@ -192,27 +214,60 @@ function StatCard({
   value,
   hint,
   onPress,
+  color = 'brand',
+  width = '47.5%',
+  icon,
+  trend,
 }: {
   label: string;
   value: number;
   hint?: string;
   onPress?: () => void;
+  color?: 'brand' | 'pending' | 'rejected' | 'info';
+  width?: string | number;
+  icon?: React.ReactNode;
+  trend?: string;
 }) {
+  const bgClasses = {
+    brand: 'bg-brand-soft-bg',
+    pending: 'bg-yellow-50 dark:bg-yellow-900/20',
+    rejected: 'bg-red-50 dark:bg-red-900/20',
+    info: 'bg-blue-50 dark:bg-blue-900/20',
+  };
+
+  const textClasses = {
+    brand: 'text-brand-900',
+    pending: 'text-amber-900',
+    rejected: 'text-red-900',
+    info: 'text-blue-900',
+  };
+
   const content = (
-    <AppCard className="w-full p-3.5">
-      <Text className="text-2xl text-ink" style={{ fontFamily: FontFamily.display }}>
-        {value}
-      </Text>
-      <Text className="mt-0.5 text-sm text-ink-muted" numberOfLines={1}>
-        {label}
-      </Text>
-      {hint ? <Text className="mt-0.5 text-[11px] text-ink-faint">{hint}</Text> : null}
+    <AppCard className={`w-full flex-1 p-4 ${bgClasses[color]}`}>
+      <View className="flex-row justify-between items-start">
+        <View>
+          <Text className={`text-[32px] ${textClasses[color]} tracking-tight`} style={{ fontFamily: FontFamily.display }}>
+            {value}
+          </Text>
+          <Text className={`mt-1 text-[15px] font-medium ${textClasses[color]} opacity-80`} numberOfLines={1}>
+            {label}
+          </Text>
+          {hint ? <Text className={`mt-1 text-[12px] ${textClasses[color]} opacity-60`}>{hint}</Text> : null}
+          {trend ? (
+            <View className="flex-row items-center mt-2 bg-white/40 self-start px-2 py-1 rounded-md">
+              <TrendingUp color="#0F766E" size={14} className="mr-1" />
+              <Text className="text-xs text-brand-900 font-bold">{trend}</Text>
+            </View>
+          ) : null}
+        </View>
+        {icon ? <View className="opacity-80">{icon}</View> : null}
+      </View>
     </AppCard>
   );
 
   return (
-    <View style={{ width: '47.5%' }}>
-      {onPress ? <Pressable onPress={onPress}>{content}</Pressable> : content}
+    <View style={{ width: width as any }}>
+      {onPress ? <Pressable className="flex-1" onPress={onPress}>{content}</Pressable> : <View className="flex-1">{content}</View>}
     </View>
   );
 }

@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
-import { AppCard, AvatarRing, InitialsAvatar } from '@/components/ui/brand';
+import { AppCard, AvatarRing, InitialsAvatar, FloatingActionBtn } from '@/components/ui/brand';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SearchField } from '@/components/ui/search-field';
 import { EmptyState } from '@/components/visitors/empty-state';
@@ -206,16 +206,6 @@ export default function AdminStaffScreen() {
       title="Staff directory"
       subtitle="People residents can contact"
       showBack
-      right={
-        <Pressable
-          onPress={openCreate}
-          accessibilityRole="button"
-          accessibilityLabel="Add staff member"
-          className="h-10 w-10 items-center justify-center rounded-full bg-brand-700"
-        >
-          <Plus color="#fff" size={20} />
-        </Pressable>
-      }
     >
       <View className="px-4">
         <SearchField
@@ -369,6 +359,7 @@ export default function AdminStaffScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      <FloatingActionBtn onPress={openCreate} icon={<Plus color="#fff" size={24} />} label="Add Staff" />
     </ScreenHeader>
   );
 }

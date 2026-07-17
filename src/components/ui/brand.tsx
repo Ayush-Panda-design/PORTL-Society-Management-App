@@ -17,14 +17,14 @@ export function AppCard({ children, className = '', style, ...rest }: CardProps)
   return (
     <View
       {...rest}
-      className={`rounded-2xl border border-surface-border bg-surface-card p-4 ${className}`}
+      className={`rounded-[16px] border border-surface-border bg-surface-card p-4 ${className}`}
       style={[
         {
           shadowColor: palette.shadow,
           shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: palette.isDark ? 0.4 : 0.06,
-          shadowRadius: 12,
-          elevation: 2,
+          shadowOpacity: palette.isDark ? 0.4 : 0.08,
+          shadowRadius: 16,
+          elevation: 3,
         },
         style,
       ]}
@@ -43,22 +43,22 @@ type HeroProps = {
 
 export function HeroBanner({ title, subtitle, illustration, children }: HeroProps) {
   return (
-    <View className="overflow-hidden rounded-3xl">
+    <View className="overflow-hidden rounded-b-3xl -mx-4 -mt-4 mb-4">
       <LinearGradient
         colors={[...Gradients.hero]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={{ paddingHorizontal: 20, paddingVertical: 22 }}
+        style={{ paddingHorizontal: 36, paddingVertical: 32, paddingTop: 40 }}
       >
         <View className="flex-row items-center gap-3">
           <View className="min-w-0 flex-1">
             <Text
-              className="mb-1 text-2xl text-white"
+              className="mb-1 text-[28px] font-bold text-white tracking-tight"
               style={{ fontFamily: FontFamily.display }}
             >
               {title}
             </Text>
-            <Text className="text-sm leading-5 text-teal-50/90">{subtitle}</Text>
+            <Text className="text-[15px] leading-5 text-teal-50/90">{subtitle}</Text>
           </View>
           {illustration}
         </View>
@@ -192,6 +192,33 @@ export function AvatarRing({
   );
 }
 
+export function FloatingActionBtn({
+  onPress,
+  icon,
+  label
+}: {
+  onPress: () => void;
+  icon: ReactNode;
+  label?: string;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      className="absolute bottom-6 right-4 rounded-full bg-brand-700 flex-row items-center justify-center px-4 py-4"
+      style={{
+        shadowColor: '#0F766E',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4,
+        shadowRadius: 16,
+        elevation: 6,
+      }}
+    >
+      {icon}
+      {label && <Text className="ml-2 font-bold text-white">{label}</Text>}
+    </Pressable>
+  );
+}
+
 export function PressableActionTile({
   title,
   subtitle,
@@ -208,13 +235,13 @@ export function PressableActionTile({
   return (
     <Pressable
       onPress={onPress}
-      className="mb-3 overflow-hidden rounded-2xl border border-surface-border bg-surface-card"
+      className="mb-3 overflow-hidden rounded-[16px] border border-surface-border bg-surface-card"
       style={{
         shadowColor: palette.shadow,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: palette.isDark ? 0.4 : 0.06,
-        shadowRadius: 12,
-        elevation: 2,
+        shadowOpacity: palette.isDark ? 0.4 : 0.08,
+        shadowRadius: 16,
+        elevation: 3,
       }}
     >
       <View className="flex-row items-center gap-3 p-4">

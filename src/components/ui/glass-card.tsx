@@ -14,19 +14,38 @@ export const GlassCard = ({ children, className, style, ...props }: GlassCardPro
   const tint = colorScheme === 'dark' ? 'dark' : 'light';
   
   return (
-    <View style={[styles.container, style]} className={className}>
-      <BlurView tint={tint} intensity={50} style={StyleSheet.absoluteFill} {...props} />
-      <View className="z-10 w-full h-full p-4 border border-surface-border rounded-3xl">
-        {children}
+    <View 
+      style={[
+        styles.shadowContainer, 
+        {
+          shadowColor: colorScheme === 'dark' ? '#000' : '#0F172A',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: colorScheme === 'dark' ? 0.4 : 0.08,
+          shadowRadius: 16,
+          elevation: 3,
+        },
+        style
+      ]} 
+      className={className}
+    >
+      <View style={styles.innerContainer}>
+        <BlurView tint={tint} intensity={50} style={StyleSheet.absoluteFill} {...props} />
+        <View className="z-10 w-full h-full p-4 border border-surface-border rounded-3xl">
+          {children}
+        </View>
       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  shadowContainer: {
+    backgroundColor: 'transparent',
+    borderRadius: 24,
+  },
+  innerContainer: {
     overflow: 'hidden',
     borderRadius: 24, // 3xl
-    backgroundColor: 'transparent',
+    flex: 1,
   },
 });

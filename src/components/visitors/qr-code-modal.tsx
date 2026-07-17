@@ -12,7 +12,7 @@ type Props = {
 };
 
 export function QRCodeModal({ visible, onClose, visitor }: Props) {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const palette = Palette[scheme];
   if (!visitor) return null;
 
