@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
-import { AppCard } from '@/components/ui/brand';
+import { Card } from '@/components/ui/card';
+import { Tokens } from '@/theme/tokens';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
@@ -185,29 +186,28 @@ export default function AdminTowersScreen() {
             <EmptyState
               visual="amenities"
               title="No towers yet"
-              subtitle="Tap + to add Tower A, Tower B, etc."
+              subtitle="Add Tower A, Tower B, etc. to structure your society."
+              actionLabel="+ Add tower"
+              onAction={openCreate}
             />
           }
           renderItem={({ item }) => (
-            <AppCard>
-              <Text className="mb-3 text-base font-semibold text-ink">{item.name}</Text>
-              <View className="flex-row gap-2">
-                <Pressable
-                  onPress={() => openEdit(item)}
-                  className="flex-1 items-center rounded-xl border border-surface-border py-2.5"
-                >
-                  <Text className="text-sm font-semibold text-ink-soft">Edit</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => confirmDelete(item)}
-                  disabled={deleteMutation.isPending}
-                  className="flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-status-rejectedSoft py-2.5"
-                >
-                  <Trash2 color="#B91C1C" size={14} />
-                  <Text className="text-sm font-semibold text-status-rejected">Delete</Text>
+            <Card style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <View>
+                <Text style={{ ...Tokens.typography.h3, color: Tokens.color.textPrimary }}>{item.name}</Text>
+                <Pressable onPress={() => openEdit(item)} style={{ marginTop: 4 }}>
+                  <Text style={{ ...Tokens.typography.label, color: Tokens.color.primary }}>Edit Tower</Text>
                 </Pressable>
               </View>
-            </AppCard>
+              <Pressable
+                onPress={() => confirmDelete(item)}
+                disabled={deleteMutation.isPending}
+                style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+                accessibilityLabel={`Delete tower ${item.name}`}
+              >
+                <Trash2 color={Tokens.color.danger} size={20} />
+              </Pressable>
+            </Card>
           )}
         />
       )}
@@ -215,10 +215,10 @@ export default function AdminTowersScreen() {
       <Modal visible={modalOpen} animationType="slide" transparent>
         <KeyboardAvoidingView behavior="padding" className="flex-1 justify-end bg-black/40">
           <View className="rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
-            <Text className="mb-4 text-xl font-bold text-ink">
+            <Text style={{ ...Tokens.typography.h2, color: Tokens.color.textPrimary, marginBottom: 16 }}>
               {editing ? 'Edit tower' : 'New tower'}
             </Text>
-            {formError ? <Text className="mb-2 text-sm text-red-500">{formError}</Text> : null}
+            {formError ? <Text style={{ ...Tokens.typography.caption, color: Tokens.color.danger, marginBottom: 8 }}>{formError}</Text> : null}
             <TextInput
               className="mb-4 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
               placeholder="Tower name"
@@ -232,17 +232,18 @@ export default function AdminTowersScreen() {
                 onPress={() => setModalOpen(false)}
                 className="flex-1 items-center rounded-xl border border-surface-border py-3"
               >
-                <Text className="font-semibold text-ink-soft">Cancel</Text>
+                <Text style={{ ...Tokens.typography.bodyMedium, color: Tokens.color.textSecondary }}>Cancel</Text>
               </Pressable>
               <Pressable
                 onPress={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending}
-                className="flex-1 items-center rounded-bubbly bg-charcoal py-3.5"
+                className="flex-1 items-center rounded-bubbly py-3.5"
+                style={{ backgroundColor: Tokens.color.primary }}
               >
                 {saveMutation.isPending ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text className="font-semibold text-white">Save</Text>
+                  <Text style={{ ...Tokens.typography.bodyMedium, color: '#fff' }}>Save</Text>
                 )}
               </Pressable>
             </View>

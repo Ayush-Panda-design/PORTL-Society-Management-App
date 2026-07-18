@@ -149,7 +149,7 @@ export default function AdminPollsScreen() {
             />
           }
           ListEmptyComponent={
-            <EmptyState visual="polls" title="No polls yet" subtitle="Tap + to create a poll for residents." />
+            <EmptyState visual="polls" title="No polls yet" subtitle="Create a poll to collect community opinion." actionLabel="+ Create poll" onAction={() => { setFormError(null); setModalOpen(true); }} />
           }
           renderItem={({ item }) => {
             const { total, counts } = pollStats(item, votes);

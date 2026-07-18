@@ -167,24 +167,37 @@ const AVATAR_TONES = [
   '#C4627A',
 ];
 
+const STATUS_DOT_COLORS: Record<'online' | 'pending' | 'offline', string> = {
+  online: '#22C55E',   // green-500 — on-duty
+  pending: '#F59E0B',  // amber-500 — pending invite
+  offline: '#94A3B8',  // slate-400 — inactive
+};
+
 export function InitialsAvatar({
   name,
   size = 48,
   seed,
   hasUnread = false,
   showOnlineDot = false,
+  status,
 }: {
   name: string;
   size?: number;
   seed?: string;
   hasUnread?: boolean;
+  /** @deprecated use `status` instead */
   showOnlineDot?: boolean;
+  status?: 'online' | 'pending' | 'offline';
 }) {
   const initial = (name?.trim()?.charAt(0) || '?').toUpperCase();
   const index = (seed ?? name).split('').reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_TONES.length;
   const ringPad = hasUnread ? 3 : 0;
   const outer = size + ringPad * 2;
   const inner = size;
+
+  // Resolve effective status
+  const resolvedStatus = status ?? (showOnlineDot ? 'online' : undefined);
+  const dotSize = Math.max(10, size * 0.28);
 
   return (
     <View style={{ width: outer, height: outer, position: 'relative' }}>
@@ -222,17 +235,17 @@ export function InitialsAvatar({
           </Text>
         </View>
       </View>
-      {showOnlineDot ? (
+      {resolvedStatus ? (
         <View
-          accessibilityLabel="Online"
+          accessibilityLabel={resolvedStatus === 'online' ? 'Online' : resolvedStatus === 'pending' ? 'Pending' : 'Offline'}
           style={{
             position: 'absolute',
             right: 0,
             bottom: 0,
-            width: Math.max(10, size * 0.28),
-            height: Math.max(10, size * 0.28),
+            width: dotSize,
+            height: dotSize,
             borderRadius: 99,
-            backgroundColor: '#4FA094',
+            backgroundColor: STATUS_DOT_COLORS[resolvedStatus],
             borderWidth: 2,
             borderColor: '#FFFFFF',
           }}
@@ -245,30 +258,51 @@ export function InitialsAvatar({
 export function AvatarRing({
   size = 48,
   hasUnread = false,
+  status,
   children,
 }: {
   size?: number;
   hasUnread?: boolean;
+  status?: 'online' | 'pending' | 'offline';
   children: ReactNode;
 }) {
   const ringPad = hasUnread ? 3 : 0;
   const outer = size + ringPad * 2;
+  const dotSize = Math.max(10, size * 0.28);
 
   return (
-    <View
-      style={{
-        width: outer,
-        height: outer,
-        borderRadius: outer / 2,
-        padding: ringPad,
-        borderWidth: hasUnread ? 2.5 : 0,
-        borderColor: Brand.primary,
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-      }}
-    >
-      {children}
+    <View style={{ width: outer, height: outer, position: 'relative' }}>
+      <View
+        style={{
+          width: outer,
+          height: outer,
+          borderRadius: outer / 2,
+          padding: ringPad,
+          borderWidth: hasUnread ? 2.5 : 0,
+          borderColor: Brand.primary,
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+        }}
+      >
+        {children}
+      </View>
+      {status ? (
+        <View
+          accessibilityLabel={status}
+          style={{
+            position: 'absolute',
+            right: 0,
+            bottom: 0,
+            width: dotSize,
+            height: dotSize,
+            borderRadius: 99,
+            backgroundColor: STATUS_DOT_COLORS[status],
+            borderWidth: 2,
+            borderColor: '#FFFFFF',
+          }}
+        />
+      ) : null}
     </View>
   );
 }

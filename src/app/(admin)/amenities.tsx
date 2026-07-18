@@ -4,6 +4,7 @@ import { Plus, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -13,7 +14,10 @@ import {
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
-import { AppCard, FloatingActionBtn } from '@/components/ui/brand';
+import { FloatingActionBtn } from '@/components/ui/brand';
+import { Card } from '@/components/ui/card';
+import { Tokens } from '@/theme/tokens';
+import { Edit2 } from 'lucide-react-native';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
@@ -75,6 +79,21 @@ export default function AdminAmenitiesScreen() {
     },
   });
 
+  const confirmDelete = (item: Amenity) => {
+    Alert.alert(
+      'Delete amenity?',
+      `“${item.name}” will be permanently removed.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteMutation.mutate(item.id),
+        },
+      ],
+    );
+  };
+
   const openCreate = () => {
     setEditing(null);
     setName('');
@@ -131,7 +150,7 @@ export default function AdminAmenitiesScreen() {
             />
           }
           renderItem={({ item }) => (
-            <AppCard className="overflow-hidden p-0">
+            <Card style={{ padding: 0, overflow: 'hidden', marginBottom: 12 }}>
               <Image
                 source={{ uri: amenityImageForName(item.name) }}
                 style={{ width: '100%', height: 110 }}
@@ -139,30 +158,25 @@ export default function AdminAmenitiesScreen() {
                 transition={200}
               />
               <View className="p-4">
-                <Text className="mb-1 text-base font-semibold text-ink">{item.name}</Text>
-                <Text className="mb-2 text-sm text-ink-muted">
+                <Text style={{ ...Tokens.typography.h3, color: Tokens.color.textPrimary, marginBottom: 4 }}>{item.name}</Text>
+                <Text style={{ ...Tokens.typography.body, color: Tokens.color.textSecondary, marginBottom: 8 }}>
                   {item.description || 'No description'}
                 </Text>
-                <Text className="mb-3 text-xs text-ink-faint">
-                  {item.slots.length} slot{item.slots.length === 1 ? '' : 's'}
-                </Text>
-                <View className="flex-row gap-2">
-                  <Pressable
-                    onPress={() => openEdit(item)}
-                    className="flex-1 items-center rounded-xl border border-surface-border py-2.5"
-                  >
-                    <Text className="text-sm font-semibold text-ink-soft">Edit</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => deleteMutation.mutate(item.id)}
-                    className="flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-status-rejectedSoft py-2.5"
-                  >
-                    <Trash2 color="#B91C1C" size={14} />
-                    <Text className="text-sm font-semibold text-status-rejected">Delete</Text>
-                  </Pressable>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ ...Tokens.typography.caption, color: Tokens.color.textMuted }}>
+                    {item.slots.length} slot{item.slots.length === 1 ? '' : 's'}
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <Pressable onPress={() => openEdit(item)} style={{ padding: 8 }}>
+                      <Edit2 color={Tokens.color.primary} size={18} />
+                    </Pressable>
+                    <Pressable onPress={() => confirmDelete(item)} style={{ padding: 8 }}>
+                      <Trash2 color={Tokens.color.danger} size={18} />
+                    </Pressable>
+                  </View>
                 </View>
               </View>
-            </AppCard>
+            </Card>
           )}
         />
       )}
@@ -173,10 +187,10 @@ export default function AdminAmenitiesScreen() {
           className="flex-1 justify-end bg-black/40"
         >
           <View className="max-h-[90%] rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
-            <Text className="mb-4 text-xl font-bold text-ink">
+            <Text style={{ ...Tokens.typography.h2, color: Tokens.color.textPrimary, marginBottom: 16 }}>
               {editing ? 'Edit amenity' : 'New amenity'}
             </Text>
-            {formError ? <Text className="mb-2 text-sm text-red-500">{formError}</Text> : null}
+            {formError ? <Text style={{ ...Tokens.typography.caption, color: Tokens.color.danger, marginBottom: 8 }}>{formError}</Text> : null}
             <TextInput
               className="mb-3 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
               placeholder="Name"
@@ -206,17 +220,18 @@ export default function AdminAmenitiesScreen() {
                 onPress={() => setModalOpen(false)}
                 className="flex-1 items-center rounded-xl border border-surface-border py-3"
               >
-                <Text className="font-semibold text-ink-soft">Cancel</Text>
+                <Text style={{ ...Tokens.typography.bodyMedium, color: Tokens.color.textSecondary }}>Cancel</Text>
               </Pressable>
               <Pressable
                 onPress={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending}
-                className="flex-1 items-center rounded-bubbly bg-charcoal py-3.5"
+                className="flex-1 items-center rounded-bubbly py-3.5"
+                style={{ backgroundColor: Tokens.color.primary }}
               >
                 {saveMutation.isPending ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text className="font-semibold text-white">Save</Text>
+                  <Text style={{ ...Tokens.typography.bodyMedium, color: '#fff' }}>Save</Text>
                 )}
               </Pressable>
             </View>

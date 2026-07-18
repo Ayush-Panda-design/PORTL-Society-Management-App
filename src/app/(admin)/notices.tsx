@@ -5,6 +5,7 @@ import { ImagePlus, Plus, X } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -14,12 +15,15 @@ import {
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
-import { AppCard, InitialsAvatar, FloatingActionBtn } from '@/components/ui/brand';
+import { InitialsAvatar, FloatingActionBtn } from '@/components/ui/brand';
+import { Card } from '@/components/ui/card';
+import { Tokens } from '@/theme/tokens';
+import { Brand } from '@/constants/theme';
+import { Trash2, Edit2 } from 'lucide-react-native';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
-import { Brand } from '@/constants/theme';
 import { formatNoticeDate } from '@/lib/community';
 import { deleteNotice, fetchNotices, uploadNoticeCover, upsertNotice } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
@@ -145,6 +149,24 @@ export default function AdminNoticesScreen() {
     setFormError(null);
   };
 
+  const confirmDelete = (item: Notice) => {
+    Alert.alert(
+      'Delete notice?',
+      `“${item.title}” will be permanently removed.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            markNoticeSeen(item.id);
+            deleteMutation.mutate(item.id);
+          },
+        },
+      ],
+    );
+  };
+
   const pickCover = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
@@ -194,13 +216,15 @@ export default function AdminNoticesScreen() {
             <EmptyState
               visual="notices"
               title="No notices"
-              subtitle="Tap + to post the first society notice."
+              subtitle="Post your first notice to reach all residents."
+              actionLabel="+ Post notice"
+              onAction={() => setModalOpen(true)}
             />
           }
           renderItem={({ item }) => {
             const unread = isNoticeUnread(item.id);
             return (
-              <AppCard className="overflow-hidden p-0">
+              <Card style={{ padding: 0, overflow: 'hidden', marginBottom: 12 }}>
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`${item.title} notice${unread ? ', unread' : ''}`}
@@ -217,38 +241,27 @@ export default function AdminNoticesScreen() {
                   <View className="p-4">
                     <View className="mb-1 flex-row items-center gap-2">
                       <InitialsAvatar name={item.title} seed={item.id} size={32} hasUnread={unread} />
-                      <Text className="flex-1 text-base font-semibold text-ink" numberOfLines={1}>
+                      <Text style={{ ...Tokens.typography.h3, color: Tokens.color.textPrimary, flex: 1 }} numberOfLines={1}>
                         {item.title}
                       </Text>
                     </View>
-                    <Text className="mb-3 text-sm text-ink-soft">{item.body}</Text>
-                    <Text className="mb-3 text-xs text-ink-faint">
-                      {formatNoticeDate(item.created_at)}
-                    </Text>
+                    <Text style={{ ...Tokens.typography.body, color: Tokens.color.textSecondary, marginBottom: 12 }}>{item.body}</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ ...Tokens.typography.caption, color: Tokens.color.textMuted }}>
+                        {formatNoticeDate(item.created_at)}
+                      </Text>
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <Pressable onPress={() => openEdit(item)} style={{ padding: 8 }}>
+                          <Edit2 color={Tokens.color.primary} size={18} />
+                        </Pressable>
+                        <Pressable onPress={() => confirmDelete(item)} style={{ padding: 8 }}>
+                          <Trash2 color={Tokens.color.danger} size={18} />
+                        </Pressable>
+                      </View>
+                    </View>
                   </View>
                 </Pressable>
-                <View className="flex-row gap-2 px-4 pb-4">
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Edit ${item.title}`}
-                    onPress={() => openEdit(item)}
-                    className="flex-1 items-center rounded-xl border border-surface-border py-2.5"
-                  >
-                    <Text className="text-sm font-semibold text-ink-soft">Edit</Text>
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Delete ${item.title}`}
-                    onPress={() => {
-                      markNoticeSeen(item.id);
-                      deleteMutation.mutate(item.id);
-                    }}
-                    className="flex-1 items-center rounded-xl bg-status-rejectedSoft py-2.5"
-                  >
-                    <Text className="text-sm font-semibold text-status-rejected">Delete</Text>
-                  </Pressable>
-                </View>
-              </AppCard>
+              </Card>
             );
           }}
         />
@@ -260,10 +273,10 @@ export default function AdminNoticesScreen() {
           className="flex-1 justify-end bg-black/40"
         >
           <View className="rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
-            <Text className="mb-4 text-xl font-bold text-ink">
+            <Text style={{ ...Tokens.typography.h2, color: Tokens.color.textPrimary, marginBottom: 16 }}>
               {editing ? 'Edit notice' : 'New notice'}
             </Text>
-            {formError ? <Text className="mb-2 text-sm text-status-rejected">{formError}</Text> : null}
+            {formError ? <Text style={{ ...Tokens.typography.caption, color: Tokens.color.danger, marginBottom: 8 }}>{formError}</Text> : null}
 
             <View className="mb-3 overflow-hidden rounded-2xl border border-surface-border bg-surface-muted">
               {coverUri ? (
@@ -319,17 +332,18 @@ export default function AdminNoticesScreen() {
                 onPress={closeModal}
                 className="flex-1 items-center rounded-xl border border-surface-border py-3"
               >
-                <Text className="font-semibold text-ink-soft">Cancel</Text>
+                <Text style={{ ...Tokens.typography.bodyMedium, color: Tokens.color.textSecondary }}>Cancel</Text>
               </Pressable>
               <Pressable
                 onPress={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending}
-                className="flex-1 items-center rounded-bubbly bg-charcoal py-3.5"
+                className="flex-1 items-center rounded-bubbly py-3.5"
+                style={{ backgroundColor: Tokens.color.primary }}
               >
                 {saveMutation.isPending ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text className="font-semibold text-white">Save</Text>
+                  <Text style={{ ...Tokens.typography.bodyMedium, color: '#fff' }}>Save</Text>
                 )}
               </Pressable>
             </View>

@@ -136,7 +136,7 @@ export default function AdminComplaintsScreen() {
           refreshing={listQuery.isRefetching}
           onRefresh={() => void listQuery.refetch()}
           ListEmptyComponent={
-            <EmptyState visual="helpdesk" title="No complaints" subtitle="Nothing matches these filters." />
+            <EmptyState visual="helpdesk" title="No complaints" subtitle="Nothing matches these filters." actionLabel="Clear filters" onAction={() => { setStatusFilter('all'); setCategoryFilter('all'); }} />
           }
           renderItem={({ item }) => {
             const tone = complaintStatusTone(item.status);

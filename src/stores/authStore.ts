@@ -166,7 +166,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         if (nextSession?.user) {
           await get().fetchProfile(nextSession.user.id);
-          // Register on login / fresh session only — skip token refresh noise.
+          // Deduped in registerForPushNotifications — safe alongside getSession above.
           if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
             syncPushToken(nextSession.user.id);
           }

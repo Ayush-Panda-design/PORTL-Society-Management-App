@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
-import { Search, X } from 'lucide-react-native';
+import { Search, X, Camera, ImageIcon, ChevronRight, ChevronLeft } from 'lucide-react-native';
 import { useThemePalette } from '@/hooks/use-theme';
 import { type ReactNode, useCallback, useState } from 'react';
 import {
@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MotiView, AnimatePresence } from 'moti';
 
 import { ChipSelector } from '@/components/ui/chip-selector';
 import { VisitorSilhouette } from '@/components/illustrations';
@@ -24,12 +25,57 @@ import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { FlatWithTower, VisitorType } from '@/types/database';
 import { VISITOR_TYPES } from '@/types/database';
-import { Brand } from '@/constants/theme';
+import { Brand, FontFamily } from '@/constants/theme';
+import { Tokens } from '@/theme/tokens';
+
+const STEPS = ['Photo', 'Details', 'Type & Submit'] as const;
+const TOTAL_STEPS = STEPS.length;
+
+// ─── Step progress bar ──────────────────────────────────────────────────────
+function StepIndicator({ current }: { current: number }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: 16, paddingBottom: 16, paddingTop: 4 }}>
+      {STEPS.map((label, i) => {
+        const done = i < current;
+        const active = i === current;
+        return (
+          <View key={label} style={{ flex: 1, gap: 4 }}>
+            <MotiView
+              animate={{
+                backgroundColor: done || active ? Brand.primary : '#E2E8F0',
+                scaleX: 1,
+              }}
+              transition={{ type: 'timing', duration: 300 }}
+              style={{
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: done || active ? Brand.primary : '#E2E8F0',
+              }}
+            />
+            <Text
+              style={{
+                fontSize: 9,
+                fontFamily: FontFamily.medium,
+                color: active ? Brand.primary : done ? Brand.primary : '#94A3B8',
+                textAlign: 'center',
+                letterSpacing: 0.3,
+              }}
+            >
+              {label}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
 
 export default function RegisterVisitorScreen() {
   const palette = useThemePalette();
   const profile = useAuthStore((s) => s.profile);
   const user = useAuthStore((s) => s.user);
+
+  const [step, setStep] = useState(0);
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -170,6 +216,7 @@ export default function RegisterVisitorScreen() {
     setSelectedFlat(null);
     setFlatQuery('');
     setFlatResults([]);
+    setStep(0);
   };
 
   const onSubmit = async () => {
@@ -258,187 +305,332 @@ export default function RegisterVisitorScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
+      {/* ── Header ── */}
+      <View style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4 }}>
+        <Text style={{ ...Tokens.typography.h2, color: Tokens.color.textPrimary }}>Register visitor</Text>
+        <Text style={{ ...Tokens.typography.caption, color: Tokens.color.textMuted, marginTop: 2 }}>
+          Creates a pending request for the flat&apos;s resident.
+        </Text>
+      </View>
+
+      {/* ── Step indicator ── */}
+      <StepIndicator current={step} />
+
       <KeyboardAwareScrollView
         bottomOffset={32}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
       >
-          <Text className="mb-1 text-2xl font-bold text-ink">Register visitor</Text>
-          <Text className="mb-6 text-sm text-ink-muted">
-            Creates a pending request for the flat&apos;s resident.
-          </Text>
-
-          {error ? <ErrorBanner message={error} onRetry={() => setError(null)} /> : null}
-          {success ? (
-            <View className="mb-3 rounded-xl border border-brand-100 bg-brand-50 px-4 py-3">
-              <Text className="text-sm text-brand-700">{success}</Text>
-            </View>
-          ) : null}
-
-          <Text className="mb-2 text-sm font-medium text-ink-soft">Photo</Text>
-          <View className="mb-4 flex-row items-center gap-3">
-            <View className="h-20 w-20 overflow-hidden rounded-2xl bg-brand-50">
-              {photoUri ? (
-                <Image source={{ uri: photoUri }} style={{ width: 80, height: 80 }} contentFit="cover" />
-              ) : (
-                <View className="h-full w-full items-center justify-center">
-                  <VisitorSilhouette size={64} />
-                </View>
-              )}
-            </View>
-            <View className="flex-1 gap-2">
-              <Pressable
-                onPress={pickPhoto}
-                className="items-center rounded-xl bg-teal-700 py-2.5"
-              >
-                <Text className="text-sm font-semibold text-white">Take photo</Text>
-              </Pressable>
-              <Pressable
-                onPress={pickFromLibrary}
-                className="items-center rounded-xl border border-surface-border bg-surface-card py-2.5"
-              >
-                <Text className="text-sm font-semibold text-ink-soft">Choose from gallery</Text>
-              </Pressable>
-            </View>
-            {photoUri ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Remove photo"
-                onPress={() => {
-                  setPhotoUri(null);
-                  setPhotoMimeType(null);
-                  setPhotoBase64(null);
-                }}
-                className="h-9 w-9 items-center justify-center rounded-full bg-surface-muted"
-              >
-                <X color={palette.inkMuted} size={16} />
-              </Pressable>
-            ) : null}
+        {error ? <ErrorBanner message={error} onRetry={() => setError(null)} /> : null}
+        {success ? (
+          <View style={{ marginBottom: 12, borderRadius: 12, borderWidth: 1, borderColor: '#BBF7D0', backgroundColor: '#F0FDF4', padding: 12 }}>
+            <Text style={{ fontSize: 14, color: '#15803D' }}>{success}</Text>
           </View>
+        ) : null}
 
-          <Field label="Name">
-            <TextInput
-              className="rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
-              placeholder="Visitor name"
-              placeholderTextColor="#94A3B8"
-              value={name}
-              onChangeText={setName}
-            />
-          </Field>
-
-          <Field label="Phone">
-            <TextInput
-              className="rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
-              placeholder="Optional"
-              placeholderTextColor="#94A3B8"
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={setPhone}
-            />
-          </Field>
-
-          <Field label="Purpose">
-            <TextInput
-              className="rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
-              placeholder="Meeting, delivery, etc."
-              placeholderTextColor="#94A3B8"
-              value={purpose}
-              onChangeText={setPurpose}
-            />
-          </Field>
-
-          <Text className="mb-2 text-sm font-medium text-ink-soft">Type</Text>
-          <ChipSelector
-            className="mb-4"
-            presentation="tiles"
-            options={VISITOR_TYPES.map((t) => ({ value: t.value, label: t.label }))}
-            value={type}
-            onChange={setType}
-          />
-
-          <Text className="mb-2 text-sm font-medium text-ink-soft">Flat</Text>
-          {selectedFlat ? (
-            <View className="mb-4 flex-row items-center justify-between rounded-xl border border-brand-100 bg-brand-50 px-4 py-3">
-              <Text className="font-semibold text-ink">
-                {flatTowerName(selectedFlat.towers)
-                  ? `${flatTowerName(selectedFlat.towers)} · `
-                  : ''}
-                Flat {selectedFlat.number}
+        {/* ── STEP 0: Photo ── */}
+        <AnimatePresence exitBeforeEnter>
+          {step === 0 && (
+            <MotiView
+              key="step-photo"
+              from={{ opacity: 0, translateX: 40 }}
+              animate={{ opacity: 1, translateX: 0 }}
+              exit={{ opacity: 0, translateX: -40 }}
+              transition={{ type: 'timing', duration: 260 }}
+            >
+              <Text style={{ ...Tokens.typography.h3, color: Tokens.color.textSecondary, marginBottom: 16 }}>
+                Step 1 of 3 — Take or choose a photo (optional)
               </Text>
-              <Pressable onPress={() => setSelectedFlat(null)}>
-                <Text className="text-sm font-medium text-ink-muted">Change</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <View className="mb-4">
-              <View className="mb-2 flex-row items-center rounded-xl border border-surface-border bg-surface-card px-3">
-                <Search color="#94A3B8" size={18} />
-                <TextInput
-                  className="ml-2 flex-1 py-3 text-base text-ink"
-                  placeholder="Search flat number…"
-                  placeholderTextColor="#94A3B8"
-                  value={flatQuery}
-                  onChangeText={searchFlats}
-                  autoCapitalize="characters"
-                />
-                {searchingFlats ? <ActivityIndicator color={Brand.primary} /> : null}
-              </View>
-              {flatResults.length > 0 ? (
-                <View className="overflow-hidden rounded-xl border border-surface-border bg-surface-card">
-                  <FlatList
-                    data={flatResults}
-                    keyExtractor={(item) => item.id}
-                    scrollEnabled={false}
-                    renderItem={({ item, index }) => (
-                      <Pressable
-                        onPress={() => {
-                          setSelectedFlat(item);
-                          setFlatResults([]);
-                          setFlatQuery(item.number);
-                        }}
-                        className={`px-4 py-3 ${
-                          index < flatResults.length - 1 ? 'border-b border-surface-border' : ''
-                        }`}
-                      >
-                        <Text className="font-medium text-ink">
-                          Flat {item.number}
-                          {flatTowerName(item.towers)
-                            ? ` · ${flatTowerName(item.towers)}`
-                            : ''}
-                        </Text>
-                      </Pressable>
-                    )}
-                  />
+
+              {/* Photo preview */}
+              <View style={{ alignItems: 'center', marginBottom: 24 }}>
+                <View
+                  style={{
+                    width: 120, height: 120, borderRadius: 60,
+                    overflow: 'hidden', backgroundColor: '#EFF6FF',
+                    borderWidth: 3, borderColor: Brand.primary + '30',
+                  }}
+                >
+                  {photoUri ? (
+                    <Image source={{ uri: photoUri }} style={{ width: 120, height: 120 }} contentFit="cover" />
+                  ) : (
+                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                      <VisitorSilhouette size={80} />
+                    </View>
+                  )}
                 </View>
-              ) : flatQuery.trim().length > 0 && !searchingFlats ? (
-                <Text className="text-sm text-ink-muted">No flats match "{flatQuery}".</Text>
-              ) : null}
-            </View>
+                {photoUri ? (
+                  <Pressable
+                    onPress={() => { setPhotoUri(null); setPhotoMimeType(null); setPhotoBase64(null); }}
+                    style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                  >
+                    <X color={Tokens.color.danger} size={14} />
+                    <Text style={{ fontSize: 13, color: Tokens.color.danger }}>Remove photo</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+
+              <View style={{ gap: 10 }}>
+                <Pressable
+                  onPress={pickPhoto}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    backgroundColor: Brand.primary, borderRadius: 14, paddingVertical: 14,
+                  }}
+                >
+                  <Camera color="#fff" size={18} />
+                  <Text style={{ color: '#fff', fontFamily: FontFamily.heading, fontSize: 15 }}>Take photo</Text>
+                </Pressable>
+                <Pressable
+                  onPress={pickFromLibrary}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    borderRadius: 14, borderWidth: 1, borderColor: Tokens.color.borderDefault,
+                    backgroundColor: Tokens.color.surfaceCard, paddingVertical: 13,
+                  }}
+                >
+                  <ImageIcon color={Tokens.color.textSecondary} size={18} />
+                  <Text style={{ color: Tokens.color.textSecondary, fontFamily: FontFamily.heading, fontSize: 15 }}>Choose from gallery</Text>
+                </Pressable>
+              </View>
+
+              <NavButtons
+                step={step}
+                onNext={() => setStep(1)}
+                showPrev={false}
+                nextLabel="Next: Details →"
+              />
+            </MotiView>
           )}
 
-          <Pressable
-            disabled={submitting}
-            onPress={onSubmit}
-            className={`mt-2 items-center rounded-xl bg-teal-700 py-3.5 ${
-              submitting ? 'opacity-70' : ''
-            }`}
-          >
-            {submitting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className="text-base font-semibold text-white">Submit for approval</Text>
-            )}
-          </Pressable>
+          {/* ── STEP 1: Details ── */}
+          {step === 1 && (
+            <MotiView
+              key="step-details"
+              from={{ opacity: 0, translateX: 40 }}
+              animate={{ opacity: 1, translateX: 0 }}
+              exit={{ opacity: 0, translateX: -40 }}
+              transition={{ type: 'timing', duration: 260 }}
+            >
+              <Text style={{ ...Tokens.typography.h3, color: Tokens.color.textSecondary, marginBottom: 16 }}>
+                Step 2 of 3 — Visitor details
+              </Text>
+
+              <Field label="Name *">
+                <TextInput
+                  className="rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+                  placeholder="Visitor name"
+                  placeholderTextColor="#94A3B8"
+                  value={name}
+                  onChangeText={setName}
+                />
+              </Field>
+
+              <Field label="Phone">
+                <TextInput
+                  className="rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+                  placeholder="Optional"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="phone-pad"
+                  value={phone}
+                  onChangeText={setPhone}
+                />
+              </Field>
+
+              <Field label="Purpose">
+                <TextInput
+                  className="rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+                  placeholder="Meeting, delivery, etc."
+                  placeholderTextColor="#94A3B8"
+                  value={purpose}
+                  onChangeText={setPurpose}
+                />
+              </Field>
+
+              <NavButtons
+                step={step}
+                onPrev={() => setStep(0)}
+                onNext={() => {
+                  if (!name.trim()) { setError('Visitor name is required.'); return; }
+                  setError(null);
+                  setStep(2);
+                }}
+                nextLabel="Next: Type →"
+              />
+            </MotiView>
+          )}
+
+          {/* ── STEP 2: Type & Flat & Submit ── */}
+          {step === 2 && (
+            <MotiView
+              key="step-type"
+              from={{ opacity: 0, translateX: 40 }}
+              animate={{ opacity: 1, translateX: 0 }}
+              exit={{ opacity: 0, translateX: -40 }}
+              transition={{ type: 'timing', duration: 260 }}
+            >
+              <Text style={{ ...Tokens.typography.h3, color: Tokens.color.textSecondary, marginBottom: 16 }}>
+                Step 3 of 3 — Type &amp; flat
+              </Text>
+
+              <Text style={{ ...Tokens.typography.label, color: Tokens.color.textSecondary, marginBottom: 8 }}>Type</Text>
+              <ChipSelector
+                className="mb-4"
+                presentation="tiles"
+                options={VISITOR_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                value={type}
+                onChange={setType}
+              />
+
+              <Text style={{ ...Tokens.typography.label, color: Tokens.color.textSecondary, marginBottom: 8 }}>Flat *</Text>
+              {selectedFlat ? (
+                <View style={{
+                  marginBottom: 16, flexDirection: 'row', alignItems: 'center',
+                  justifyContent: 'space-between', borderRadius: 12, borderWidth: 1,
+                  borderColor: '#BBF7D0', backgroundColor: '#F0FDF4', paddingHorizontal: 16, paddingVertical: 12,
+                }}>
+                  <Text style={{ fontWeight: '600', color: Tokens.color.textPrimary }}>
+                    {flatTowerName(selectedFlat.towers) ? `${flatTowerName(selectedFlat.towers)} · ` : ''}
+                    Flat {selectedFlat.number}
+                  </Text>
+                  <Pressable onPress={() => setSelectedFlat(null)}>
+                    <Text style={{ fontSize: 13, color: Tokens.color.textMuted }}>Change</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <View style={{ marginBottom: 16 }}>
+                  <View style={{
+                    marginBottom: 8, flexDirection: 'row', alignItems: 'center',
+                    borderRadius: 12, borderWidth: 1, borderColor: Tokens.color.borderDefault,
+                    backgroundColor: Tokens.color.surfaceCard, paddingHorizontal: 12,
+                  }}>
+                    <Search color="#94A3B8" size={18} />
+                    <TextInput
+                      style={{ marginLeft: 8, flex: 1, paddingVertical: 12, fontSize: 15, color: Tokens.color.textPrimary }}
+                      placeholder="Search flat number…"
+                      placeholderTextColor="#94A3B8"
+                      value={flatQuery}
+                      onChangeText={searchFlats}
+                      autoCapitalize="characters"
+                    />
+                    {searchingFlats ? <ActivityIndicator color={Brand.primary} /> : null}
+                  </View>
+                  {flatResults.length > 0 ? (
+                    <View style={{ borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: Tokens.color.borderDefault, backgroundColor: Tokens.color.surfaceCard }}>
+                      <FlatList
+                        data={flatResults}
+                        keyExtractor={(item) => item.id}
+                        scrollEnabled={false}
+                        renderItem={({ item, index }) => (
+                          <Pressable
+                            onPress={() => {
+                              setSelectedFlat(item);
+                              setFlatResults([]);
+                              setFlatQuery(item.number);
+                            }}
+                            style={{
+                              paddingHorizontal: 16, paddingVertical: 12,
+                              borderBottomWidth: index < flatResults.length - 1 ? 1 : 0,
+                              borderBottomColor: Tokens.color.borderDefault,
+                            }}
+                          >
+                            <Text style={{ fontWeight: '500', color: Tokens.color.textPrimary }}>
+                              Flat {item.number}
+                              {flatTowerName(item.towers) ? ` · ${flatTowerName(item.towers)}` : ''}
+                            </Text>
+                          </Pressable>
+                        )}
+                      />
+                    </View>
+                  ) : flatQuery.trim().length > 0 && !searchingFlats ? (
+                    <Text style={{ fontSize: 13, color: Tokens.color.textMuted }}>No flats match "{flatQuery}".</Text>
+                  ) : null}
+                </View>
+              )}
+
+              <NavButtons
+                step={step}
+                onPrev={() => setStep(1)}
+                showNext={false}
+              />
+
+              <Pressable
+                disabled={submitting}
+                onPress={onSubmit}
+                style={{
+                  marginTop: 8, alignItems: 'center', borderRadius: 14,
+                  backgroundColor: Brand.primary, paddingVertical: 14,
+                  opacity: submitting ? 0.7 : 1,
+                }}
+              >
+                {submitting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={{ color: '#fff', fontFamily: FontFamily.heading, fontSize: 15 }}>Submit for approval</Text>
+                )}
+              </Pressable>
+            </MotiView>
+          )}
+        </AnimatePresence>
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
 
+// ─── Shared field wrapper ─────────────────────────────────────────────────────
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <View className="mb-4">
-      <Text className="mb-2 text-sm font-medium text-ink-soft">{label}</Text>
+    <View style={{ marginBottom: 16 }}>
+      <Text style={{ marginBottom: 6, fontSize: 13, fontWeight: '500', color: '#64748B' }}>{label}</Text>
       {children}
+    </View>
+  );
+}
+
+// ─── Prev / Next navigation ───────────────────────────────────────────────────
+function NavButtons({
+  step,
+  onPrev,
+  onNext,
+  showPrev = true,
+  showNext = true,
+  nextLabel = 'Next →',
+}: {
+  step: number;
+  onPrev?: () => void;
+  onNext?: () => void;
+  showPrev?: boolean;
+  showNext?: boolean;
+  nextLabel?: string;
+}) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 10, marginTop: 24 }}>
+      {showPrev && step > 0 ? (
+        <Pressable
+          onPress={onPrev}
+          style={{
+            flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+            borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0',
+            backgroundColor: '#F8FAFC', paddingVertical: 13,
+          }}
+        >
+          <ChevronLeft color="#64748B" size={16} />
+          <Text style={{ color: '#64748B', fontWeight: '600', fontSize: 14 }}>Back</Text>
+        </Pressable>
+      ) : showPrev ? <View style={{ flex: 1 }} /> : null}
+
+      {showNext ? (
+        <Pressable
+          onPress={onNext}
+          style={{
+            flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+            borderRadius: 14, backgroundColor: Brand.primary, paddingVertical: 13,
+          }}
+        >
+          <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>{nextLabel}</Text>
+          <ChevronRight color="#fff" size={16} />
+        </Pressable>
+      ) : null}
     </View>
   );
 }

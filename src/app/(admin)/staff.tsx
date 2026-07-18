@@ -15,7 +15,10 @@ import {
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
-import { AppCard, AvatarRing, InitialsAvatar, FloatingActionBtn } from '@/components/ui/brand';
+import { AvatarRing, InitialsAvatar, FloatingActionBtn } from '@/components/ui/brand';
+import { Card } from '@/components/ui/card';
+import { Tokens } from '@/theme/tokens';
+import { Edit2 } from 'lucide-react-native';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SearchField } from '@/components/ui/search-field';
 import { EmptyState } from '@/components/visitors/empty-state';
@@ -154,6 +157,21 @@ export default function AdminStaffScreen() {
     },
   });
 
+  const confirmDelete = (item: StaffMember) => {
+    Alert.alert(
+      'Delete staff member?',
+      `“${item.name}” will be permanently removed.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteMutation.mutate(item.id),
+        },
+      ],
+    );
+  };
+
   const openCreate = () => {
     setEditing(null);
     setName('');
@@ -238,14 +256,16 @@ export default function AdminStaffScreen() {
               subtitle={
                 search.trim()
                   ? 'Try a different name, role, or phone.'
-                  : 'Tap + to add a contact.'
+                  : 'Add contacts that residents can call for help.'
               }
+              actionLabel={search.trim() ? undefined : '+ Add staff member'}
+              onAction={search.trim() ? undefined : openCreate}
             />
           }
           renderItem={({ item }) => (
-            <AppCard className="flex-row items-center gap-3 p-3">
+            <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, marginBottom: 12 }}>
               {item.photo_url ? (
-                <AvatarRing size={48}>
+                <AvatarRing size={48} status="online">
                   <Image
                     source={{ uri: item.photo_url }}
                     style={{ width: 48, height: 48 }}
@@ -253,11 +273,11 @@ export default function AdminStaffScreen() {
                   />
                 </AvatarRing>
               ) : (
-                <InitialsAvatar name={item.name} size={48} seed={item.id} />
+                <InitialsAvatar name={item.name} size={48} seed={item.id} status="online" />
               )}
-              <View className="flex-1">
-                <Text className="font-semibold text-ink">{item.name}</Text>
-                <Text className="text-sm text-ink-muted">
+              <View style={{ flex: 1 }}>
+                <Text style={{ ...Tokens.typography.h3, color: Tokens.color.textPrimary }}>{item.name}</Text>
+                <Text style={{ ...Tokens.typography.caption, color: Tokens.color.textMuted }}>
                   {item.role}
                   {item.phone ? ` · ${item.phone}` : ''}
                 </Text>
@@ -266,19 +286,19 @@ export default function AdminStaffScreen() {
                 onPress={() => openEdit(item)}
                 accessibilityRole="button"
                 accessibilityLabel={`Edit ${item.name}`}
-                className="px-2 py-1"
+                style={{ padding: 8 }}
               >
-                <Text className="text-sm font-semibold text-brand-700">Edit</Text>
+                <Edit2 color={Tokens.color.primary} size={18} />
               </Pressable>
               <Pressable
-                onPress={() => deleteMutation.mutate(item.id)}
+                onPress={() => confirmDelete(item)}
                 accessibilityRole="button"
                 accessibilityLabel={`Delete ${item.name}`}
-                className="px-2 py-1"
+                style={{ padding: 8 }}
               >
-                <Trash2 color="#B91C1C" size={16} />
+                <Trash2 color={Tokens.color.danger} size={18} />
               </Pressable>
-            </AppCard>
+            </Card>
           )}
         />
       )}
@@ -289,10 +309,10 @@ export default function AdminStaffScreen() {
           className="flex-1 justify-end bg-black/40"
         >
           <View className="rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
-            <Text className="mb-4 text-xl font-bold text-ink">
+            <Text style={{ ...Tokens.typography.h2, color: Tokens.color.textPrimary, marginBottom: 16 }}>
               {editing ? 'Edit staff' : 'Add staff'}
             </Text>
-            {formError ? <Text className="mb-2 text-sm text-red-500">{formError}</Text> : null}
+            {formError ? <Text style={{ ...Tokens.typography.caption, color: Tokens.color.danger, marginBottom: 8 }}>{formError}</Text> : null}
 
             <View className="mb-4 flex-row items-center gap-3">
               {photoUri ? (
@@ -342,17 +362,18 @@ export default function AdminStaffScreen() {
                 onPress={() => setModalOpen(false)}
                 className="flex-1 items-center rounded-xl border border-surface-border py-3"
               >
-                <Text className="font-semibold text-ink-soft">Cancel</Text>
+                <Text style={{ ...Tokens.typography.bodyMedium, color: Tokens.color.textSecondary }}>Cancel</Text>
               </Pressable>
               <Pressable
                 onPress={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending}
-                className="flex-1 items-center rounded-bubbly bg-charcoal py-3.5"
+                className="flex-1 items-center rounded-bubbly py-3.5"
+                style={{ backgroundColor: Tokens.color.primary }}
               >
                 {saveMutation.isPending ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text className="font-semibold text-white">Save</Text>
+                  <Text style={{ ...Tokens.typography.bodyMedium, color: '#fff' }}>Save</Text>
                 )}
               </Pressable>
             </View>

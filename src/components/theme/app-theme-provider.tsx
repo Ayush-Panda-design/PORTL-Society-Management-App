@@ -8,7 +8,7 @@ import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
 import { colorScheme as nwColorScheme, vars } from 'nativewind';
 import { type ReactNode, useEffect, useMemo } from 'react';
-import { View } from 'react-native';
+import { AppState, View } from 'react-native';
 
 import { Brand, getPalette, themeCssVars } from '@/constants/theme';
 import {
@@ -59,7 +59,13 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
   }, [mode]);
 
   useEffect(() => {
-    void SystemUI.setBackgroundColorAsync(palette.surface);
+    const apply = () => {
+      if (AppState.currentState !== 'active') return;
+      void SystemUI.setBackgroundColorAsync(palette.surface).catch(() => {});
+    };
+    apply();
+    const sub = AppState.addEventListener('change', apply);
+    return () => sub.remove();
   }, [palette.surface]);
 
   const cssVars = useMemo(

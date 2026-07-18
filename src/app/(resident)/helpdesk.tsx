@@ -22,6 +22,7 @@ import {
 
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
+import { SuccessOverlay } from '@/components/ui/success-overlay';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
@@ -115,7 +116,7 @@ export default function ResidentHelpdeskScreen() {
   const [category, setCategory] = useState<string>(COMPLAINT_CATEGORIES[0]);
   const [description, setDescription] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [successVisible, setSuccessVisible] = useState(false);
 
   const listQuery = useQuery({
     queryKey: queryKeys.complaints(`flat:${flatId ?? 'none'}`),
@@ -135,14 +136,14 @@ export default function ResidentHelpdeskScreen() {
     },
     onSuccess: async () => {
       setDescription('');
-      setSuccess('Complaint submitted successfully.');
+      setSuccessVisible(true);
       setFormError(null);
       await queryClient.invalidateQueries({
         queryKey: queryKeys.complaints(`flat:${flatId}`),
       });
     },
     onError: (e: Error) => {
-      setSuccess(null);
+      setSuccessVisible(false);
       setFormError(e.message);
     },
   });
@@ -195,11 +196,6 @@ export default function ResidentHelpdeskScreen() {
               {formError ? (
                 <View className="mb-3 rounded-card bg-status-rejectedSoft px-3 py-2">
                   <Text className="text-sm text-status-rejected">{formError}</Text>
-                </View>
-              ) : null}
-              {success ? (
-                <View className="mb-3 rounded-card bg-status-approvedSoft px-3 py-2">
-                  <Text className="text-sm text-status-approved">{success}</Text>
                 </View>
               ) : null}
 
@@ -294,6 +290,11 @@ export default function ResidentHelpdeskScreen() {
           }}
         />
       </KeyboardAvoidingView>
+      <SuccessOverlay
+        visible={successVisible}
+        message="Complaint submitted"
+        onDone={() => setSuccessVisible(false)}
+      />
     </ScreenHeader>
   );
 }

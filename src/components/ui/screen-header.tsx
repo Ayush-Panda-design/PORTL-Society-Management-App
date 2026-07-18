@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { interpolate, useAnimatedStyle, Extrapolation, type SharedValue } from 'react-native-reanimated';
 
 import { FontFamily } from '@/constants/theme';
 import { useThemePalette } from '@/hooks/use-theme';
@@ -13,15 +14,33 @@ type Props = {
   children: ReactNode;
   right?: ReactNode;
   showBack?: boolean;
+  scrollOffset?: SharedValue<number>;
 };
 
-export function ScreenHeader({ title, subtitle, children, right, showBack }: Props) {
+export function ScreenHeader({ title, subtitle, children, right, showBack, scrollOffset }: Props) {
   const router = useRouter();
   const palette = useThemePalette();
 
+  const animatedStyle = useAnimatedStyle(() => {
+    if (!scrollOffset) return {};
+
+    const opacity = interpolate(scrollOffset.value, [0, 8], [0, palette.isDark ? 0.3 : 0.08], Extrapolation.CLAMP);
+    const elevation = interpolate(scrollOffset.value, [0, 8], [0, 3], Extrapolation.CLAMP);
+
+    return {
+      shadowColor: palette.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: opacity,
+      shadowRadius: 8,
+      elevation,
+      backgroundColor: palette.surface,
+      zIndex: 10,
+    };
+  });
+
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
-      <View className="flex-row items-start justify-between gap-3 px-5 pb-3 pt-4">
+      <Animated.View className="flex-row items-start justify-between gap-3 px-5 pb-3 pt-4" style={animatedStyle}>
         <View className="min-w-0 flex-1 flex-row items-start gap-3">
           {showBack ? (
             <Pressable
@@ -63,7 +82,7 @@ export function ScreenHeader({ title, subtitle, children, right, showBack }: Pro
           </View>
         </View>
         {right}
-      </View>
+      </Animated.View>
       {children}
     </SafeAreaView>
   );

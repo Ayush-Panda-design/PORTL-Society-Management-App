@@ -7,6 +7,7 @@ import {
   BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
 import { useColorScheme } from 'nativewind';
+import { Tokens } from '@/theme/tokens';
 
 interface Props {
   children: React.ReactNode;
@@ -30,10 +31,11 @@ export const BottomSheetModal = forwardRef<GorhomBottomSheetModal, Props>(
         snapPoints={snapPoints}
         backdropComponent={renderBackdrop}
         backgroundStyle={{
-          backgroundColor: isDark ? '#161616' : '#ffffff',
+          backgroundColor: Tokens.color.surface,
+          ...Tokens.elevation.level2,
         }}
         handleIndicatorStyle={{
-          backgroundColor: isDark ? '#333' : '#ccc',
+          backgroundColor: Tokens.color.border,
         }}
       >
         <BottomSheetView style={styles.contentContainer}>

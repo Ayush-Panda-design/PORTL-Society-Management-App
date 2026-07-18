@@ -9,6 +9,7 @@ import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { VisitorCard } from '@/components/visitors/visitor-card';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
+import { SuccessOverlay } from '@/components/ui/success-overlay';
 import { Brand } from '@/constants/theme';
 import { useThemePalette } from '@/hooks/use-theme';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
@@ -22,6 +23,7 @@ export default function ResidentVisitorsScreen() {
   const [actionId, setActionId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [successVisible, setSuccessVisible] = useState(false);
 
   const { visitors, isLoading, error, refresh } = useVisitorsRealtime({
     flatId: profile?.flat_id,
@@ -54,6 +56,8 @@ export default function ResidentVisitorsScreen() {
 
       if (updateError) {
         setActionError(updateError);
+      } else if (status === 'approved') {
+        setSuccessVisible(true);
       }
     } catch (e) {
       setActionError(e instanceof Error ? e.message : 'Failed to update request');
@@ -153,6 +157,11 @@ export default function ResidentVisitorsScreen() {
           )}
         />
       )}
+      <SuccessOverlay
+        visible={successVisible}
+        message="Visitor Approved"
+        onDone={() => setSuccessVisible(false)}
+      />
     </SafeAreaView>
   );
 }

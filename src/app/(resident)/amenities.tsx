@@ -13,6 +13,7 @@ import { AppCard } from '@/components/ui/brand';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
+import { SuccessOverlay } from '@/components/ui/success-overlay';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
@@ -38,6 +39,7 @@ export default function ResidentAmenitiesScreen() {
 
   const [date, setDate] = useState(todayISODate());
   const [message, setMessage] = useState<string | null>(null);
+  const [successVisible, setSuccessVisible] = useState(false);
 
   const dateOptions = useMemo(
     () =>
@@ -77,6 +79,7 @@ export default function ResidentAmenitiesScreen() {
     },
     onSuccess: async (_data, slot) => {
       setMessage(`Booked ${slot} on ${date}.`);
+      setSuccessVisible(true);
       await queryClient.invalidateQueries({
         queryKey: queryKeys.amenityBookings(selected!.id, date),
       });
@@ -185,6 +188,12 @@ export default function ResidentAmenitiesScreen() {
             }}
           />
         )}
+        <SuccessOverlay
+          visible={successVisible}
+          type="payment"
+          message="Booking Confirmed"
+          onDone={() => setSuccessVisible(false)}
+        />
       </ScreenHeader>
     );
   }

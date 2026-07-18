@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
-import { AppCard } from '@/components/ui/brand';
+import { Card } from '@/components/ui/card';
+import { Tokens } from '@/theme/tokens';
 import { ChipSelector } from '@/components/ui/chip-selector';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SearchField } from '@/components/ui/search-field';
@@ -298,30 +299,27 @@ export default function AdminFlatsScreen() {
             />
           }
           renderItem={({ item }) => (
-            <AppCard>
-              <Text className="mb-0.5 text-base font-semibold text-ink">
-                Flat {item.number}
-              </Text>
-              <Text className="mb-3 text-sm text-ink-muted">
-                {flatTowerName(item.towers) ?? 'Unknown tower'}
-              </Text>
-              <View className="flex-row gap-2">
-                <Pressable
-                  onPress={() => openEdit(item)}
-                  className="flex-1 items-center rounded-xl border border-surface-border py-2.5"
-                >
-                  <Text className="text-sm font-semibold text-ink-soft">Edit</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => confirmDelete(item)}
-                  disabled={deleteMutation.isPending}
-                  className="flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-status-rejectedSoft py-2.5"
-                >
-                  <Trash2 color="#B91C1C" size={14} />
-                  <Text className="text-sm font-semibold text-status-rejected">Delete</Text>
+            <Card style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <View>
+                <Text style={{ ...Tokens.typography.h3, color: Tokens.color.textPrimary }}>
+                  Flat {item.number}
+                </Text>
+                <Text style={{ ...Tokens.typography.caption, color: Tokens.color.textMuted, marginBottom: 4 }}>
+                  {flatTowerName(item.towers) ?? 'Unknown tower'}
+                </Text>
+                <Pressable onPress={() => openEdit(item)}>
+                  <Text style={{ ...Tokens.typography.label, color: Tokens.color.primary }}>Edit Flat</Text>
                 </Pressable>
               </View>
-            </AppCard>
+              <Pressable
+                onPress={() => confirmDelete(item)}
+                disabled={deleteMutation.isPending}
+                style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+                accessibilityLabel={`Delete flat ${item.number}`}
+              >
+                <Trash2 color={Tokens.color.danger} size={20} />
+              </Pressable>
+            </Card>
           )}
         />
       )}
@@ -329,10 +327,10 @@ export default function AdminFlatsScreen() {
       <Modal visible={modalOpen} animationType="slide" transparent>
         <KeyboardAvoidingView behavior="padding" className="flex-1 justify-end bg-black/40">
           <View className="max-h-[90%] rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
-            <Text className="mb-4 text-xl font-bold text-ink">
+            <Text style={{ ...Tokens.typography.h2, color: Tokens.color.textPrimary, marginBottom: 16 }}>
               {editing ? 'Edit flat' : 'New flat'}
             </Text>
-            {formError ? <Text className="mb-2 text-sm text-red-500">{formError}</Text> : null}
+            {formError ? <Text style={{ ...Tokens.typography.caption, color: Tokens.color.danger, marginBottom: 8 }}>{formError}</Text> : null}
 
             {formTowerOptions.length > 0 ? (
               <View className="mb-3">
@@ -358,17 +356,18 @@ export default function AdminFlatsScreen() {
                 onPress={() => setModalOpen(false)}
                 className="flex-1 items-center rounded-xl border border-surface-border py-3"
               >
-                <Text className="font-semibold text-ink-soft">Cancel</Text>
+                <Text style={{ ...Tokens.typography.bodyMedium, color: Tokens.color.textSecondary }}>Cancel</Text>
               </Pressable>
               <Pressable
                 onPress={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending}
-                className="flex-1 items-center rounded-bubbly bg-charcoal py-3.5"
+                className="flex-1 items-center rounded-bubbly py-3.5"
+                style={{ backgroundColor: Tokens.color.primary }}
               >
                 {saveMutation.isPending ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text className="font-semibold text-white">Save</Text>
+                  <Text style={{ ...Tokens.typography.bodyMedium, color: '#fff' }}>Save</Text>
                 )}
               </Pressable>
             </View>

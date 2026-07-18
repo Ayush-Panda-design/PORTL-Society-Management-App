@@ -93,6 +93,61 @@ export default function AdminHome() {
           />
         ) : null}
 
+        {/* ── Needs Attention card (urgent items only) ── */}
+        {stats && (stats.pendingVisitorsToday > 0 || stats.openComplaints > 0) ? (
+          <View
+            style={{
+              marginBottom: 16,
+              borderRadius: 14,
+              borderLeftWidth: 4,
+              borderLeftColor: '#F59E0B',
+              backgroundColor: '#FFFBEB',
+              paddingHorizontal: 16,
+              paddingVertical: 14,
+              shadowColor: '#F59E0B',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.12,
+              shadowRadius: 8,
+              elevation: 2,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <AlertCircle color="#D97706" size={16} />
+              <Text style={{ fontFamily: FontFamily.heading, fontSize: 13, color: '#92400E', letterSpacing: 0.5 }}>
+                NEEDS ATTENTION
+              </Text>
+            </View>
+            {stats.pendingVisitorsToday > 0 ? (
+              <Pressable
+                onPress={() => go('/(admin)/join-requests' as Href)}
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#F59E0B' }} />
+                  <Text style={{ fontSize: 14, color: '#78350F' }}>
+                    {stats.pendingVisitorsToday} pending visitor{stats.pendingVisitorsToday > 1 ? 's' : ''} today
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 12, color: '#D97706', fontFamily: FontFamily.heading }}>Review →</Text>
+              </Pressable>
+            ) : null}
+            {stats.openComplaints > 0 ? (
+              <Pressable
+                onPress={() => go('/(admin)/complaints')}
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#EF4444' }} />
+                  <Text style={{ fontSize: 14, color: '#78350F' }}>
+                    {stats.openComplaints} open complaint{stats.openComplaints > 1 ? 's' : ''}
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 12, color: '#D97706', fontFamily: FontFamily.heading }}>Review →</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+
         {statsQuery.isLoading && !stats ? (
           <View className="mb-2 h-36 items-center justify-center rounded-bubbly border border-surface-border bg-surface-card">
             <ActivityIndicator color={Brand.primary} />

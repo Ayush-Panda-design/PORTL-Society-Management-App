@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { QrCode, ShieldCheck, UserPlus } from 'lucide-react-native';
+import { QrCode, UserPlus } from 'lucide-react-native';
 
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
@@ -116,21 +116,13 @@ export default function GuardDashboard() {
             <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           ListEmptyComponent={
-            <View className="flex-1 items-center justify-center py-16">
-              {/* Distinct "waiting" empty state (clock motif) */}
-              <View
-                className="mb-4 h-20 w-20 items-center justify-center rounded-pill"
-                style={{ backgroundColor: Pastels.butter }}
-              >
-                <ShieldCheck color={Brand.primary} size={36} strokeWidth={1.5} />
-              </View>
-              <Text className="mb-1 text-lg font-semibold text-ink" style={{ fontFamily: FontFamily.heading }}>
-                Queue is clear
-              </Text>
-              <Text className="max-w-[240px] text-center text-sm text-ink-muted">
-                New visitor registrations will appear here instantly as they arrive.
-              </Text>
-            </View>
+            <EmptyState
+              visual="visitors"
+              title="Queue is clear"
+              subtitle="New visitor registrations will appear here instantly."
+              actionLabel="+ Register a visitor"
+              onAction={() => router.push('/(guard)/register-visitor')}
+            />
           }
           renderItem={({ item }) => (
             <View

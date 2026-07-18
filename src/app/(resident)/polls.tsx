@@ -7,6 +7,7 @@ import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
+import { SuccessOverlay } from '@/components/ui/success-overlay';
 import { InitialsAvatar } from '@/components/ui/brand';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { isPollExpired, pollStats } from '@/lib/community';
@@ -121,6 +122,7 @@ export default function ResidentPollsScreen() {
   const userId = profile?.id;
   const queryClient = useQueryClient();
   const [votingPollId, setVotingPollId] = useState<string | null>(null);
+  const [successVisible, setSuccessVisible] = useState(false);
 
   const pollsQuery = useQuery({
     queryKey: queryKeys.polls(societyId ?? 'none'),
@@ -145,6 +147,7 @@ export default function ResidentPollsScreen() {
       if (!societyId) return;
       await queryClient.invalidateQueries({ queryKey: queryKeys.polls(societyId) });
       await queryClient.refetchQueries({ queryKey: queryKeys.pollVotes(societyId, pollIds) });
+      setSuccessVisible(true);
     },
     onSettled: () => setVotingPollId(null),
   });
@@ -304,6 +307,11 @@ export default function ResidentPollsScreen() {
           renderItem={({ item }) => renderPoll(item.poll, item.readOnly)}
         />
       )}
+      <SuccessOverlay
+        visible={successVisible}
+        message="Vote cast"
+        onDone={() => setSuccessVisible(false)}
+      />
     </ScreenHeader>
   );
 }

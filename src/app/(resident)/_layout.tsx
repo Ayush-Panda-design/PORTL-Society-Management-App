@@ -3,22 +3,20 @@ import { Bell, Home, MoreHorizontal, Users } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useResolvedColorScheme } from '@/hooks/use-resolved-color-scheme';
-import { getResidentTabOptions } from '@/constants/navigation';
+import { getResidentTabOptions, TAB_ICON_SIZE } from '@/constants/navigation';
 
 /** Consistent 1.5px stroke weight per design spec (Lucide icon family). */
 function tabIcon(
   Icon: typeof Home,
   color: string,
-  size: number,
   focused: boolean,
 ) {
   return (
     <Icon
       color={color}
-      size={size}
+      size={TAB_ICON_SIZE}
       strokeWidth={1.5}
       fill={focused ? color : 'transparent'}
-      fillOpacity={focused ? 0.18 : 0}
     />
   );
 }
@@ -33,29 +31,29 @@ export default function ResidentLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, size, focused }) => tabIcon(Home, color, size, focused),
+          tabBarIcon: ({ color, focused }) => tabIcon(Home, color, focused),
         }}
       />
       <Tabs.Screen
         name="visitors"
         options={{
           title: 'Visitors',
-          tabBarIcon: ({ color, size, focused }) => tabIcon(Users, color, size, focused),
+          tabBarIcon: ({ color, focused }) => tabIcon(Users, color, focused),
         }}
       />
       <Tabs.Screen
         name="notices"
         options={{
           title: 'Notices',
-          tabBarIcon: ({ color, size, focused }) => tabIcon(Bell, color, size, focused),
+          tabBarIcon: ({ color, focused }) => tabIcon(Bell, color, focused),
         }}
       />
       <Tabs.Screen
         name="more"
         options={{
           title: 'More',
-          tabBarIcon: ({ color, size, focused }) =>
-            tabIcon(MoreHorizontal, color, size, focused),
+          tabBarIcon: ({ color, focused }) =>
+            tabIcon(MoreHorizontal, color, focused),
         }}
       />
       <Tabs.Screen name="pre-approve" options={{ href: null }} />

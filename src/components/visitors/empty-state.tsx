@@ -1,15 +1,7 @@
 import type { ReactNode } from 'react';
 import { Text, View, Pressable } from 'react-native';
+import LottieView from 'lottie-react-native';
 
-import {
-  BallotBoxIllustration,
-  CalendarIllustration,
-  EmptyMailboxIllustration,
-  EmptyVisitorsIllustration,
-  NotConnectedIllustration,
-  QuietGateIllustration,
-  ToolboxIllustration,
-} from '@/components/illustrations';
 import { FontFamily } from '@/constants/theme';
 
 export type EmptyVisual =
@@ -31,25 +23,42 @@ type Props = {
   onAction?: () => void;
 };
 
+
+
+const LOTTIE_FILES = {
+  'no-data': require('@/assets/lottie/empty.json'),
+  'inbox': require('@/assets/lottie/inbox.json'),
+  'no-internet': require('@/assets/lottie/no-internet.json'),
+};
+
 function Visual({ kind }: { kind: EmptyVisual }) {
+  let source;
   switch (kind) {
     case 'notices':
-      return <EmptyMailboxIllustration />;
-    case 'visitors':
-      return <EmptyVisitorsIllustration />;
-    case 'polls':
-      return <BallotBoxIllustration />;
     case 'helpdesk':
-      return <ToolboxIllustration />;
-    case 'amenities':
-      return <CalendarIllustration />;
-    case 'gate':
-      return <QuietGateIllustration />;
+      source = LOTTIE_FILES['inbox'];
+      break;
     case 'disconnected':
-      return <NotConnectedIllustration />;
+      source = LOTTIE_FILES['no-internet'];
+      break;
+    case 'visitors':
+    case 'polls':
+    case 'amenities':
+    case 'gate':
+    case 'default':
     default:
-      return <NotConnectedIllustration />;
+      source = LOTTIE_FILES['no-data'];
+      break;
   }
+
+  return (
+    <LottieView
+      source={source}
+      autoPlay
+      loop
+      style={{ width: 160, height: 160 }}
+    />
+  );
 }
 
 export function EmptyState({ title, subtitle, visual = 'default', action, actionLabel, onAction }: Props) {

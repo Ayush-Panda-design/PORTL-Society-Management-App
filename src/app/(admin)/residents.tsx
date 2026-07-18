@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -44,6 +45,7 @@ function matchesSearch(profile: ProfileWithFlat, query: string): boolean {
 
 export default function AdminResidentsScreen() {
   const societyId = useAuthStore((s) => s.profile?.society_id);
+  const router = useRouter();
   const queryClient = useQueryClient();
   const residentsKey = queryKeys.residents(societyId ?? 'none');
 
@@ -212,8 +214,10 @@ export default function AdminResidentsScreen() {
               subtitle={
                 search.trim()
                   ? 'Try a different name, phone, or flat.'
-                  : 'Residents appear here after they sign up with the resident role.'
+                  : 'Residents appear here after signing up with the resident role.'
               }
+              actionLabel={!search.trim() ? 'Share invite link' : undefined}
+              onAction={!search.trim() ? () => router.push('/(admin)/invites') : undefined}
             />
           }
           renderItem={({ item }) => (
@@ -229,6 +233,7 @@ export default function AdminResidentsScreen() {
                   seed={item.id}
                   size={44}
                   hasUnread={!item.flat_id}
+                  status={item.flat_id ? 'online' : 'pending'}
                 />
                 <View className="min-w-0 flex-1">
                   <Text className="text-base font-semibold text-ink" numberOfLines={1}>

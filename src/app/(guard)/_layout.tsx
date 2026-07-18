@@ -3,22 +3,20 @@ import { ClipboardList, MoreHorizontal, ScanLine, ShieldCheck, UserPlus } from '
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useResolvedColorScheme } from '@/hooks/use-resolved-color-scheme';
-import { getGuardTabOptions } from '@/constants/navigation';
+import { getGuardTabOptions, TAB_ICON_SIZE } from '@/constants/navigation';
 
 /** Consistent 1.5px stroke weight per design spec (Lucide icon family). */
 function tabIcon(
   Icon: typeof ShieldCheck,
   color: string,
-  size: number,
   focused: boolean,
 ) {
   return (
     <Icon
       color={color}
-      size={size}
+      size={TAB_ICON_SIZE}
       strokeWidth={1.5}
       fill={focused ? color : 'transparent'}
-      fillOpacity={focused ? 0.18 : 0}
     />
   );
 }
@@ -33,38 +31,38 @@ export default function GuardLayout() {
         name="dashboard"
         options={{
           title: 'Pending',
-          tabBarIcon: ({ color, size, focused }) =>
-            tabIcon(ShieldCheck, color, size, focused),
+          tabBarIcon: ({ color, focused }) =>
+            tabIcon(ShieldCheck, color, focused),
         }}
       />
       <Tabs.Screen
         name="register-visitor"
         options={{
           title: 'Register',
-          tabBarIcon: ({ color, size, focused }) => tabIcon(UserPlus, color, size, focused),
+          tabBarIcon: ({ color, focused }) => tabIcon(UserPlus, color, focused),
         }}
       />
       <Tabs.Screen
         name="verify"
         options={{
           title: 'Entry',
-          tabBarIcon: ({ color, size, focused }) => tabIcon(ScanLine, color, size, focused),
+          tabBarIcon: ({ color, focused }) => tabIcon(ScanLine, color, focused),
         }}
       />
       <Tabs.Screen
         name="logs"
         options={{
           title: 'Logs',
-          tabBarIcon: ({ color, size, focused }) =>
-            tabIcon(ClipboardList, color, size, focused),
+          tabBarIcon: ({ color, focused }) =>
+            tabIcon(ClipboardList, color, focused),
         }}
       />
       <Tabs.Screen
         name="more"
         options={{
           title: 'More',
-          tabBarIcon: ({ color, size, focused }) =>
-            tabIcon(MoreHorizontal, color, size, focused),
+          tabBarIcon: ({ color, focused }) =>
+            tabIcon(MoreHorizontal, color, focused),
         }}
       />
       <Tabs.Screen name="index" options={{ href: null }} />

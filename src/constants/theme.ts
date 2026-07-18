@@ -14,25 +14,25 @@ import { Platform } from 'react-native';
 /** Static brand accents — deep forest green primary, terracotta accent. */
 export const Brand = {
   // Primary — deep forest green
-  primary: '#1F4B3F',
-  primaryDark: '#163830',
-  primarySoft: '#C8DDD8',
+  primary: '#2D6A4F',
+  primaryDark: '#1B4332',
+  primarySoft: '#D8F3DC', // Maps to primaryContainer
   primaryMid: '#2E6B5B',
 
   // Accent — terracotta (CTAs & alerts)
-  accent: '#E4823D',
-  accentDark: '#C46B2B',
+  accent: '#EA580C', // Maps to accentGuard
+  accentDark: '#C2410C', // Maps to accentGuardDark
   accentSoft: '#FDEBD8',
 
   // Neutrals
   charcoal: '#1E2322',
   charcoalSoft: '#2E3532',
-  surface: '#FAF9F6',
-  card: '#FFFFFF',
-  border: '#E5E8E4',
-  ink: '#101512',
-  inkSoft: '#374140',
-  inkMuted: '#6B7A77',
+  surface: '#FAF7F2', // Maps to background
+  card: '#FFFFFF', // Maps to surface
+  border: '#E5E7EB', // Maps to border
+  ink: '#1A1A1A', // Maps to textPrimary
+  inkSoft: '#6B7280', // Maps to textSecondary
+  inkMuted: '#9CA3AF', // Maps to textMuted
 } as const;
 
 // Per-role identity tints (used in tab bar active color)
@@ -58,10 +58,13 @@ export const Pastels = {
 // ─── Type Scale ─────────────────────────────────────────────────────────────
 /** 4-level type scale (px) per design spec. */
 export const TypeScale = {
-  display: 32,
-  heading: 24,
-  body: 16,
+  display: 28,
+  heading: 24, // h1
+  h2: 20,
+  h3: 17,
+  body: 15,
   caption: 13,
+  label: 12,
 } as const;
 
 // ─── Elevation ──────────────────────────────────────────────────────────────
@@ -215,17 +218,17 @@ export function getPalette(scheme: 'light' | 'dark'): ThemePalette {
 
 // ─── Status Colors ───────────────────────────────────────────────────────────
 export const StatusColors = {
-  approved: { solid: '#1F4B3F', soft: '#E3F0EC', text: '#163830' },
-  pending: { solid: '#C4861A', soft: '#F9F0DC', text: '#92600E' },
-  rejected: { solid: '#C0392B', soft: '#F8E4E4', text: '#8B1A1A' },
+  approved: { solid: '#16A34A', soft: '#E3F0EC', text: '#163830' }, // success
+  pending: { solid: '#F59E0B', soft: '#F9F0DC', text: '#92600E' }, // warning
+  rejected: { solid: '#DC2626', soft: '#F8E4E4', text: '#8B1A1A' }, // danger
   info: { solid: '#2563EB', soft: '#DDE8F4', text: '#1E3A8A' },
-  entry: { solid: '#1F4B3F', soft: '#E3F0EC', text: '#163830' },
-  exit: { solid: '#C0392B', soft: '#F8E4E4', text: '#8B1A1A' },
+  entry: { solid: '#16A34A', soft: '#E3F0EC', text: '#163830' }, // success
+  exit: { solid: '#DC2626', soft: '#F8E4E4', text: '#8B1A1A' }, // danger
   checked_in: { solid: '#2563EB', soft: '#DDE8F4', text: '#1E3A8A' },
   checked_out: { solid: '#6B7A77', soft: '#EFF2F0', text: '#374140' },
-  open: { solid: '#C4861A', soft: '#F9F0DC', text: '#92600E' },
+  open: { solid: '#F59E0B', soft: '#F9F0DC', text: '#92600E' }, // warning
   in_progress: { solid: '#2563EB', soft: '#DDE8F4', text: '#1E3A8A' },
-  resolved: { solid: '#1F4B3F', soft: '#E3F0EC', text: '#163830' },
+  resolved: { solid: '#16A34A', soft: '#E3F0EC', text: '#163830' }, // success
 } as const;
 
 export const StatusColorsDark = {
@@ -322,6 +325,13 @@ export const Fonts = Platform.select({
 
 // ─── Spacing ─────────────────────────────────────────────────────────────────
 export const Spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  xxl: 32,
+  // Keep legacy for now to avoid breaking existing UI
   half: 2,
   one: 4,
   two: 8,
@@ -334,12 +344,15 @@ export const Spacing = {
 // ─── Radii ───────────────────────────────────────────────────────────────────
 /** Crisp-professional corner radii — 12px base per design spec. */
 export const Radii = {
+  input: 8,
+  card: 12,
+  pill: 999,
+  // Keep legacy for now
   xs: 8,
   sm: 12,   // cards (spec: 12px)
   md: 16,   // panels
   lg: 20,   // hero cards
   xl: 28,   // modals / bottom-sheets
-  pill: 999,
 } as const;
 
 // ─── Misc ────────────────────────────────────────────────────────────────────
