@@ -300,6 +300,8 @@ export const FontFamily = {
   heading: 'Inter_600SemiBold',
   medium: 'Inter_500Medium',
   body: 'Inter_400Regular',
+  /** Wordmark-only display face — tighter, more intentional than UI bold. */
+  wordmark: 'Manrope_800ExtraBold',
 } as const;
 
 export const Fonts = Platform.select({

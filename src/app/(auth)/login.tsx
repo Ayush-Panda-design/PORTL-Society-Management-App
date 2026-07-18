@@ -36,13 +36,28 @@ export default function LoginScreen() {
       });
 
       if (signInError) {
+        const msg = signInError.message.toLowerCase();
+        if (msg.includes('email not confirmed') || msg.includes('confirm')) {
+          router.replace({
+            pathname: '/(auth)/verify-email',
+            params: { email: email.trim() },
+          });
+          return;
+        }
         setError(signInError.message);
         return;
       }
 
       if (data.user) {
+        if (!data.user.email_confirmed_at) {
+          router.replace({
+            pathname: '/(auth)/verify-email',
+            params: { email: email.trim() },
+          });
+          return;
+        }
         const profile = await fetchProfile(data.user.id);
-        router.replace(destinationForProfile(profile));
+        router.replace(destinationForProfile(profile, data.user));
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to sign in');
@@ -148,6 +163,10 @@ export default function LoginScreen() {
               Create account
             </Link>
           </View>
+
+          <Pressable onPress={() => router.replace('/(auth)/welcome')} className="mt-4 py-2">
+            <Text className="text-center text-sm text-ink-faint">Back to welcome</Text>
+          </Pressable>
         </View>
       </KeyboardAwareScrollView>
     </View>

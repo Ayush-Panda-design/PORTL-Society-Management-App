@@ -20,8 +20,10 @@ import { usePortlFonts } from '@/hooks/use-portl-fonts';
 import { destinationForProfile } from '@/lib/auth-routing';
 import { queryClient } from '@/lib/query-client';
 import {
+  isEmailVerified,
   isMembershipActive,
   isMembershipPending,
+  needsProfileCompletion,
   needsSocietyOnboarding,
   useAuthStore,
 } from '@/stores/authStore';
@@ -57,7 +59,7 @@ async function hideExpoToolsFab() {
 function AuthGate({ children }: { children: ReactNode }) {
   const router = useRouter();
   const segments = useSegments();
-  const { session, profile, isLoading, isInitialized, initialize } = useAuthStore();
+  const { session, user, profile, isLoading, isInitialized, initialize } = useAuthStore();
 
   useEffect(() => {
     void initialize();
@@ -69,29 +71,49 @@ function AuthGate({ children }: { children: ReactNode }) {
     const root = segments[0];
     const inAuthGroup = root === '(auth)';
     const inOnboardingGroup = root === '(onboarding)';
+    const authScreen = segments[1];
+    const onboardingScreen = segments[1];
+    const isRoot = !root;
 
     if (!session) {
-      const authScreen = segments[1];
-      const allowedAuthScreens = ['login', 'signup', 'callback'];
+      const allowedAuthScreens = ['welcome', 'login', 'signup', 'callback', 'verify-email'];
 
       if (!inAuthGroup) {
-        router.replace('/(auth)/login');
-      } else if (authScreen && !allowedAuthScreens.includes(authScreen)) {
-        router.replace('/(auth)/login');
+        router.replace('/(auth)/welcome' as Href);
+      } else if (!authScreen || authScreen === 'index') {
+        router.replace('/(auth)/welcome' as Href);
+      } else if (!allowedAuthScreens.includes(authScreen)) {
+        router.replace('/(auth)/welcome' as Href);
       }
       return;
     }
 
-    const dest = destinationForProfile(profile);
-    const onboardingScreen = segments[1];
-    const isRoot = !root;
+    // Signed in but email not confirmed yet
+    if (!isEmailVerified(user)) {
+      if (!inAuthGroup || authScreen !== 'verify-email') {
+        router.replace('/(auth)/verify-email' as Href);
+      }
+      return;
+    }
+
+    // Name + photo required before society / dashboard
+    if (needsProfileCompletion(profile)) {
+      if (!inOnboardingGroup || onboardingScreen !== 'complete-profile') {
+        router.replace('/(onboarding)/complete-profile' as Href);
+      }
+      return;
+    }
+
+    const dest = destinationForProfile(profile, user);
 
     if (needsSocietyOnboarding(profile)) {
-      const allowed = ['index', 'create', 'join'];
+      const allowed = ['index', 'create', 'join', 'discover'];
       if (!inOnboardingGroup) {
         router.replace('/(onboarding)' as Href);
       } else if (onboardingScreen && !allowed.includes(onboardingScreen)) {
-        if (onboardingScreen === 'pending') router.replace('/(onboarding)' as Href);
+        if (onboardingScreen === 'pending' || onboardingScreen === 'complete-profile') {
+          router.replace('/(onboarding)' as Href);
+        }
       }
       return;
     }
@@ -122,7 +144,7 @@ function AuthGate({ children }: { children: ReactNode }) {
         router.replace(dest);
       }
     }
-  }, [session, profile, isLoading, isInitialized, segments, router]);
+  }, [session, user, profile, isLoading, isInitialized, segments, router]);
 
   if (!isInitialized || isLoading) {
     return (

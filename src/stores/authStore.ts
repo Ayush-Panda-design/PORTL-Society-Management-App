@@ -43,6 +43,20 @@ export function needsSocietyOnboarding(profile: Profile | null): boolean {
   return false;
 }
 
+/** Name + face photo required before society join / dashboard (guards match faces). */
+export function needsProfileCompletion(profile: Profile | null): boolean {
+  if (!profile) return true;
+  const hasName = Boolean(profile.full_name?.trim());
+  const hasPhoto = Boolean(profile.avatar_url?.trim());
+  return !hasName || !hasPhoto;
+}
+
+export function isEmailVerified(user: User | null | undefined): boolean {
+  if (!user) return false;
+  // Confirmed accounts have email_confirmed_at; some local/dev projects skip confirm.
+  return Boolean(user.email_confirmed_at);
+}
+
 export function isMembershipPending(profile: Profile | null): boolean {
   return Boolean(profile?.society_id && profile.status === 'pending');
 }

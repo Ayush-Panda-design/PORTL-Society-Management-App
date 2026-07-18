@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Building2, KeyRound, LogOut } from 'lucide-react-native';
+import { Building2, KeyRound, LogOut, MapPin } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -45,7 +45,7 @@ export default function OnboardingLanding() {
           {rejected ? 'Try again' : `Hi${profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}`}
         </Text>
         <Text className="mb-6 text-sm leading-5 text-ink-muted">
-          Create a society as admin, or join one with an invite code from your society office.
+          Create a society as admin, find yours by name or area, or join with an invite code.
         </Text>
 
         <Pressable
@@ -66,15 +66,32 @@ export default function OnboardingLanding() {
         </Pressable>
 
         <Pressable
+          onPress={() => router.push('/(onboarding)/discover')}
+          className="mb-3.5 flex-row items-center gap-4 rounded-bubbly border border-surface-border bg-surface-card px-4 py-4"
+        >
+          <View className="h-12 w-12 items-center justify-center rounded-soft bg-pastel-peach">
+            <MapPin color={Brand.primary} size={22} />
+          </View>
+          <View className="min-w-0 flex-1">
+            <Text className="text-base text-ink" style={{ fontFamily: FontFamily.heading }}>
+              Find your society
+            </Text>
+            <Text className="mt-0.5 text-sm text-ink-muted">
+              Search by name, city, or neighbourhood
+            </Text>
+          </View>
+        </Pressable>
+
+        <Pressable
           onPress={() => router.push('/(onboarding)/join')}
           className="mb-8 flex-row items-center gap-4 rounded-bubbly border border-surface-border bg-surface-card px-4 py-4"
         >
-          <View className="h-12 w-12 items-center justify-center rounded-soft bg-pastel-peach">
+          <View className="h-12 w-12 items-center justify-center rounded-soft bg-pastel-mint">
             <KeyRound color={Brand.primary} size={22} />
           </View>
           <View className="min-w-0 flex-1">
             <Text className="text-base text-ink" style={{ fontFamily: FontFamily.heading }}>
-              Join a society
+              Join with invite code
             </Text>
             <Text className="mt-0.5 text-sm text-ink-muted">
               Enter a resident or guard invite code

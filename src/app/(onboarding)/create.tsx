@@ -23,6 +23,7 @@ export default function CreateSocietyScreen() {
 
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -42,6 +43,7 @@ export default function CreateSocietyScreen() {
       const result = await createSociety({
         name: name.trim(),
         address: address.trim(),
+        city: city.trim() || null,
       });
       if (user?.id) await fetchProfile(user.id);
       Toast.show({
@@ -101,7 +103,7 @@ export default function CreateSocietyScreen() {
             />
           </View>
 
-          <View className="mb-6 gap-2">
+          <View className="mb-4 gap-2">
             <Text className="text-sm font-medium text-ink-soft">Address</Text>
             <TextInput
               className="rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
@@ -114,6 +116,20 @@ export default function CreateSocietyScreen() {
               textAlignVertical="top"
               style={{ minHeight: 88 }}
             />
+          </View>
+
+          <View className="mb-6 gap-2">
+            <Text className="text-sm font-medium text-ink-soft">City / area (for search)</Text>
+            <TextInput
+              className="rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+              placeholder="Pune · Koregaon Park"
+              placeholderTextColor="#94A3B8"
+              value={city}
+              onChangeText={setCity}
+            />
+            <Text className="text-xs text-ink-faint">
+              Helps new residents find your society without an invite code
+            </Text>
           </View>
 
           {error ? <Text className="mb-4 text-sm text-status-rejected">{error}</Text> : null}

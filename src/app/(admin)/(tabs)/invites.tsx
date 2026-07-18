@@ -51,6 +51,15 @@ function InviteCodeCard({
   };
 
   const isResident = invite.role === 'resident';
+  const expiresLabel = invite.expires_at
+    ? new Date(invite.expires_at).toLocaleDateString(undefined, {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : null;
+  const expired =
+    invite.expires_at != null && new Date(invite.expires_at).getTime() < Date.now();
 
   return (
     <View className="mb-5 overflow-hidden rounded-bubbly">
@@ -67,6 +76,11 @@ function InviteCodeCard({
         <Text className="text-xs text-white/70">
           Share only with verified {isResident ? 'residents' : 'security staff'}
         </Text>
+        {expiresLabel ? (
+          <Text className={`mt-2 text-xs ${expired ? 'text-red-200' : 'text-white/70'}`}>
+            {expired ? `Expired ${expiresLabel}` : `Expires ${expiresLabel}`}
+          </Text>
+        ) : null}
       </View>
 
       {/* Perforated Divider */}
@@ -99,7 +113,9 @@ function InviteCodeCard({
         ) : (
           <RefreshCw color={Brand.inkMuted} size={14} />
         )}
-        <Text className="text-xs text-ink-muted">Regenerate code (invalidates old code)</Text>
+        <Text className="text-xs text-ink-muted">
+          Regenerate code (invalidates old code · resets 90-day expiry)
+        </Text>
       </Pressable>
     </View>
   );

@@ -41,14 +41,20 @@ export async function updatePublicProfile(
 }
 
 export async function uploadProfilePhoto(params: {
-  societyId: string;
+  /** Society folder, or omit / null to store under pending/{userId}. */
+  societyId?: string | null;
+  userId: string;
   uri: string;
   mimeType?: string | null;
   base64?: string | null;
 }): Promise<string> {
+  const folder = params.societyId?.trim()
+    ? params.societyId.trim()
+    : `pending/${params.userId}`;
+
   const { publicUrl, error } = await uploadLocalImage({
     bucket: 'profile-photos',
-    societyId: params.societyId,
+    societyId: folder,
     uri: params.uri,
     mimeType: params.mimeType,
     base64: params.base64,

@@ -281,14 +281,7 @@ export function ProfileScreen() {
   };
 
   const pickAvatar = async () => {
-    if (!profile?.society_id) {
-      Toast.show({
-        type: 'error',
-        text1: 'No society linked',
-        text2: 'Join a society before uploading a photo.',
-      });
-      return;
-    }
+    if (!userId) return;
     if (avatarBusy) return;
 
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -311,7 +304,8 @@ export function ProfileScreen() {
     setAvatarBusy(true);
     try {
       const publicUrl = await uploadProfilePhoto({
-        societyId: profile.society_id,
+        societyId: profile?.society_id,
+        userId,
         uri: asset.uri,
         mimeType: asset.mimeType,
         base64: asset.base64,

@@ -13,9 +13,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ChipSelector } from '@/components/ui/chip-selector';
 import { Brand, FontFamily, Gradients } from '@/constants/theme';
+import { inviteErrorKind } from '@/lib/invite-errors';
 import { joinSociety, resolveInviteCode } from '@/lib/society-api';
 import { useAuthStore } from '@/stores/authStore';
 import type { ResolvedInvite } from '@/types/database';
+
+function formatExpiry(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
 
 export default function JoinSocietyScreen() {
   const router = useRouter();
@@ -26,6 +38,7 @@ export default function JoinSocietyScreen() {
   const [resolved, setResolved] = useState<ResolvedInvite | null>(null);
   const [flatId, setFlatId] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [errorKind, setErrorKind] = useState<ReturnType<typeof inviteErrorKind>>('other');
   const [lookingUp, setLookingUp] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -38,12 +51,20 @@ export default function JoinSocietyScreen() {
     [resolved?.flats],
   );
 
+  const setFriendlyError = (raw: unknown, fallback: string) => {
+    const msg = raw instanceof Error ? raw.message : fallback;
+    setError(msg);
+    setErrorKind(inviteErrorKind(msg));
+  };
+
   const onLookup = async () => {
     setError(null);
+    setErrorKind('other');
     setResolved(null);
     setFlatId('');
     if (code.trim().length < 4) {
       setError('Enter the invite code from your society');
+      setErrorKind('invalid');
       return;
     }
     setLookingUp(true);
@@ -54,7 +75,7 @@ export default function JoinSocietyScreen() {
         setFlatId(result.flats[0].id);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Invalid invite code');
+      setFriendlyError(e, 'Invalid invite code');
     } finally {
       setLookingUp(false);
     }
@@ -62,6 +83,7 @@ export default function JoinSocietyScreen() {
 
   const onJoin = async () => {
     setError(null);
+    setErrorKind('other');
     if (!resolved) {
       setError('Look up your invite code first');
       return;
@@ -72,7 +94,9 @@ export default function JoinSocietyScreen() {
         return;
       }
       if (resolved.flats.length === 0) {
-        setError('This society has no flats yet. Ask your admin to add towers and flats first.');
+        setError(
+          'This society has no flats yet. Ask your admin to add towers and flats first.',
+        );
         return;
       }
     }
@@ -86,11 +110,13 @@ export default function JoinSocietyScreen() {
       if (user?.id) await fetchProfile(user.id);
       router.replace('/(onboarding)/pending');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not join society');
+      setFriendlyError(e, 'Could not join society');
     } finally {
       setSubmitting(false);
     }
   };
+
+  const expiryLabel = formatExpiry(resolved?.expires_at);
 
   return (
     <View className="flex-1 bg-surface">
@@ -137,6 +163,7 @@ export default function JoinSocietyScreen() {
               onChangeText={(v) => {
                 setCode(v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12));
                 setResolved(null);
+                setError(null);
               }}
               maxLength={12}
             />
@@ -164,6 +191,9 @@ export default function JoinSocietyScreen() {
                 {resolved.society_name}
               </Text>
               <Text className="text-sm text-ink-muted">{resolved.society_address}</Text>
+              {expiryLabel ? (
+                <Text className="mt-2 text-xs text-ink-faint">Code valid until {expiryLabel}</Text>
+              ) : null}
 
               {resolved.role === 'resident' ? (
                 <View className="mt-4">
@@ -186,7 +216,32 @@ export default function JoinSocietyScreen() {
             </View>
           ) : null}
 
-          {error ? <Text className="mb-4 text-sm text-status-rejected">{error}</Text> : null}
+          {error ? (
+            <View className="mb-4 rounded-2xl bg-red-50 px-4 py-3">
+              <Text className="text-sm font-semibold text-ink">
+                {errorKind === 'expired'
+                  ? 'Code expired'
+                  : errorKind === 'already_member'
+                    ? 'Already a member'
+                    : errorKind === 'pending'
+                      ? 'Request already pending'
+                      : errorKind === 'invalid'
+                        ? 'Code not recognized'
+                        : 'Something went wrong'}
+              </Text>
+              <Text className="mt-1 text-sm text-status-rejected">{error}</Text>
+              {errorKind === 'invalid' || errorKind === 'expired' ? (
+                <Pressable
+                  className="mt-3 self-start"
+                  onPress={() => router.push('/(onboarding)/discover')}
+                >
+                  <Text className="text-sm font-semibold text-brand-800">
+                    Search for your society instead
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
 
           <Pressable
             className={`items-center rounded-bubbly bg-charcoal py-3.5 ${

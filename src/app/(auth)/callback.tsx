@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Brand, FontFamily } from '@/constants/theme';
+import { destinationForProfile } from '@/lib/auth-routing';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -58,7 +59,8 @@ export default function AuthCallbackScreen() {
         }
 
         await fetchProfile(session.user.id);
-        router.replace('/');
+        const profile = useAuthStore.getState().profile;
+        router.replace(destinationForProfile(profile, session.user));
       } catch (error) {
         setIsError(true);
         setMessage(error instanceof Error ? error.message : 'Email confirmation failed.');

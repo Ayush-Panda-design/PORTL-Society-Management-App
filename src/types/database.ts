@@ -58,6 +58,11 @@ export type Society = {
   address: string;
   created_by?: string | null;
   created_at?: string;
+  is_discoverable?: boolean;
+  city?: string | null;
+  area?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 export type InviteCode = {
@@ -65,6 +70,7 @@ export type InviteCode = {
   role: InviteRole;
   code: string;
   created_at: string;
+  expires_at?: string | null;
   revoked_at: string | null;
 };
 
@@ -80,7 +86,21 @@ export type ResolvedInvite = {
   society_name: string;
   society_address: string;
   role: InviteRole;
+  expires_at?: string | null;
   flats: InviteFlatOption[];
+};
+
+/** Public discovery hit from `search_societies`. */
+export type DiscoverableSociety = {
+  id: string;
+  name: string;
+  address: string;
+  city: string | null;
+  area: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  member_count: number;
+  has_flats: boolean;
 };
 
 export type CreateSocietyResult = {

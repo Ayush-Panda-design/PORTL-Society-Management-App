@@ -72,6 +72,7 @@ async function readLocalImageBase64(uri: string): Promise<string> {
  */
 export async function uploadLocalImage(params: {
   bucket: string;
+  /** Folder prefix — society id, or `pending/{userId}` before join. */
   societyId: string;
   uri: string;
   mimeType?: string | null;

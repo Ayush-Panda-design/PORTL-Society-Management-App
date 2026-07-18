@@ -65,12 +65,20 @@ export default function SignupScreen() {
             full_name: fullName.trim(),
             status: 'active',
           });
-          const profile = await fetchProfile(data.user.id);
-          router.replace(destinationForProfile(profile));
+          if (data.user.email_confirmed_at) {
+            const profile = await fetchProfile(data.user.id);
+            router.replace(destinationForProfile(profile, data.user));
+          } else {
+            router.replace({
+              pathname: '/(auth)/verify-email',
+              params: { email: email.trim() },
+            });
+          }
         } else {
-          setError(
-            'Check your email to confirm your account, then sign in. If the link opens localhost, update Supabase → Authentication → URL Configuration and sign up again.',
-          );
+          router.replace({
+            pathname: '/(auth)/verify-email',
+            params: { email: email.trim() },
+          });
         }
       }
     } catch (e) {
@@ -189,6 +197,10 @@ export default function SignupScreen() {
               Sign in
             </Link>
           </View>
+
+          <Pressable onPress={() => router.replace('/(auth)/welcome')} className="mt-4 py-2">
+            <Text className="text-center text-sm text-ink-faint">Back to welcome</Text>
+          </Pressable>
         </View>
       </KeyboardAwareScrollView>
     </View>
