@@ -139,71 +139,94 @@ export async function fetchVotesForPolls(pollIds: string[]): Promise<PollVote[]>
   return (data as PollVote[]) ?? [];
 }
 
-type PollVoteProfileRow = PollVote & {
-  profiles: PollVoteWithProfile['profile'];
+type ProfileFlatJoin = {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  flats:
+    | {
+        number: string;
+        towers: { name: string } | { name: string }[] | null;
+      }
+    | {
+        number: string;
+        towers: { name: string } | { name: string }[] | null;
+      }[]
+    | null;
 };
 
+function normalizeVoteProfile(
+  profile: ProfileFlatJoin | null | undefined,
+): PollVoteWithProfile['profile'] {
+  if (!profile) return null;
+  const flatsRaw = profile.flats;
+  if (!flatsRaw) {
+    return {
+      full_name: profile.full_name,
+      avatar_url: profile.avatar_url,
+      flats: null,
+    };
+  }
+  const flat = Array.isArray(flatsRaw) ? flatsRaw[0] ?? null : flatsRaw;
+  if (!flat) {
+    return {
+      full_name: profile.full_name,
+      avatar_url: profile.avatar_url,
+      flats: null,
+    };
+  }
+  const towers = Array.isArray(flat.towers) ? flat.towers[0] ?? null : flat.towers;
+  return {
+    full_name: profile.full_name,
+    avatar_url: profile.avatar_url,
+    flats: { number: flat.number, towers },
+  };
+}
+
+/** Votes + voter profiles. Fetches in two steps so a broken embed never hides votes. */
 export async function fetchPollVotesWithProfiles(
   pollIds: string[],
 ): Promise<PollVoteWithProfile[]> {
   if (pollIds.length === 0) return [];
 
-  const { data, error } = await supabase
+  const { data: votes, error } = await supabase
     .from('poll_votes')
-    .select(
-      `
-      id,
-      poll_id,
-      user_id,
-      option,
-      profiles (
-        full_name,
-        flats (
-          number,
-          towers (
-            name
-          )
-        )
-      )
-    `,
-    )
+    .select('id, poll_id, user_id, option')
     .in('poll_id', pollIds);
 
   if (error) throw new Error(error.message);
 
-  return ((data as unknown as PollVoteProfileRow[]) ?? []).map((row) => {
-    const profile = Array.isArray(row.profiles) ? row.profiles[0] ?? null : row.profiles;
-    const flats = profile?.flats;
-    if (!flats) {
-      return {
-        id: row.id,
-        poll_id: row.poll_id,
-        user_id: row.user_id,
-        option: row.option,
-        profile,
-      };
-    }
+  const rows = (votes as PollVote[]) ?? [];
+  if (rows.length === 0) return [];
 
-    const flat = Array.isArray(flats) ? flats[0] ?? null : flats;
-    if (!flat) {
-      return {
-        id: row.id,
-        poll_id: row.poll_id,
-        user_id: row.user_id,
-        option: row.option,
-        profile: profile ? { ...profile, flats: null } : null,
-      };
-    }
+  const userIds = [...new Set(rows.map((v) => v.user_id))];
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select(
+      `
+      id,
+      full_name,
+      avatar_url,
+      flats (
+        number,
+        towers (
+          name
+        )
+      )
+    `,
+    )
+    .in('id', userIds);
 
-    const towers = Array.isArray(flat.towers) ? flat.towers[0] ?? null : flat.towers;
-    return {
-      id: row.id,
-      poll_id: row.poll_id,
-      user_id: row.user_id,
-      option: row.option,
-      profile: profile ? { ...profile, flats: { ...flat, towers } } : null,
-    };
-  });
+  if (profilesError) throw new Error(profilesError.message);
+
+  const byId = new Map(
+    ((profiles as ProfileFlatJoin[]) ?? []).map((p) => [p.id, normalizeVoteProfile(p)]),
+  );
+
+  return rows.map((row) => ({
+    ...row,
+    profile: byId.get(row.user_id) ?? null,
+  }));
 }
 
 export async function createPoll(input: {

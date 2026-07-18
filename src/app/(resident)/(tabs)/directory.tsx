@@ -10,9 +10,10 @@ import {
   Wrench,
 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { FlatList, Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import { FlatList, Linking, Pressable, Text, View } from 'react-native';
 
 import { AppCard, AvatarRing, InitialsAvatar } from '@/components/ui/brand';
+import { ChipSelector } from '@/components/ui/chip-selector';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SearchField } from '@/components/ui/search-field';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
@@ -28,7 +29,13 @@ import type { ProfileWithFlat, StaffMember } from '@/types/database';
 
 type Tab = 'Security' | 'Staff' | 'Emergency' | 'Residents' | 'Admins';
 
-const TABS: Tab[] = ['Security', 'Staff', 'Emergency', 'Residents', 'Admins'];
+const TABS: { value: Tab; label: string }[] = [
+  { value: 'Security', label: 'Security' },
+  { value: 'Staff', label: 'Staff' },
+  { value: 'Emergency', label: 'Emergency' },
+  { value: 'Residents', label: 'Residents' },
+  { value: 'Admins', label: 'Admins' },
+];
 
 const ROLE_META: Record<
   string,
@@ -162,34 +169,16 @@ export default function ResidentDirectoryScreen() {
 
   return (
     <ScreenHeader title="Directory" subtitle="People, staff & services" showBack>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 8, gap: 6 }}
-      >
-        {TABS.map((tab) => (
-          <Pressable
-            key={tab}
-            onPress={() => setActiveTab(tab)}
-            className="items-center rounded-pill px-3.5 py-2"
-            style={{
-              backgroundColor: activeTab === tab ? Brand.primary : Pastels.sage,
-            }}
-          >
-            <Text
-              className="text-xs font-semibold"
-              style={{
-                color: activeTab === tab ? '#fff' : Brand.inkMuted,
-                fontFamily: FontFamily.heading,
-              }}
-            >
-              {tab}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+      <View className="px-4 pb-2" style={{ flexGrow: 0, flexShrink: 0 }}>
+        <ChipSelector
+          presentation="filter"
+          options={TABS}
+          value={activeTab}
+          onChange={setActiveTab}
+        />
+      </View>
 
-      <View className="px-4 pb-2">
+      <View className="px-4 pb-2" style={{ flexGrow: 0, flexShrink: 0 }}>
         <SearchField
           value={search}
           onChangeText={setSearch}

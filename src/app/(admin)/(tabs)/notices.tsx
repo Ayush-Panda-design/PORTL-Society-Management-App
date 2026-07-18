@@ -223,6 +223,106 @@ export default function AdminNoticesScreen() {
     );
   }
 
+  const noticeFormModal = (
+    <Modal visible={modalOpen} animationType="slide" transparent>
+      <KeyboardAvoidingView behavior="padding" className="flex-1 justify-end bg-black/40">
+        <View className="max-h-[90%] rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
+          <ScrollView keyboardShouldPersistTaps="handled">
+            <Text
+              className="mb-4 text-xl text-ink"
+              style={{ fontFamily: FontFamily.display }}
+            >
+              {editing ? 'Edit notice' : 'New notice'}
+            </Text>
+            {formError ? (
+              <Text className="mb-2 text-sm text-red-500">{formError}</Text>
+            ) : null}
+
+            <View className="mb-3 overflow-hidden rounded-2xl border border-surface-border bg-surface-muted">
+              {coverUri ? (
+                <View>
+                  <Image
+                    source={{ uri: coverUri }}
+                    style={{ width: '100%', height: 120 }}
+                    contentFit="cover"
+                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Remove cover image"
+                    onPress={() => {
+                      setCoverUri(null);
+                      setCoverUrl(null);
+                    }}
+                    className="absolute right-2 top-2 h-8 w-8 items-center justify-center rounded-full bg-black/50"
+                  >
+                    <X color="#fff" size={14} />
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable
+                  onPress={() => {
+                    void pickCover();
+                  }}
+                  className="h-24 items-center justify-center gap-1"
+                >
+                  <ImagePlus color={Brand.primary} size={22} />
+                  <Text className="text-sm font-medium text-brand-700">Add cover image</Text>
+                </Pressable>
+              )}
+            </View>
+            {coverUri ? (
+              <Pressable
+                onPress={() => {
+                  void pickCover();
+                }}
+                className="mb-3"
+              >
+                <Text className="text-sm font-semibold text-brand-700">Change cover</Text>
+              </Pressable>
+            ) : null}
+
+            <TextInput
+              className="mb-3 rounded-xl border border-surface-border px-4 py-3 text-base text-ink"
+              placeholder="Title"
+              placeholderTextColor="#94A3B8"
+              value={title}
+              onChangeText={setTitle}
+            />
+            <TextInput
+              className="mb-4 min-h-[120px] rounded-xl border border-surface-border px-4 py-3 text-base text-ink"
+              placeholder="Body"
+              placeholderTextColor="#94A3B8"
+              multiline
+              textAlignVertical="top"
+              value={body}
+              onChangeText={setBody}
+            />
+            <View className="flex-row gap-2">
+              <Pressable
+                onPress={closeModal}
+                className="flex-1 items-center rounded-xl border border-surface-border py-3"
+              >
+                <Text className="font-semibold text-ink-soft">Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => saveMutation.mutate()}
+                disabled={saveMutation.isPending}
+                className="flex-1 items-center rounded-bubbly py-3.5"
+                style={{ backgroundColor: Brand.primary }}
+              >
+                {saveMutation.isPending ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text className="font-semibold text-white">Save</Text>
+                )}
+              </Pressable>
+            </View>
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+
   if (selected) {
     return (
       <ScreenHeader title="Notice" subtitle={formatNoticeDate(selected.created_at)}>
@@ -277,6 +377,7 @@ export default function AdminNoticesScreen() {
             </Pressable>
           </View>
         </ScrollView>
+        {noticeFormModal}
       </ScreenHeader>
     );
   }
@@ -394,103 +495,7 @@ export default function AdminNoticesScreen() {
         />
       )}
 
-      <Modal visible={modalOpen} animationType="slide" transparent>
-        <KeyboardAvoidingView behavior="padding" className="flex-1 justify-end bg-black/40">
-          <View className="max-h-[90%] rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
-            <ScrollView keyboardShouldPersistTaps="handled">
-              <Text
-                className="mb-4 text-xl text-ink"
-                style={{ fontFamily: FontFamily.display }}
-              >
-                {editing ? 'Edit notice' : 'New notice'}
-              </Text>
-              {formError ? (
-                <Text className="mb-2 text-sm text-red-500">{formError}</Text>
-              ) : null}
-
-              <View className="mb-3 overflow-hidden rounded-2xl border border-surface-border bg-surface-muted">
-                {coverUri ? (
-                  <View>
-                    <Image
-                      source={{ uri: coverUri }}
-                      style={{ width: '100%', height: 120 }}
-                      contentFit="cover"
-                    />
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="Remove cover image"
-                      onPress={() => {
-                        setCoverUri(null);
-                        setCoverUrl(null);
-                      }}
-                      className="absolute right-2 top-2 h-8 w-8 items-center justify-center rounded-full bg-black/50"
-                    >
-                      <X color="#fff" size={14} />
-                    </Pressable>
-                  </View>
-                ) : (
-                  <Pressable
-                    onPress={() => {
-                      void pickCover();
-                    }}
-                    className="h-24 items-center justify-center gap-1"
-                  >
-                    <ImagePlus color={Brand.primary} size={22} />
-                    <Text className="text-sm font-medium text-brand-700">Add cover image</Text>
-                  </Pressable>
-                )}
-              </View>
-              {coverUri ? (
-                <Pressable
-                  onPress={() => {
-                    void pickCover();
-                  }}
-                  className="mb-3"
-                >
-                  <Text className="text-sm font-semibold text-brand-700">Change cover</Text>
-                </Pressable>
-              ) : null}
-
-              <TextInput
-                className="mb-3 rounded-xl border border-surface-border px-4 py-3 text-base text-ink"
-                placeholder="Title"
-                placeholderTextColor="#94A3B8"
-                value={title}
-                onChangeText={setTitle}
-              />
-              <TextInput
-                className="mb-4 min-h-[120px] rounded-xl border border-surface-border px-4 py-3 text-base text-ink"
-                placeholder="Body"
-                placeholderTextColor="#94A3B8"
-                multiline
-                textAlignVertical="top"
-                value={body}
-                onChangeText={setBody}
-              />
-              <View className="flex-row gap-2">
-                <Pressable
-                  onPress={closeModal}
-                  className="flex-1 items-center rounded-xl border border-surface-border py-3"
-                >
-                  <Text className="font-semibold text-ink-soft">Cancel</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => saveMutation.mutate()}
-                  disabled={saveMutation.isPending}
-                  className="flex-1 items-center rounded-bubbly py-3.5"
-                  style={{ backgroundColor: Brand.primary }}
-                >
-                  {saveMutation.isPending ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text className="font-semibold text-white">Save</Text>
-                  )}
-                </Pressable>
-              </View>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+      {noticeFormModal}
       <FloatingActionBtn
         onPress={openCreate}
         icon={<Plus color="#fff" size={24} />}

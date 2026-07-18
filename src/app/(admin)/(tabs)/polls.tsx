@@ -4,13 +4,19 @@ import { useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, Text, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
+import {
+  PollOptionRow,
+  PollRespondentsList,
+  PollShell,
+} from '@/components/polls/poll-card';
 import { PollCreateForm } from '@/components/polls/poll-create-form';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { isPollExpired, pollRespondentLabel, pollStats } from '@/lib/community';
+import { Brand, FontFamily, Pastels } from '@/constants/theme';
+import { isPollExpired, pollStats } from '@/lib/community';
 import {
   createPoll,
   fetchPolls,
@@ -19,7 +25,6 @@ import {
 } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
-import type { Poll, PollVoteWithProfile } from '@/types/database';
 
 export default function AdminPollsScreen() {
   const profile = useAuthStore((s) => s.profile);
@@ -72,31 +77,17 @@ export default function AdminPollsScreen() {
   if (!societyId) {
     return (
       <ScreenHeader title="Polls" showBack>
-        <EmptyState visual="disconnected" title="No society linked" subtitle="Assign a society to your admin profile." />
+        <EmptyState
+          visual="disconnected"
+          title="No society linked"
+          subtitle="Assign a society to your admin profile."
+        />
       </ScreenHeader>
     );
   }
 
   const votes = votesQuery.data ?? [];
   const totalResidents = residentsQuery.data?.length ?? 0;
-
-  const renderRespondents = (poll: Poll, pollVotes: PollVoteWithProfile[]) => {
-    if (pollVotes.length === 0) {
-      return (
-        <Text className="text-sm text-ink-faint">No responses yet.</Text>
-      );
-    }
-
-    return pollVotes.map((vote) => (
-      <View
-        key={vote.id}
-        className="flex-row items-start justify-between border-t border-surface-border py-2"
-      >
-        <Text className="mr-3 flex-1 text-sm text-ink-soft">{pollRespondentLabel(vote)}</Text>
-        <Text className="text-sm font-medium text-brand-700">{vote.option}</Text>
-      </View>
-    ));
-  };
 
   return (
     <ScreenHeader
@@ -138,7 +129,7 @@ export default function AdminPollsScreen() {
           data={pollsQuery.data ?? []}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
-          ItemSeparatorComponent={() => <View className="h-3" />}
+          ItemSeparatorComponent={() => <View className="h-3.5" />}
           refreshControl={
             <ThemedRefreshControl
               refreshing={pollsQuery.isRefetching || votesQuery.isRefetching}
@@ -149,59 +140,103 @@ export default function AdminPollsScreen() {
             />
           }
           ListEmptyComponent={
-            <EmptyState visual="polls" title="No polls yet" subtitle="Create a poll to collect community opinion." actionLabel="+ Create poll" onAction={() => { setFormError(null); setModalOpen(true); }} />
+            <EmptyState
+              visual="polls"
+              title="No polls yet"
+              subtitle="Create a poll to collect community opinion."
+              actionLabel="+ Create poll"
+              onAction={() => {
+                setFormError(null);
+                setModalOpen(true);
+              }}
+            />
           }
           renderItem={({ item }) => {
             const { total, counts } = pollStats(item, votes);
             const pollRespondents = votes.filter((v) => v.poll_id === item.id);
             const expired = isPollExpired(item.expires_at);
-            const participation =
-              totalResidents > 0
-                ? `${total} of ${totalResidents} resident${totalResidents === 1 ? '' : 's'} responded`
-                : `${total} response${total === 1 ? '' : 's'}`;
+            const participationPct =
+              totalResidents > 0 ? Math.round((total / totalResidents) * 100) : null;
 
             return (
-              <View className="rounded-2xl border border-surface-border bg-surface-card p-4">
-                <Text className="mb-1 text-base font-semibold text-ink">{item.question}</Text>
+              <PollShell accent={expired ? Pastels.peach : Pastels.mint}>
+                <View className="mb-3 flex-row items-start justify-between gap-3">
+                  <Text
+                    className="min-w-0 flex-1 text-lg text-ink"
+                    style={{ fontFamily: FontFamily.display }}
+                  >
+                    {item.question}
+                  </Text>
+                  <View
+                    className="rounded-pill px-2.5 py-1"
+                    style={{ backgroundColor: expired ? Pastels.peach : Brand.primarySoft }}
+                  >
+                    <Text
+                      className="text-[11px]"
+                      style={{
+                        color: expired ? Brand.accentDark : Brand.primaryDark,
+                        fontFamily: FontFamily.heading,
+                      }}
+                    >
+                      {expired ? 'Closed' : 'Live'}
+                    </Text>
+                  </View>
+                </View>
+
                 <Text className="mb-1 text-xs text-ink-faint">
-                  {expired ? 'Expired' : 'Active'}
                   {item.expires_at
-                    ? ` · ends ${new Date(item.expires_at).toLocaleString()}`
-                    : ''}
+                    ? `${expired ? 'Ended' : 'Ends'} ${new Date(item.expires_at).toLocaleString()}`
+                    : 'No expiry set'}
                 </Text>
-                <Text className="mb-3 text-sm font-medium text-ink-soft">{participation}</Text>
+
+                <View className="mb-4 flex-row items-end gap-2">
+                  <Text
+                    className="text-2xl text-ink"
+                    style={{ fontFamily: FontFamily.display }}
+                  >
+                    {total}
+                  </Text>
+                  <Text className="mb-1 text-sm text-ink-muted">
+                    {totalResidents > 0
+                      ? `of ${totalResidents} residents${
+                          participationPct != null ? ` · ${participationPct}%` : ''
+                        }`
+                      : `response${total === 1 ? '' : 's'}`}
+                  </Text>
+                </View>
+
                 {item.options.map((option) => {
                   const count = counts[option] ?? 0;
                   const pct = total === 0 ? 0 : Math.round((count / total) * 100);
+                  const optionVotes = pollRespondents.filter((v) => v.option === option);
                   return (
-                    <View key={option} className="mb-2 overflow-hidden rounded-xl border border-surface-border">
-                      <View
-                        pointerEvents="none"
-                        className="absolute bottom-0 left-0 top-0 bg-brand-100"
-                        style={{ width: `${pct}%` }}
-                      />
-                      <View className="flex-row justify-between px-3 py-2.5">
-                        <Text className="text-ink">{option}</Text>
-                        <Text className="text-ink-muted">
-                          {pct}% ({count})
-                        </Text>
-                      </View>
-                    </View>
+                    <PollOptionRow
+                      key={option}
+                      label={option}
+                      count={count}
+                      pct={pct}
+                      votes={optionVotes}
+                      showVoters
+                    />
                   );
                 })}
-                <View className="mt-3 rounded-xl bg-surface-muted px-3 py-2">
-                  <Text className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                    Who responded
-                  </Text>
-                  {renderRespondents(item, pollRespondents)}
-                </View>
-              </View>
+
+                <PollRespondentsList
+                  votes={pollRespondents}
+                  loading={votesQuery.isLoading && !votesQuery.data}
+                />
+              </PollShell>
             );
           }}
         />
       )}
 
-      <Modal visible={modalOpen} animationType="slide" transparent onRequestClose={() => setModalOpen(false)}>
+      <Modal
+        visible={modalOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setModalOpen(false)}
+      >
         {modalOpen ? (
           <KeyboardAvoidingView behavior="padding" className="flex-1 justify-end bg-black/40">
             <PollCreateForm

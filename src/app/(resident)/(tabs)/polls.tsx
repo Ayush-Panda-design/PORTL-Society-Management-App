@@ -1,121 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BarChart3, CheckCircle2, Vote } from 'lucide-react-native';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, FlatList, Pressable, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList, Text, View } from 'react-native';
 
+import {
+  PollOptionRow,
+  PollRespondentsList,
+  PollShell,
+} from '@/components/polls/poll-card';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { SuccessOverlay } from '@/components/ui/success-overlay';
-import { InitialsAvatar } from '@/components/ui/brand';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { isPollExpired, pollStats } from '@/lib/community';
-import { castVote, fetchPolls, fetchVotesForPolls } from '@/lib/community-api';
+import { castVote, fetchPolls, fetchPollVotesWithProfiles } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
 import type { Poll } from '@/types/database';
-
-/** Animated progress bar that fills on mount. */
-function AnimatedBar({
-  pct,
-  color,
-  selected,
-}: {
-  pct: number;
-  color: string;
-  selected: boolean;
-}) {
-  const anim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(anim, {
-      toValue: pct,
-      duration: 650,
-      useNativeDriver: false,
-    }).start();
-  }, [anim, pct]);
-
-  const width = anim.interpolate({
-    inputRange: [0, 100],
-    outputRange: ['0%', '100%'],
-  });
-
-  return (
-    <View
-      className="mt-2 h-2 overflow-hidden rounded-pill"
-      style={{ backgroundColor: selected ? `${color}22` : Pastels.sage }}
-    >
-      <Animated.View
-        style={{
-          height: '100%',
-          width,
-          backgroundColor: selected ? color : `${color}66`,
-          borderRadius: 999,
-        }}
-      />
-    </View>
-  );
-}
-
-/** Small overlapping voter avatar stack. */
-function VoterAvatarStack({ count, votes }: { count: number; votes: { user_id: string }[] }) {
-  const shown = votes.slice(0, 4);
-  const extra = count - shown.length;
-
-  return (
-    <View className="flex-row items-center" style={{ gap: -8 }}>
-      {shown.map((v, i) => (
-        <View key={v.user_id} style={{ marginLeft: i === 0 ? 0 : -8, zIndex: shown.length - i }}>
-          <InitialsAvatar name={v.user_id} seed={v.user_id} size={22} />
-        </View>
-      ))}
-      {extra > 0 ? (
-        <View
-          className="h-6 w-6 items-center justify-center rounded-pill"
-          style={{ backgroundColor: Brand.primarySoft, marginLeft: -8, zIndex: 0 }}
-        >
-          <Text className="text-[10px] font-bold" style={{ color: Brand.primary, fontFamily: FontFamily.heading }}>
-            +{extra}
-          </Text>
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
-/** Participation ring chart (simple arc using borders). */
-function ParticipationRing({ totalVoters, totalOptions }: { totalVoters: number; totalOptions: number }) {
-  const ratio = totalOptions > 0 ? Math.min(totalVoters / Math.max(totalOptions * 5, 1), 1) : 0;
-  const pct = Math.round(ratio * 100);
-
-  return (
-    <View className="mb-4 flex-row items-center gap-4 rounded-panel bg-surface-muted p-4">
-      <View className="h-14 w-14 items-center justify-center rounded-pill" style={{ borderWidth: 5, borderColor: Brand.primarySoft }}>
-        <View
-          className="absolute h-14 w-14 rounded-pill"
-          style={{
-            borderWidth: 5,
-            borderColor: Brand.primary,
-            borderRightColor: 'transparent',
-            borderBottomColor: ratio < 0.5 ? 'transparent' : Brand.primary,
-            transform: [{ rotate: `${ratio * 360}deg` }],
-          }}
-        />
-        <Text className="text-sm font-bold text-ink" style={{ fontFamily: FontFamily.display }}>
-          {pct}%
-        </Text>
-      </View>
-      <View>
-        <Text className="text-base font-semibold text-ink" style={{ fontFamily: FontFamily.heading }}>
-          {totalVoters} votes cast
-        </Text>
-        <Text className="text-xs text-ink-muted">Participation rate</Text>
-      </View>
-    </View>
-  );
-}
 
 export default function ResidentPollsScreen() {
   const profile = useAuthStore((s) => s.profile);
@@ -135,7 +39,7 @@ export default function ResidentPollsScreen() {
 
   const votesQuery = useQuery({
     queryKey: queryKeys.pollVotes(societyId ?? 'none', pollIds),
-    queryFn: () => fetchVotesForPolls(pollIds),
+    queryFn: () => fetchPollVotesWithProfiles(pollIds),
     enabled: Boolean(societyId) && pollIds.length > 0,
   });
 
@@ -147,7 +51,9 @@ export default function ResidentPollsScreen() {
     onSuccess: async () => {
       if (!societyId) return;
       await queryClient.invalidateQueries({ queryKey: queryKeys.polls(societyId) });
-      await queryClient.refetchQueries({ queryKey: queryKeys.pollVotes(societyId, pollIds) });
+      await queryClient.refetchQueries({
+        queryKey: [...queryKeys.polls(societyId), 'votes'],
+      });
       setSuccessVisible(true);
     },
     onSettled: () => setVotingPollId(null),
@@ -173,7 +79,11 @@ export default function ResidentPollsScreen() {
   if (!societyId) {
     return (
       <ScreenHeader title="Polls" subtitle="Community voting">
-        <EmptyState visual="disconnected" title="No society linked" subtitle="Ask an admin to link your profile." />
+        <EmptyState
+          visual="disconnected"
+          title="No society linked"
+          subtitle="Ask an admin to link your profile."
+        />
       </ScreenHeader>
     );
   }
@@ -184,76 +94,79 @@ export default function ResidentPollsScreen() {
     const isVotingThisPoll = votingPollId === poll.id && voteMutation.isPending;
     const locked = readOnly || Boolean(myVote) || isVotingThisPoll;
     const pollVotes = votes.filter((v) => v.poll_id === poll.id);
+    const showResults = Boolean(myVote) || readOnly;
 
     return (
-      <View
-        className="rounded-panel bg-surface-card"
-        style={{
-          shadowColor: Brand.primary,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.06,
-          shadowRadius: 8,
-          elevation: 2,
-        }}
-      >
-        <View className="p-4">
-          <Text className="mb-0.5 text-base font-bold text-ink" style={{ fontFamily: FontFamily.display }}>
+      <PollShell accent={readOnly ? Pastels.peach : Pastels.mint}>
+        <View className="mb-2 flex-row items-start justify-between gap-3">
+          <Text
+            className="min-w-0 flex-1 text-lg text-ink"
+            style={{ fontFamily: FontFamily.display }}
+          >
             {poll.question}
           </Text>
-          <Text className="mb-3 text-xs text-ink-faint">
-            {readOnly
-              ? 'Poll closed'
-              : poll.expires_at
-                ? `Closes ${new Date(poll.expires_at).toLocaleDateString()}`
-                : 'No expiry'}
-            {myVote ? ` · You voted: ${myVote}` : ''}
-          </Text>
-
-          {/* Participation ring */}
-          <ParticipationRing totalVoters={total} totalOptions={poll.options.length} />
-
-          {poll.options.map((option) => {
-            const count = counts[option] ?? 0;
-            const pct = total === 0 ? 0 : Math.round((count / total) * 100);
-            const selected = myVote === option;
-            const optionVotes = pollVotes.filter((v) => v.option === option);
-
-            return (
-              <Pressable
-                key={option}
-                disabled={locked}
-                onPress={() => voteMutation.mutate({ pollId: poll.id, option })}
-                className={`mb-3 rounded-card px-3 py-3 ${selected ? '' : ''}`}
-                style={{
-                  backgroundColor: selected ? `${Brand.primary}10` : 'transparent',
-                  borderWidth: 1.5,
-                  borderColor: selected ? Brand.primary : '#E5E8E4',
-                }}
-              >
-                <View className="flex-row items-center justify-between">
-                  <Text
-                    className="font-medium text-ink"
-                    style={{ fontFamily: selected ? FontFamily.heading : FontFamily.body }}
-                  >
-                    {option}
-                  </Text>
-                  <View className="flex-row items-center gap-2">
-                    {/* Voter avatar stack */}
-                    {optionVotes.length > 0 && (
-                      <VoterAvatarStack count={count} votes={optionVotes} />
-                    )}
-                    <Text className="text-sm font-semibold text-ink-muted">
-                      {pct}%
-                    </Text>
-                  </View>
-                </View>
-                {/* Animated progress bar */}
-                <AnimatedBar pct={pct} color={Brand.primary} selected={selected} />
-              </Pressable>
-            );
-          })}
+          <View
+            className="rounded-pill px-2.5 py-1"
+            style={{ backgroundColor: readOnly ? Pastels.peach : Brand.primarySoft }}
+          >
+            <Text
+              className="text-[11px]"
+              style={{
+                color: readOnly ? Brand.accentDark : Brand.primaryDark,
+                fontFamily: FontFamily.heading,
+              }}
+            >
+              {readOnly ? 'Closed' : 'Open'}
+            </Text>
+          </View>
         </View>
-      </View>
+
+        <Text className="mb-4 text-xs text-ink-faint">
+          {readOnly
+            ? 'Poll closed'
+            : poll.expires_at
+              ? `Closes ${new Date(poll.expires_at).toLocaleDateString()}`
+              : 'No expiry'}
+          {myVote ? ` · You voted ${myVote}` : ''}
+          {showResults ? ` · ${total} vote${total === 1 ? '' : 's'}` : ''}
+        </Text>
+
+        {poll.options.map((option) => {
+          const count = counts[option] ?? 0;
+          const pct = total === 0 ? 0 : Math.round((count / total) * 100);
+          const selected = myVote === option;
+          const optionVotes = pollVotes.filter((v) => v.option === option);
+
+          return (
+            <PollOptionRow
+              key={option}
+              label={option}
+              count={showResults ? count : 0}
+              pct={showResults ? pct : 0}
+              selected={selected}
+              disabled={locked}
+              votes={showResults ? optionVotes : []}
+              showVoters={showResults}
+              onPress={
+                locked
+                  ? undefined
+                  : () => voteMutation.mutate({ pollId: poll.id, option })
+              }
+            />
+          );
+        })}
+
+        {showResults ? (
+          <PollRespondentsList
+            votes={pollVotes}
+            loading={votesQuery.isLoading && !votesQuery.data}
+          />
+        ) : (
+          <Text className="mt-1 text-center text-xs text-ink-muted">
+            Vote to see live results and who responded
+          </Text>
+        )}
+      </PollShell>
     );
   };
 
@@ -285,7 +198,7 @@ export default function ResidentPollsScreen() {
           ]}
           keyExtractor={(item) => item.poll.id}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
-          ItemSeparatorComponent={() => <View className="h-4" />}
+          ItemSeparatorComponent={() => <View className="h-3.5" />}
           refreshControl={
             <ThemedRefreshControl
               refreshing={pollsQuery.isRefetching || votesQuery.isRefetching}
@@ -305,22 +218,22 @@ export default function ResidentPollsScreen() {
                   Icon: Vote,
                   title: 'Cast your vote',
                   body: 'Tap an option once — your choice is saved instantly.',
-                  tint: '#7C3AED',
-                  wash: Pastels.lilac,
+                  tint: Brand.primary,
+                  wash: Pastels.mint,
                 },
                 {
                   Icon: BarChart3,
                   title: 'See live results',
                   body: 'Bars and percentages update as neighbours vote.',
-                  tint: Brand.primary,
-                  wash: Pastels.mint,
+                  tint: Brand.accent,
+                  wash: Pastels.peach,
                 },
                 {
                   Icon: CheckCircle2,
                   title: 'One vote per poll',
                   body: 'After you vote, the poll locks so results stay fair.',
-                  tint: Brand.accent,
-                  wash: Pastels.peach,
+                  tint: '#1F3A6B',
+                  wash: Pastels.sky,
                 },
               ]}
             />

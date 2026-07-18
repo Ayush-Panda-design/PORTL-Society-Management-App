@@ -217,6 +217,7 @@ export type PollVote = {
 export type PollVoteWithProfile = PollVote & {
   profile: {
     full_name: string | null;
+    avatar_url?: string | null;
     flats: {
       number: string;
       towers: { name: string } | { name: string }[] | null;

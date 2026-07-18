@@ -85,6 +85,7 @@ function FilterChip<T extends string>({
         {
           flexDirection: 'row',
           alignItems: 'center',
+          alignSelf: 'flex-start',
           gap: 6,
           borderRadius: 999,
           paddingHorizontal: selected ? 12 : 14,
@@ -129,8 +130,13 @@ function FilterChipRow<T extends string>({
       horizontal
       showsHorizontalScrollIndicator={false}
       className={className}
-      style={style}
-      contentContainerStyle={{ gap: 8, paddingVertical: 2, paddingRight: 8 }}
+      style={[{ flexGrow: 0 }, style]}
+      contentContainerStyle={{
+        gap: 8,
+        paddingVertical: 2,
+        paddingRight: 8,
+        alignItems: 'center',
+      }}
     >
       {options.map((option) => (
         <FilterChip
