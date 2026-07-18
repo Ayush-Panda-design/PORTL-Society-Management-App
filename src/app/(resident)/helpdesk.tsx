@@ -15,6 +15,7 @@ import {
   Clock,
   Droplets,
   Leaf,
+  MessageSquarePlus,
   ShieldAlert,
   Wrench,
   Zap,
@@ -243,7 +244,34 @@ export default function ResidentHelpdeskScreen() {
                 onRetry={() => void listQuery.refetch()}
               />
             ) : (
-              <EmptyState visual="helpdesk" title="No complaints yet" subtitle="Submitted tickets will show here." />
+              <EmptyState
+                visual="helpdesk"
+                title="No complaints yet"
+                subtitle="Submitted tickets will show here."
+                tips={[
+                  {
+                    Icon: MessageSquarePlus,
+                    title: 'Raise an issue',
+                    body: 'Pick a category above, describe the problem, and submit.',
+                    tint: '#C0392B',
+                    wash: Pastels.rose,
+                  },
+                  {
+                    Icon: Clock,
+                    title: 'Track status',
+                    body: 'Open → In progress → Resolved — you’ll see updates here.',
+                    tint: Brand.accent,
+                    wash: Pastels.peach,
+                  },
+                  {
+                    Icon: CheckCircle,
+                    title: 'Admin follows up',
+                    body: 'Society staff get notified and can mark tickets resolved.',
+                    tint: Brand.primary,
+                    wash: Pastels.mint,
+                  },
+                ]}
+              />
             )
           }
           renderItem={({ item }) => {

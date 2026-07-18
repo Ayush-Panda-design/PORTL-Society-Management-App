@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
-import { ImagePlus, Plus, X } from 'lucide-react-native';
+import { ImagePlus, Megaphone, Plus, Users, X } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,7 +18,7 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { InitialsAvatar, FloatingActionBtn } from '@/components/ui/brand';
 import { Card } from '@/components/ui/card';
 import { Tokens } from '@/theme/tokens';
-import { Brand } from '@/constants/theme';
+import { Brand, Pastels } from '@/constants/theme';
 import { Trash2, Edit2 } from 'lucide-react-native';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { EmptyState } from '@/components/visitors/empty-state';
@@ -219,6 +219,29 @@ export default function AdminNoticesScreen() {
               subtitle="Post your first notice to reach all residents."
               actionLabel="+ Post notice"
               onAction={() => setModalOpen(true)}
+              tips={[
+                {
+                  Icon: Megaphone,
+                  title: 'Reach every flat',
+                  body: 'Notices push to residents’ feeds and unread badges.',
+                  tint: Brand.primary,
+                  wash: Pastels.mint,
+                },
+                {
+                  Icon: ImagePlus,
+                  title: 'Add a cover photo',
+                  body: 'Visual posts get more attention for events and alerts.',
+                  tint: Brand.accent,
+                  wash: Pastels.peach,
+                },
+                {
+                  Icon: Users,
+                  title: 'Edit anytime',
+                  body: 'Update or delete posts from this list when plans change.',
+                  tint: '#1F3A6B',
+                  wash: Pastels.sky,
+                },
+              ]}
             />
           }
           renderItem={({ item }) => {

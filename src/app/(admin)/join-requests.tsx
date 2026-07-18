@@ -140,8 +140,7 @@ export default function AdminJoinRequestsScreen() {
         ) : (
           <View className="mb-8">
             <EmptyState
-              visual="default"
-              title="No pending requests"
+              visual="invites"
               subtitle="When someone uses an invite code, they appear here."
             />
           </View>

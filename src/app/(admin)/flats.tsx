@@ -272,7 +272,7 @@ export default function AdminFlatsScreen() {
 
       {noTowers ? (
         <EmptyState
-          visual="amenities"
+          visual="towers"
           title="Add a tower first"
           subtitle="Flats belong to a tower. Create towers before adding flat numbers."
         />
@@ -289,8 +289,7 @@ export default function AdminFlatsScreen() {
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <EmptyState
-              visual="amenities"
-              title={search.trim() ? 'No matches' : 'No flats yet'}
+              visual="flats"
               subtitle={
                 search.trim()
                   ? 'Try a different flat number or tower.'

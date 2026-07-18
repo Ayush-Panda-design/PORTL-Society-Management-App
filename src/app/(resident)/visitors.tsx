@@ -3,14 +3,16 @@ import { History, UserPlus } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 
+import { VisitorsEmptyPanel } from '@/components/visitors/visitors-empty-panel';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { VisitorCard } from '@/components/visitors/visitor-card';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { SuccessOverlay } from '@/components/ui/success-overlay';
-import { Brand } from '@/constants/theme';
+import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { useThemePalette } from '@/hooks/use-theme';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { updateVisitorStatus } from '@/lib/visitors';
@@ -70,47 +72,76 @@ export default function ResidentVisitorsScreen() {
     return (
       <SafeAreaView className="flex-1 bg-surface">
         <EmptyState
-          visual="disconnected" title="No flat linked"
+          visual="disconnected"
+          title="No flat linked"
           subtitle="Ask your society admin to link your profile to a flat to approve visitors."
         />
       </SafeAreaView>
     );
   }
 
+  const isEmpty = !isLoading && visitors.length === 0;
+
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
-      <View className="flex-row items-start justify-between px-4 pb-2 pt-3">
-        <View className="flex-1 pr-3">
-          <Text className="text-2xl font-bold text-ink">Visitor requests</Text>
-          <Text className="text-sm text-ink-muted">Approve or reject · live updates</Text>
-        </View>
-        <View className="flex-row gap-2">
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="View visitor history"
-            onPress={() => router.push('/(resident)/visitor-history')}
-            className="h-10 w-10 items-center justify-center rounded-full border border-surface-border bg-surface-card"
-          >
-            <History color={palette.inkMuted} size={18} />
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Pre-approve a guest"
-            onPress={() => router.push('/(resident)/pre-approve')}
-            className="h-10 w-10 items-center justify-center rounded-full bg-charcoal"
-          >
-            <UserPlus color="#fff" size={18} />
-          </Pressable>
-        </View>
-      </View>
-
-      <Pressable
-        onPress={() => router.push('/(resident)/pre-approve')}
-        className="mx-4 mb-3 flex-row items-center justify-center gap-2 rounded-xl border border-brand-100 bg-brand-50 py-3"
+      {/* Header */}
+      <LinearGradient
+        colors={isEmpty ? [Pastels.mint, '#FAF7F2'] : ['#FAF7F2', '#FAF7F2']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={{ paddingBottom: isEmpty ? 4 : 0 }}
       >
-        <UserPlus color={Brand.primary} size={18} />
-        <Text className="text-sm font-semibold text-brand-800">Pre-approve guest</Text>
-      </Pressable>
+        <View className="flex-row items-start justify-between px-4 pb-2 pt-3">
+          <View className="flex-1 pr-3">
+            <Text
+              className="text-[26px] text-ink"
+              style={{ fontFamily: FontFamily.display }}
+            >
+              Visitor requests
+            </Text>
+            <Text className="mt-0.5 text-sm text-ink-muted">
+              {isEmpty
+                ? 'You’re all clear — watching for new guests'
+                : 'Approve or reject · live updates'}
+            </Text>
+          </View>
+          <View className="flex-row gap-2">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="View visitor history"
+              onPress={() => router.push('/(resident)/visitor-history')}
+              className="h-10 w-10 items-center justify-center rounded-full bg-white"
+              style={{
+                shadowColor: '#000',
+                shadowOpacity: 0.06,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 2 },
+                elevation: 2,
+              }}
+            >
+              <History color={palette.inkMuted} size={18} strokeWidth={1.5} />
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Pre-approve a guest"
+              onPress={() => router.push('/(resident)/pre-approve')}
+              className="h-10 w-10 items-center justify-center rounded-full bg-charcoal"
+            >
+              <UserPlus color="#fff" size={18} strokeWidth={1.5} />
+            </Pressable>
+          </View>
+        </View>
+
+        {!isEmpty ? (
+          <Pressable
+            onPress={() => router.push('/(resident)/pre-approve')}
+            className="mx-4 mb-3 flex-row items-center justify-center gap-2 rounded-xl border border-brand-100 bg-brand-50 py-3"
+          >
+            <UserPlus color={Brand.primary} size={18} />
+            <Text className="text-sm font-semibold text-brand-800">Pre-approve guest</Text>
+          </Pressable>
+        ) : null}
+      </LinearGradient>
 
       {(error || actionError) && (
         <ErrorBanner message={actionError ?? error ?? ''} onRetry={refresh} />
@@ -122,16 +153,20 @@ export default function ResidentVisitorsScreen() {
         <FlatList
           data={visitors}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingTop: isEmpty ? 8 : 4,
+            paddingBottom: 28,
+            flexGrow: 1,
+          }}
           ItemSeparatorComponent={() => <View className="h-3" />}
           refreshControl={
             <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           ListEmptyComponent={
-            <EmptyState
-              visual="visitors"
-              title="No pending requests"
-              subtitle="When the guard registers a visitor for your flat, you can approve them here instantly."
+            <VisitorsEmptyPanel
+              onPreApprove={() => router.push('/(resident)/pre-approve')}
+              onHistory={() => router.push('/(resident)/visitor-history')}
             />
           }
           renderItem={({ item }) => (

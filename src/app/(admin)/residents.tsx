@@ -209,7 +209,7 @@ export default function AdminResidentsScreen() {
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <EmptyState
-              visual="visitors"
+              visual="residents"
               title={search.trim() ? 'No matches' : 'No residents yet'}
               subtitle={
                 search.trim()

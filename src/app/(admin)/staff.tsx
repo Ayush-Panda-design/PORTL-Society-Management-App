@@ -251,7 +251,7 @@ export default function AdminStaffScreen() {
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <EmptyState
-              visual="helpdesk"
+              visual="staff"
               title={search.trim() ? 'No matches' : 'No staff yet'}
               subtitle={
                 search.trim()

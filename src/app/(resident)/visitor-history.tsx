@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, CheckCircle2, History, QrCode } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { VisitorCard } from '@/components/visitors/visitor-card';
 import { QRCodeModal } from '@/components/visitors/qr-code-modal';
+import { Brand, Pastels } from '@/constants/theme';
 import { useThemePalette } from '@/hooks/use-theme';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { useAuthStore } from '@/stores/authStore';
@@ -100,6 +101,29 @@ export default function ResidentVisitorHistoryScreen() {
               visual="visitors"
               title="No visitors yet"
               subtitle="Approved, rejected, and checked-in guests will appear here."
+              tips={[
+                {
+                  Icon: History,
+                  title: 'Full trail',
+                  body: 'Every decision and gate check-in is kept for your flat.',
+                  tint: Brand.primary,
+                  wash: Pastels.mint,
+                },
+                {
+                  Icon: CheckCircle2,
+                  title: 'Filter by status',
+                  body: 'Use the chips above to focus on approved or past guests.',
+                  tint: '#3B82F6',
+                  wash: Pastels.sky,
+                },
+                {
+                  Icon: QrCode,
+                  title: 'Show the pass',
+                  body: 'Approved visitors can open a QR pass from their card.',
+                  tint: Brand.accent,
+                  wash: Pastels.peach,
+                },
+              ]}
             />
           }
           renderItem={({ item }) => (

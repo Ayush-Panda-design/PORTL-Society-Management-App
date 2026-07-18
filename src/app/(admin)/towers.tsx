@@ -184,7 +184,7 @@ export default function AdminTowersScreen() {
           onRefresh={() => void listQuery.refetch()}
           ListEmptyComponent={
             <EmptyState
-              visual="amenities"
+              visual="towers"
               title="No towers yet"
               subtitle="Add Tower A, Tower B, etc. to structure your society."
               actionLabel="+ Add tower"

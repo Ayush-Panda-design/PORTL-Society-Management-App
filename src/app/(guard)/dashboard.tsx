@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { QrCode, UserPlus } from 'lucide-react-native';
+import { Bell, QrCode, UserPlus } from 'lucide-react-native';
 
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
@@ -122,6 +122,29 @@ export default function GuardDashboard() {
               subtitle="New visitor registrations will appear here instantly."
               actionLabel="+ Register a visitor"
               onAction={() => router.push('/(guard)/register-visitor')}
+              tips={[
+                {
+                  Icon: UserPlus,
+                  title: 'Register at the gate',
+                  body: 'Add a guest’s details — the resident gets an approval request.',
+                  tint: Brand.accent,
+                  wash: Pastels.peach,
+                },
+                {
+                  Icon: Bell,
+                  title: 'Live queue',
+                  body: 'Pending approvals refresh here as residents respond.',
+                  tint: Brand.primary,
+                  wash: Pastels.mint,
+                },
+                {
+                  Icon: QrCode,
+                  title: 'Scan for entry',
+                  body: 'Use Entry to verify approved passes when guests arrive.',
+                  tint: '#3B82F6',
+                  wash: Pastels.sky,
+                },
+              ]}
             />
           }
           renderItem={({ item }) => (

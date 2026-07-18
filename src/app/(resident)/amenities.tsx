@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
+import { CalendarDays, Clock3, Sparkles } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -17,7 +18,7 @@ import { SuccessOverlay } from '@/components/ui/success-overlay';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
-import { Brand, amenityImageForName } from '@/constants/theme';
+import { Brand, Pastels, amenityImageForName } from '@/constants/theme';
 import { addDaysISO, todayISODate } from '@/lib/community';
 import {
   bookAmenitySlot,
@@ -226,6 +227,29 @@ export default function ResidentAmenitiesScreen() {
               visual="amenities"
               title="No amenities yet"
               subtitle="When your society adds amenities, you can book them here."
+              tips={[
+                {
+                  Icon: Sparkles,
+                  title: 'Gym, clubhouse & more',
+                  body: 'Bookable spaces appear here once your admin adds them.',
+                  tint: Brand.primary,
+                  wash: Pastels.mint,
+                },
+                {
+                  Icon: CalendarDays,
+                  title: 'Pick a date & slot',
+                  body: 'Choose a free time — conflicts are blocked automatically.',
+                  tint: '#3B82F6',
+                  wash: Pastels.sky,
+                },
+                {
+                  Icon: Clock3,
+                  title: 'Your bookings stay listed',
+                  body: 'Upcoming reservations show on this screen for quick reference.',
+                  tint: Brand.accent,
+                  wash: Pastels.peach,
+                },
+              ]}
             />
           }
           renderItem={({ item }) => (

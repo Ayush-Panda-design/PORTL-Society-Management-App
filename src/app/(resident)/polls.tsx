@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { BarChart3, CheckCircle2, Vote } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, FlatList, Pressable, Text, View } from 'react-native';
 
@@ -295,7 +296,34 @@ export default function ResidentPollsScreen() {
             />
           }
           ListEmptyComponent={
-            <EmptyState visual="polls" title="No polls" subtitle="When admins publish a poll, it will show up here." />
+            <EmptyState
+              visual="polls"
+              title="No polls"
+              subtitle="When admins publish a poll, it will show up here."
+              tips={[
+                {
+                  Icon: Vote,
+                  title: 'Cast your vote',
+                  body: 'Tap an option once — your choice is saved instantly.',
+                  tint: '#7C3AED',
+                  wash: Pastels.lilac,
+                },
+                {
+                  Icon: BarChart3,
+                  title: 'See live results',
+                  body: 'Bars and percentages update as neighbours vote.',
+                  tint: Brand.primary,
+                  wash: Pastels.mint,
+                },
+                {
+                  Icon: CheckCircle2,
+                  title: 'One vote per poll',
+                  body: 'After you vote, the poll locks so results stay fair.',
+                  tint: Brand.accent,
+                  wash: Pastels.peach,
+                },
+              ]}
+            />
           }
           ListHeaderComponent={
             voteMutation.isPending ? (

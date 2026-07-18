@@ -133,8 +133,7 @@ export default function ResidentDirectoryScreen() {
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <EmptyState
-              visual="helpdesk"
-              title={search.trim() ? 'No matches' : 'No contacts'}
+              visual="residents"
               subtitle={
                 search.trim()
                   ? 'Try a different name, role, or phone.'

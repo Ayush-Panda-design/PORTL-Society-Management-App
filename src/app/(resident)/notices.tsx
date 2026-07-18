@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { AlertCircle, Calendar, Megaphone, Wrench } from 'lucide-react-native';
+import { AlertCircle, Calendar, Megaphone, Sparkles, Wrench } from 'lucide-react-native';
 import { FlatList, Pressable, Text, View } from 'react-native';
 
 import { AppCard, InitialsAvatar } from '@/components/ui/brand';
@@ -156,6 +156,29 @@ export default function ResidentNoticesScreen() {
                 visual="notices"
                 title="No notices yet"
                 subtitle="When the society posts an update, it will appear here."
+                tips={[
+                  {
+                    Icon: Megaphone,
+                    title: 'Society updates',
+                    body: 'Events, maintenance, and alerts from your admin show up first.',
+                    tint: Brand.primary,
+                    wash: Pastels.mint,
+                  },
+                  {
+                    Icon: AlertCircle,
+                    title: 'Urgent posts stand out',
+                    body: 'Pinned and alert notices get a colored banner so you don’t miss them.',
+                    tint: '#C0392B',
+                    wash: Pastels.rose,
+                  },
+                  {
+                    Icon: Sparkles,
+                    title: 'Stay in the loop',
+                    body: 'Pull down anytime to refresh — new posts appear at the top.',
+                    tint: '#6B5CC4',
+                    wash: Pastels.lilac,
+                  },
+                ]}
               />
             ) : null
           }
