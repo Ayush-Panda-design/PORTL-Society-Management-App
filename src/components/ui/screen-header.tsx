@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { interpolate, useAnimatedStyle, Extrapolation, type SharedValue } from 'react-native-reanimated';
 
+import { DrawerMenuButton } from '@/components/navigation/drawer-menu-button';
 import { FontFamily } from '@/constants/theme';
 import { useThemePalette } from '@/hooks/use-theme';
 
@@ -14,10 +15,20 @@ type Props = {
   children: ReactNode;
   right?: ReactNode;
   showBack?: boolean;
+  /** Opens the role drawer (menu). Ignored when showBack is true. */
+  showMenu?: boolean;
   scrollOffset?: SharedValue<number>;
 };
 
-export function ScreenHeader({ title, subtitle, children, right, showBack, scrollOffset }: Props) {
+export function ScreenHeader({
+  title,
+  subtitle,
+  children,
+  right,
+  showBack,
+  showMenu,
+  scrollOffset,
+}: Props) {
   const router = useRouter();
   const palette = useThemePalette();
 
@@ -64,6 +75,10 @@ export function ScreenHeader({ title, subtitle, children, right, showBack, scrol
             >
               <ChevronLeft color={palette.ink} size={22} />
             </Pressable>
+          ) : showMenu ? (
+            <View className="mt-0.5">
+              <DrawerMenuButton />
+            </View>
           ) : null}
           <View className="min-w-0 flex-1 pt-0.5">
             <Text

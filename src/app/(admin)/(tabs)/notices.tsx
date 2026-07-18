@@ -1,0 +1,501 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'expo-image';
+import {
+  ChevronRight,
+  ImagePlus,
+  Megaphone,
+  Plus,
+  Trash2,
+  Users,
+  X,
+} from 'lucide-react-native';
+import { useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Modal,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+
+import { AppCard, FloatingActionBtn } from '@/components/ui/brand';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { SearchField } from '@/components/ui/search-field';
+import { EmptyState } from '@/components/visitors/empty-state';
+import { ErrorBanner } from '@/components/visitors/error-banner';
+import { SkeletonList } from '@/components/visitors/loading-state';
+import { Brand, FontFamily, Pastels } from '@/constants/theme';
+import { formatNoticeDate } from '@/lib/community';
+import { deleteNotice, fetchNotices, uploadNoticeCover, upsertNotice } from '@/lib/community-api';
+import { queryKeys } from '@/lib/query-client';
+import { useAuthStore } from '@/stores/authStore';
+import { useCommunityUiStore } from '@/stores/communityUiStore';
+import { useReadStateStore } from '@/stores/readStateStore';
+import type { Notice } from '@/types/database';
+
+function matchesNotice(notice: Notice, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return [notice.title, notice.body].join(' ').toLowerCase().includes(q);
+}
+
+export default function AdminNoticesScreen() {
+  const profile = useAuthStore((s) => s.profile);
+  const societyId = profile?.society_id;
+  const userId = profile?.id;
+  const queryClient = useQueryClient();
+  const editingNoticeId = useCommunityUiStore((s) => s.editingNoticeId);
+  const setEditingNoticeId = useCommunityUiStore((s) => s.setEditingNoticeId);
+  const isNoticeUnread = useReadStateStore((s) => s.isNoticeUnread);
+  const markNoticeSeen = useReadStateStore((s) => s.markNoticeSeen);
+
+  const [search, setSearch] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const [coverUri, setCoverUri] = useState<string | null>(null);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const noticesKey = queryKeys.notices(societyId ?? 'none');
+
+  const { data, isLoading, error, refetch, isRefetching } = useQuery({
+    queryKey: noticesKey,
+    queryFn: () => fetchNotices(societyId!),
+    enabled: Boolean(societyId),
+  });
+
+  const notices = useMemo(
+    () => (data ?? []).filter((n) => matchesNotice(n, search)),
+    [data, search],
+  );
+
+  const selected =
+    data?.find((n) => n.id === selectedId) ?? null;
+
+  const editing = useMemo(
+    () => data?.find((n) => n.id === editingNoticeId) ?? null,
+    [data, editingNoticeId],
+  );
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!societyId || !userId) throw new Error('Admin profile missing society.');
+      if (!title.trim() || !body.trim()) throw new Error('Title and body are required.');
+
+      let nextCover = coverUrl;
+      if (coverUri && !coverUri.startsWith('http')) {
+        nextCover = (await uploadNoticeCover(societyId, coverUri)) ?? coverUrl;
+      }
+
+      await upsertNotice({
+        id: editingNoticeId ?? undefined,
+        societyId,
+        title: title.trim(),
+        body: body.trim(),
+        postedBy: userId,
+        coverUrl: nextCover,
+      });
+    },
+    onMutate: async () => {
+      if (!editingNoticeId) return { previous: undefined };
+      await queryClient.cancelQueries({ queryKey: noticesKey });
+      const previous = queryClient.getQueryData<Notice[]>(noticesKey);
+      queryClient.setQueryData<Notice[]>(noticesKey, (old = []) =>
+        old.map((n) =>
+          n.id === editingNoticeId
+            ? {
+                ...n,
+                title: title.trim(),
+                body: body.trim(),
+                cover_url: coverUri ?? n.cover_url,
+              }
+            : n,
+        ),
+      );
+      return { previous };
+    },
+    onError: (e: Error, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(noticesKey, context.previous);
+      setFormError(e.message);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: noticesKey });
+      closeModal();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteNotice(id),
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: noticesKey });
+      const previous = queryClient.getQueryData<Notice[]>(noticesKey);
+      queryClient.setQueryData<Notice[]>(noticesKey, (old = []) =>
+        old.filter((n) => n.id !== id),
+      );
+      return { previous };
+    },
+    onError: (_e: Error, _id, context) => {
+      if (context?.previous) queryClient.setQueryData(noticesKey, context.previous);
+    },
+    onSuccess: (_d, id) => {
+      if (selectedId === id) setSelectedId(null);
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: noticesKey });
+    },
+  });
+
+  const openCreate = () => {
+    setEditingNoticeId(null);
+    setTitle('');
+    setBody('');
+    setCoverUri(null);
+    setCoverUrl(null);
+    setFormError(null);
+    setModalOpen(true);
+  };
+
+  const openEdit = (notice: Notice) => {
+    markNoticeSeen(notice.id);
+    setEditingNoticeId(notice.id);
+    setTitle(notice.title);
+    setBody(notice.body);
+    setCoverUri(notice.cover_url ?? null);
+    setCoverUrl(notice.cover_url ?? null);
+    setFormError(null);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditingNoticeId(null);
+    setFormError(null);
+  };
+
+  const confirmDelete = (item: Notice) => {
+    Alert.alert('Delete notice?', `“${item.title}” will be permanently removed.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          markNoticeSeen(item.id);
+          deleteMutation.mutate(item.id);
+        },
+      },
+    ]);
+  };
+
+  const pickCover = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setFormError('Photo library permission is required.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.75,
+      allowsEditing: true,
+      aspect: [16, 9],
+    });
+    if (!result.canceled && result.assets[0]) {
+      setCoverUri(result.assets[0].uri);
+    }
+  };
+
+  if (!societyId) {
+    return (
+      <ScreenHeader title="Notices" subtitle="Manage announcements">
+        <EmptyState
+          visual="disconnected"
+          title="No society linked"
+          subtitle="Assign a society to your admin profile."
+        />
+      </ScreenHeader>
+    );
+  }
+
+  if (selected) {
+    return (
+      <ScreenHeader title="Notice" subtitle={formatNoticeDate(selected.created_at)}>
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+        >
+          <Pressable onPress={() => setSelectedId(null)} className="mb-4 self-start">
+            <Text className="font-semibold text-brand-700">← All notices</Text>
+          </Pressable>
+
+          {selected.cover_url ? (
+            <View className="mb-4 overflow-hidden rounded-panel">
+              <Image
+                source={{ uri: selected.cover_url }}
+                style={{ width: '100%', height: 180 }}
+                contentFit="cover"
+              />
+            </View>
+          ) : null}
+
+          <Text
+            className="mb-2 text-[26px] text-ink"
+            style={{ fontFamily: FontFamily.display }}
+          >
+            {selected.title}
+          </Text>
+          <Text className="mb-5 text-xs text-ink-muted">
+            {formatNoticeDate(selected.created_at)}
+          </Text>
+          <Text className="mb-6 text-[15px] leading-6 text-ink">{selected.body}</Text>
+
+          <View className="flex-row gap-2">
+            <Pressable
+              onPress={() => openEdit(selected)}
+              className="flex-1 items-center rounded-card py-3.5"
+              style={{ backgroundColor: Brand.primary }}
+            >
+              <Text className="font-semibold text-white">Edit</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => confirmDelete(selected)}
+              className="flex-1 items-center rounded-card py-3.5"
+              style={{ backgroundColor: Pastels.rose }}
+            >
+              <View className="flex-row items-center gap-2">
+                <Trash2 color="#C0392B" size={16} strokeWidth={1.5} />
+                <Text className="font-semibold" style={{ color: '#C0392B' }}>
+                  Delete
+                </Text>
+              </View>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </ScreenHeader>
+    );
+  }
+
+  return (
+    <ScreenHeader title="Notices" subtitle="Create and manage announcements" showMenu>
+      <View className="px-4 pb-2">
+        <SearchField
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search notices…"
+          accessibilityLabel="Search notices"
+        />
+      </View>
+
+      {error ? <ErrorBanner message={error.message} onRetry={() => void refetch()} /> : null}
+      {deleteMutation.error ? (
+        <ErrorBanner message={(deleteMutation.error as Error).message} />
+      ) : null}
+
+      {isLoading && !data ? (
+        <SkeletonList count={6} />
+      ) : (
+        <FlatList
+          data={notices}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100, flexGrow: 1 }}
+          ItemSeparatorComponent={() => <View className="h-2" />}
+          refreshing={isRefetching}
+          onRefresh={() => void refetch()}
+          ListEmptyComponent={
+            <EmptyState
+              visual="notices"
+              title={search.trim() ? 'No matches' : 'No notices'}
+              subtitle={
+                search.trim()
+                  ? 'Try a different title or keyword.'
+                  : 'Post your first notice to reach all residents.'
+              }
+              actionLabel={search.trim() ? undefined : '+ Post notice'}
+              onAction={search.trim() ? undefined : openCreate}
+              tips={
+                search.trim()
+                  ? undefined
+                  : [
+                      {
+                        Icon: Megaphone,
+                        title: 'Reach every flat',
+                        body: 'Notices push to residents’ feeds and unread badges.',
+                        tint: Brand.primary,
+                        wash: Pastels.mint,
+                      },
+                      {
+                        Icon: ImagePlus,
+                        title: 'Add a cover photo',
+                        body: 'Visual posts get more attention for events and alerts.',
+                        tint: Brand.accent,
+                        wash: Pastels.peach,
+                      },
+                      {
+                        Icon: Users,
+                        title: 'Open to manage',
+                        body: 'Tap a notice to read it fully, then edit or delete.',
+                        tint: '#1F3A6B',
+                        wash: Pastels.sky,
+                      },
+                    ]
+              }
+            />
+          }
+          renderItem={({ item }) => {
+            const unread = isNoticeUnread(item.id);
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${item.title}${unread ? ', unread' : ''}`}
+                onPress={() => {
+                  markNoticeSeen(item.id);
+                  setSelectedId(item.id);
+                }}
+              >
+                <AppCard className="flex-row items-center gap-3 p-3.5">
+                  <View
+                    className="h-10 w-10 items-center justify-center rounded-card"
+                    style={{ backgroundColor: Pastels.mint }}
+                  >
+                    <Megaphone color={Brand.primary} size={16} strokeWidth={1.5} />
+                  </View>
+                  <View className="min-w-0 flex-1">
+                    <View className="flex-row items-center gap-2">
+                      <Text
+                        className="flex-1 text-[15px] text-ink"
+                        numberOfLines={1}
+                        style={{ fontFamily: FontFamily.heading }}
+                      >
+                        {item.title}
+                      </Text>
+                      {unread ? (
+                        <View
+                          className="h-2 w-2 rounded-pill"
+                          style={{ backgroundColor: Brand.accent }}
+                        />
+                      ) : null}
+                    </View>
+                    <Text className="mt-0.5 text-xs text-ink-muted">
+                      {formatNoticeDate(item.created_at)}
+                      {item.cover_url ? ' · Cover' : ''}
+                    </Text>
+                  </View>
+                  <ChevronRight color={Brand.inkMuted} size={16} strokeWidth={1.5} />
+                </AppCard>
+              </Pressable>
+            );
+          }}
+        />
+      )}
+
+      <Modal visible={modalOpen} animationType="slide" transparent>
+        <KeyboardAvoidingView behavior="padding" className="flex-1 justify-end bg-black/40">
+          <View className="max-h-[90%] rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
+            <ScrollView keyboardShouldPersistTaps="handled">
+              <Text
+                className="mb-4 text-xl text-ink"
+                style={{ fontFamily: FontFamily.display }}
+              >
+                {editing ? 'Edit notice' : 'New notice'}
+              </Text>
+              {formError ? (
+                <Text className="mb-2 text-sm text-red-500">{formError}</Text>
+              ) : null}
+
+              <View className="mb-3 overflow-hidden rounded-2xl border border-surface-border bg-surface-muted">
+                {coverUri ? (
+                  <View>
+                    <Image
+                      source={{ uri: coverUri }}
+                      style={{ width: '100%', height: 120 }}
+                      contentFit="cover"
+                    />
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Remove cover image"
+                      onPress={() => {
+                        setCoverUri(null);
+                        setCoverUrl(null);
+                      }}
+                      className="absolute right-2 top-2 h-8 w-8 items-center justify-center rounded-full bg-black/50"
+                    >
+                      <X color="#fff" size={14} />
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Pressable
+                    onPress={() => {
+                      void pickCover();
+                    }}
+                    className="h-24 items-center justify-center gap-1"
+                  >
+                    <ImagePlus color={Brand.primary} size={22} />
+                    <Text className="text-sm font-medium text-brand-700">Add cover image</Text>
+                  </Pressable>
+                )}
+              </View>
+              {coverUri ? (
+                <Pressable
+                  onPress={() => {
+                    void pickCover();
+                  }}
+                  className="mb-3"
+                >
+                  <Text className="text-sm font-semibold text-brand-700">Change cover</Text>
+                </Pressable>
+              ) : null}
+
+              <TextInput
+                className="mb-3 rounded-xl border border-surface-border px-4 py-3 text-base text-ink"
+                placeholder="Title"
+                placeholderTextColor="#94A3B8"
+                value={title}
+                onChangeText={setTitle}
+              />
+              <TextInput
+                className="mb-4 min-h-[120px] rounded-xl border border-surface-border px-4 py-3 text-base text-ink"
+                placeholder="Body"
+                placeholderTextColor="#94A3B8"
+                multiline
+                textAlignVertical="top"
+                value={body}
+                onChangeText={setBody}
+              />
+              <View className="flex-row gap-2">
+                <Pressable
+                  onPress={closeModal}
+                  className="flex-1 items-center rounded-xl border border-surface-border py-3"
+                >
+                  <Text className="font-semibold text-ink-soft">Cancel</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => saveMutation.mutate()}
+                  disabled={saveMutation.isPending}
+                  className="flex-1 items-center rounded-bubbly py-3.5"
+                  style={{ backgroundColor: Brand.primary }}
+                >
+                  {saveMutation.isPending ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text className="font-semibold text-white">Save</Text>
+                  )}
+                </Pressable>
+              </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+      <FloatingActionBtn
+        onPress={openCreate}
+        icon={<Plus color="#fff" size={24} />}
+        label="Post"
+      />
+    </ScreenHeader>
+  );
+}

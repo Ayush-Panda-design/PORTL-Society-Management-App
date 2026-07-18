@@ -21,6 +21,7 @@ export const queryKeys = {
   amenityBookings: (amenityId: string, date: string) =>
     ['amenity-bookings', amenityId, date] as const,
   staff: (societyId: string) => ['staff', societyId] as const,
+  directoryMembers: (societyId: string) => ['directory-members', societyId] as const,
   societyProfiles: (societyId: string) => ['society-profiles', societyId] as const,
   towers: (societyId: string) => ['towers', societyId] as const,
   flats: (societyId: string) => ['flats', societyId] as const,
@@ -28,4 +29,6 @@ export const queryKeys = {
   pendingMembers: (societyId: string) => ['pending-members', societyId] as const,
   inviteCodes: (societyId: string) => ['invite-codes', societyId] as const,
   adminDashboard: (societyId: string) => ['admin-dashboard', societyId] as const,
+  profilePrivate: (userId: string) => ['profile-private', userId] as const,
+  profileNotes: (userId: string) => ['profile-notes', userId] as const,
 };

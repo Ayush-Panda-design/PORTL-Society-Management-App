@@ -5,6 +5,7 @@ import {
   KeyRound,
   Layers,
   Phone,
+  User,
   UserPlus,
   Users,
 } from 'lucide-react-native';
@@ -15,6 +16,19 @@ import { useAuthStore } from '@/stores/authStore';
 import { Brand } from '@/constants/theme';
 
 const SECTIONS = [
+  {
+    title: 'Account',
+    links: [
+      {
+        href: '/(admin)/profile' as Href,
+        title: 'My profile',
+        subtitle: 'Bio, personal details, and private notes',
+        Icon: User,
+        tone: 'mint' as const,
+        iconColor: Brand.primary,
+      },
+    ] as SettingsLink[],
+  },
   {
     title: 'Community Setup',
     links: [

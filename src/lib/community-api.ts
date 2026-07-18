@@ -7,6 +7,7 @@ import type {
   Amenity,
   AmenityBooking,
   Complaint,
+  ComplaintReporter,
   ComplaintStatus,
   ComplaintWithFlat,
   Flat,
@@ -256,25 +257,86 @@ export async function fetchComplaintsForSociety(): Promise<ComplaintWithFlat[]> 
     .select(
       `
       *,
-      flats ( id, number )
+      flats (
+        id,
+        number,
+        towers ( name )
+      ),
+      reporter:profiles!created_by (
+        id,
+        full_name,
+        phone,
+        avatar_url
+      )
     `,
     )
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);
-  return (data as ComplaintWithFlat[]) ?? [];
+
+  const rows = ((data as ComplaintWithFlat[]) ?? []).map((row) => {
+    const flats = row.flats;
+    const reporter = Array.isArray(row.reporter) ? row.reporter[0] ?? null : row.reporter;
+    if (!flats) return { ...row, reporter };
+    const towers = Array.isArray(flats.towers) ? flats.towers[0] ?? null : flats.towers;
+    return { ...row, flats: { ...flats, towers }, reporter };
+  });
+
+  // Fallback for legacy rows still missing created_by: resolve resident by flat.
+  const missingFlatIds = [
+    ...new Set(
+      rows
+        .filter((r) => !r.reporter?.full_name && r.flat_id)
+        .map((r) => r.flat_id),
+    ),
+  ];
+
+  if (missingFlatIds.length === 0) return rows;
+
+  const { data: flatResidents, error: residentsError } = await supabase
+    .from('profiles')
+    .select('id, full_name, phone, avatar_url, flat_id')
+    .in('flat_id', missingFlatIds)
+    .eq('role', 'resident')
+    .eq('status', 'active')
+    .order('created_at', { ascending: true });
+
+  if (residentsError) {
+    console.warn('Could not resolve complaint reporters by flat:', residentsError.message);
+    return rows;
+  }
+
+  const byFlat = new Map<string, ComplaintReporter>();
+  for (const person of flatResidents ?? []) {
+    const flatId = person.flat_id as string | null;
+    if (!flatId || byFlat.has(flatId)) continue;
+    byFlat.set(flatId, {
+      id: person.id as string,
+      full_name: (person.full_name as string | null) ?? null,
+      phone: (person.phone as string | null) ?? null,
+      avatar_url: (person.avatar_url as string | null) ?? null,
+    });
+  }
+
+  return rows.map((row) => {
+    if (row.reporter?.full_name) return row;
+    const fallback = byFlat.get(row.flat_id);
+    return fallback ? { ...row, reporter: fallback } : row;
+  });
 }
 
 export async function createComplaint(input: {
   flatId: string;
   category: string;
   description: string;
+  createdBy: string;
 }): Promise<void> {
   const { error } = await supabase.from('complaints').insert({
     flat_id: input.flatId,
     category: input.category,
     description: input.description,
     status: 'open',
+    created_by: input.createdBy,
   });
   if (error) throw new Error(error.message);
 }
@@ -296,11 +358,13 @@ export async function fetchAmenities(societyId: string): Promise<Amenity[]> {
     .from('amenities')
     .select('*')
     .eq('society_id', societyId)
+    .order('is_featured', { ascending: false })
     .order('name', { ascending: true });
   if (error) throw new Error(error.message);
   return ((data as Array<Omit<Amenity, 'slots'> & { slots: unknown }>) ?? []).map((row) => ({
     ...row,
     slots: parseJsonStringArray(row.slots),
+    is_featured: Boolean(row.is_featured),
   }));
 }
 
@@ -310,25 +374,45 @@ export async function upsertAmenity(input: {
   name: string;
   description: string;
   slots: string[];
+  coverUrl?: string | null;
+  isFeatured?: boolean;
+  location?: string | null;
+  capacity?: number | null;
+  rules?: string | null;
 }): Promise<void> {
-  if (input.id) {
-    const { error } = await supabase
+  const payload = {
+    name: input.name,
+    description: input.description || null,
+    slots: input.slots,
+    cover_url: input.coverUrl ?? null,
+    is_featured: Boolean(input.isFeatured),
+    location: input.location?.trim() || null,
+    capacity: input.capacity ?? null,
+    rules: input.rules?.trim() || null,
+  };
+
+  if (input.isFeatured) {
+    // Keep a single featured amenity per society for a clear special section.
+    let clearQuery = supabase
       .from('amenities')
-      .update({
-        name: input.name,
-        description: input.description || null,
-        slots: input.slots,
-      })
-      .eq('id', input.id);
+      .update({ is_featured: false })
+      .eq('society_id', input.societyId);
+    if (input.id) {
+      clearQuery = clearQuery.neq('id', input.id);
+    }
+    const { error: clearError } = await clearQuery;
+    if (clearError) throw new Error(clearError.message);
+  }
+
+  if (input.id) {
+    const { error } = await supabase.from('amenities').update(payload).eq('id', input.id);
     if (error) throw new Error(error.message);
     return;
   }
 
   const { error } = await supabase.from('amenities').insert({
     society_id: input.societyId,
-    name: input.name,
-    description: input.description || null,
-    slots: input.slots,
+    ...payload,
   });
   if (error) throw new Error(error.message);
 }
@@ -558,6 +642,40 @@ export async function fetchResidents(societyId: string): Promise<ProfileWithFlat
   });
 }
 
+/** Active society members for the resident directory (residents + admins). */
+export async function fetchDirectoryMembers(
+  societyId: string,
+): Promise<ProfileWithFlat[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(
+      `
+      *,
+      flats (
+        id,
+        number,
+        towers (
+          id,
+          name
+        )
+      )
+    `,
+    )
+    .eq('society_id', societyId)
+    .eq('status', 'active')
+    .in('role', ['resident', 'admin'])
+    .order('full_name', { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  return ((data as ProfileWithFlat[]) ?? []).map((row) => {
+    const flats = row.flats;
+    if (!flats) return row;
+    const towers = Array.isArray(flats.towers) ? flats.towers[0] ?? null : flats.towers;
+    return { ...row, flats: { ...flats, towers } };
+  });
+}
+
 export async function assignResidentFlat(input: {
   profileId: string;
   flatId: string | null;
@@ -651,4 +769,11 @@ export async function uploadNoticeCover(
   uri: string,
 ): Promise<string | null> {
   return uploadPublicImage('notice-covers', societyId, uri);
+}
+
+export async function uploadAmenityCover(
+  societyId: string,
+  uri: string,
+): Promise<string | null> {
+  return uploadPublicImage('amenity-covers', societyId, uri);
 }

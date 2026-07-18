@@ -22,6 +22,33 @@ export type Profile = {
   society_id: string | null;
   status: MembershipStatus;
   push_token?: string | null;
+  /** Short public bio — visible to society admins / members. */
+  bio?: string | null;
+  occupation?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  vehicle_number?: string | null;
+  /** Public profile photo — visible to society admins / members. */
+  avatar_url?: string | null;
+  created_at: string;
+};
+
+/** Owner-only personal fields — never returned to admins via RLS. */
+export type ProfilePrivate = {
+  user_id: string;
+  personal_email: string | null;
+  date_of_birth: string | null;
+  blood_group: string | null;
+  allergies: string | null;
+  permanent_address: string | null;
+  updated_at: string;
+};
+
+/** Owner-only notes with auto timestamp. */
+export type ProfileNote = {
+  id: string;
+  user_id: string;
+  body: string;
   created_at: string;
 };
 
@@ -204,12 +231,27 @@ export type Complaint = {
   description: string;
   status: ComplaintStatus;
   assigned_to: string | null;
+  created_by?: string | null;
   created_at: string;
 };
 
+export type ComplaintReporter = {
+  id: string;
+  full_name: string | null;
+  phone: string | null;
+  avatar_url?: string | null;
+};
+
 export type ComplaintWithFlat = Complaint & {
-  flats: { id: string; number: string } | null;
+  flats:
+    | {
+        id: string;
+        number: string;
+        towers?: { name: string } | { name: string }[] | null;
+      }
+    | null;
   assignee?: { id: string; full_name: string | null } | null;
+  reporter?: ComplaintReporter | null;
 };
 
 export type Amenity = {
@@ -218,6 +260,13 @@ export type Amenity = {
   name: string;
   description: string | null;
   slots: string[];
+  /** Optional custom cover — clients fall back to stock image when null. */
+  cover_url?: string | null;
+  /** Highlighted in the resident “Featured” section. */
+  is_featured?: boolean;
+  location?: string | null;
+  capacity?: number | null;
+  rules?: string | null;
 };
 
 export type AmenityBooking = {

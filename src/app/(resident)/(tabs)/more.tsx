@@ -3,6 +3,7 @@ import {
   Building2,
   ClipboardList,
   Phone,
+  User,
   Users,
 } from 'lucide-react-native';
 import { type Href } from 'expo-router';
@@ -12,6 +13,14 @@ import { useAuthStore } from '@/stores/authStore';
 import { Brand } from '@/constants/theme';
 
 const LINKS: SettingsLink[] = [
+  {
+    href: '/(resident)/profile' as Href,
+    title: 'My profile',
+    subtitle: 'Bio, personal details, and private notes',
+    Icon: User,
+    tone: 'mint',
+    iconColor: Brand.primary,
+  },
   {
     href: '/(resident)/polls' as Href,
     title: 'Polls',

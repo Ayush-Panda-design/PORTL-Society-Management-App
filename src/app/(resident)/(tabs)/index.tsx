@@ -24,6 +24,7 @@ import { MotiView } from 'moti';
 import Toast from 'react-native-toast-message';
 
 import { QuietGateIllustration, CalendarIllustration } from '@/components/illustrations';
+import { DrawerMenuButton } from '@/components/navigation/drawer-menu-button';
 import { HeroBanner, SoftPromoCard, InitialsAvatar } from '@/components/ui/brand';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { VisitorSwipeDeck } from '@/components/visitors/visitor-swipe-deck';
@@ -223,6 +224,16 @@ export default function ResidentHome() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        <View className="mb-3 flex-row items-center justify-between">
+          <DrawerMenuButton />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="My profile"
+            onPress={() => router.push('/(resident)/profile')}
+          >
+            <InitialsAvatar name={profile?.full_name ?? 'You'} seed={profile?.id} size={40} imageUrl={profile?.avatar_url} />
+          </Pressable>
+        </View>
         <HeroBanner
           title={`Hi, ${name} 👋`}
           subtitle={greeting}

@@ -20,7 +20,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCallback, useState } from 'react';
 
 import { EmptyMailboxIllustration } from '@/components/illustrations';
-import { AppCard, HeroBanner, PressableActionTile } from '@/components/ui/brand';
+import { DrawerMenuButton } from '@/components/navigation/drawer-menu-button';
+import { AppCard, HeroBanner, InitialsAvatar, PressableActionTile } from '@/components/ui/brand';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
@@ -73,6 +74,16 @@ export default function AdminHome() {
           <ThemedRefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
         }
       >
+        <View className="mb-3 flex-row items-center justify-between">
+          <DrawerMenuButton />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="My profile"
+            onPress={() => go('/(admin)/profile' as Href)}
+          >
+            <InitialsAvatar name={profile?.full_name ?? 'You'} seed={profile?.id} size={40} imageUrl={profile?.avatar_url} />
+          </Pressable>
+        </View>
         <HeroBanner
           title={`Hello, ${name}`}
           subtitle="Structure, notices, and day-to-day society ops"

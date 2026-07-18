@@ -380,3 +380,12 @@ export function amenityImageForName(name: string): string {
   if (key.includes('garden') || key.includes('park')) return AmenityImages.garden;
   return AmenityImages.default;
 }
+
+/** Prefer uploaded cover; otherwise keep the existing stock-image behavior. */
+export function amenityCoverUri(amenity: {
+  name: string;
+  cover_url?: string | null;
+}): string {
+  const custom = amenity.cover_url?.trim();
+  return custom || amenityImageForName(amenity.name);
+}

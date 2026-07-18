@@ -1,4 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
 import type { ReactNode } from 'react';
 import { Pressable, Text, View, type ViewProps } from 'react-native';
 
@@ -180,6 +181,7 @@ export function InitialsAvatar({
   hasUnread = false,
   showOnlineDot = false,
   status,
+  imageUrl,
 }: {
   name: string;
   size?: number;
@@ -188,12 +190,15 @@ export function InitialsAvatar({
   /** @deprecated use `status` instead */
   showOnlineDot?: boolean;
   status?: 'online' | 'pending' | 'offline';
+  /** When set, shows the photo instead of initials. */
+  imageUrl?: string | null;
 }) {
   const initial = (name?.trim()?.charAt(0) || '?').toUpperCase();
   const index = (seed ?? name).split('').reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_TONES.length;
   const ringPad = hasUnread ? 3 : 0;
   const outer = size + ringPad * 2;
   const inner = size;
+  const photo = imageUrl?.trim() || null;
 
   // Resolve effective status
   const resolvedStatus = status ?? (showOnlineDot ? 'online' : undefined);
@@ -218,21 +223,31 @@ export function InitialsAvatar({
             width: inner,
             height: inner,
             borderRadius: inner / 2,
-            backgroundColor: AVATAR_TONES[index],
+            backgroundColor: photo ? '#E5E7EB' : AVATAR_TONES[index],
             alignItems: 'center',
             justifyContent: 'center',
+            overflow: 'hidden',
           }}
           accessibilityLabel={`${name} avatar${hasUnread ? ', unread' : ''}`}
         >
-          <Text
-            style={{
-              color: '#fff',
-              fontFamily: FontFamily.heading,
-              fontSize: inner * 0.4,
-            }}
-          >
-            {initial}
-          </Text>
+          {photo ? (
+            <Image
+              source={{ uri: photo }}
+              style={{ width: inner, height: inner }}
+              contentFit="cover"
+              transition={160}
+            />
+          ) : (
+            <Text
+              style={{
+                color: '#fff',
+                fontFamily: FontFamily.heading,
+                fontSize: inner * 0.4,
+              }}
+            >
+              {initial}
+            </Text>
+          )}
         </View>
       </View>
       {resolvedStatus ? (

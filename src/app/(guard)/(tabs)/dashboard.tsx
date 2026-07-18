@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Bell, QrCode, UserPlus } from 'lucide-react-native';
 
+import { DrawerMenuButton } from '@/components/navigation/drawer-menu-button';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
@@ -47,7 +48,10 @@ export default function GuardDashboard() {
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
       {/* Header with live badge */}
-      <View className="flex-row items-center justify-between px-4 pb-3 pt-4">
+      <View className="mb-1 flex-row items-center px-4 pt-4">
+        <DrawerMenuButton />
+      </View>
+      <View className="flex-row items-center justify-between px-4 pb-3 pt-2">
         <View>
           <View className="flex-row items-center gap-2">
             <Text className="text-2xl text-ink" style={{ fontFamily: FontFamily.display }}>

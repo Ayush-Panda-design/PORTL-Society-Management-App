@@ -182,7 +182,7 @@ export default function AdminResidentsScreen() {
   }
 
   return (
-    <ScreenHeader title="Residents" subtitle="Assign members to flats">
+    <ScreenHeader title="Residents" subtitle="Assign members to flats" showMenu>
       <View className="px-4">
         <SearchField
           value={search}
@@ -232,6 +232,7 @@ export default function AdminResidentsScreen() {
                   name={item.full_name ?? 'Resident'}
                   seed={item.id}
                   size={44}
+                  imageUrl={item.avatar_url}
                   hasUnread={!item.flat_id}
                   status={item.flat_id ? 'online' : 'pending'}
                 />
@@ -281,6 +282,7 @@ export default function AdminResidentsScreen() {
                 name={selected?.full_name ?? 'Resident'}
                 seed={selected?.id}
                 size={64}
+                imageUrl={selected?.avatar_url}
               />
               <Text className="mt-3 text-xl font-bold text-ink">
                 {selected?.full_name ?? 'Unnamed resident'}
@@ -291,6 +293,22 @@ export default function AdminResidentsScreen() {
             <View className="mb-4 gap-3 rounded-2xl border border-surface-border bg-surface-muted px-4 py-3">
               <DetailRow label="Phone" value={selected?.phone ?? '—'} />
               <DetailRow label="Flat" value={selected ? flatLabel(selected) : '—'} />
+              <DetailRow label="Occupation" value={selected?.occupation?.trim() || '—'} />
+              <DetailRow label="Bio" value={selected?.bio?.trim() || '—'} />
+              <DetailRow
+                label="Emergency contact"
+                value={
+                  selected?.emergency_contact_name || selected?.emergency_contact_phone
+                    ? [selected?.emergency_contact_name, selected?.emergency_contact_phone]
+                        .filter(Boolean)
+                        .join(' · ')
+                    : '—'
+                }
+              />
+              <DetailRow
+                label="Vehicle"
+                value={selected?.vehicle_number?.trim() || '—'}
+              />
               <DetailRow
                 label="Joined"
                 value={
@@ -300,6 +318,10 @@ export default function AdminResidentsScreen() {
                 }
               />
             </View>
+            <Text className="mb-4 text-xs leading-4 text-ink-muted">
+              Private details and personal notes are only visible to the member — admins cannot
+              access them.
+            </Text>
 
             <View className="flex-row gap-2">
               <Pressable
@@ -387,10 +409,25 @@ export default function AdminResidentsScreen() {
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
+  const multiline = value.length > 40 || value.includes('\n');
   return (
-    <View className="flex-row items-start justify-between gap-3">
+    <View
+      className={
+        multiline
+          ? 'gap-1'
+          : 'flex-row items-start justify-between gap-3'
+      }
+    >
       <Text className="text-sm text-ink-muted">{label}</Text>
-      <Text className="flex-1 text-right text-sm font-medium text-ink">{value}</Text>
+      <Text
+        className={
+          multiline
+            ? 'text-sm font-medium text-ink'
+            : 'flex-1 text-right text-sm font-medium text-ink'
+        }
+      >
+        {value}
+      </Text>
     </View>
   );
 }

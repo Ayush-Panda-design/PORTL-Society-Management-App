@@ -1,4 +1,4 @@
-import { ClipboardList, ScanLine, ShieldCheck, UserPlus } from 'lucide-react-native';
+import { ClipboardList, ScanLine, ShieldCheck, User, UserPlus } from 'lucide-react-native';
 import { type Href } from 'expo-router';
 
 import { SettingsHub, type SettingsLink } from '@/components/ui/settings-hub';
@@ -6,6 +6,14 @@ import { useAuthStore } from '@/stores/authStore';
 import { Brand } from '@/constants/theme';
 
 const LINKS: SettingsLink[] = [
+  {
+    href: '/(guard)/profile' as Href,
+    title: 'My profile',
+    subtitle: 'Bio, personal details, and private notes',
+    Icon: User,
+    tone: 'mint',
+    iconColor: Brand.primary,
+  },
   {
     href: '/(guard)/dashboard' as Href,
     title: 'Pending queue',

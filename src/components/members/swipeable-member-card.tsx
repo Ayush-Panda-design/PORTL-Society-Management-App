@@ -159,7 +159,12 @@ export function SwipeableMemberCard({
         ]}
       >
         <View className="items-center gap-3 px-5 pb-2 pt-8">
-          <InitialsAvatar name={member.full_name ?? 'Member'} size={72} />
+          <InitialsAvatar
+            name={member.full_name ?? 'Member'}
+            size={72}
+            seed={member.id}
+            imageUrl={member.avatar_url}
+          />
           <Text
             className="text-center text-2xl text-ink"
             style={{ fontFamily: FontFamily.display }}

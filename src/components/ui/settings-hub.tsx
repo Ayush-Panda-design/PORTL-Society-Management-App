@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { DrawerMenuButton } from '@/components/navigation/drawer-menu-button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
@@ -129,6 +130,9 @@ export function SettingsHub({ title, subtitle, links, sections }: Props) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        <View className="mb-4">
+          <DrawerMenuButton />
+        </View>
         <Text
           className="mb-0.5 text-[32px] tracking-tight text-ink"
           style={{ fontFamily: FontFamily.display }}

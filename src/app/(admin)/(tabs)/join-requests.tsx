@@ -159,7 +159,12 @@ export default function AdminJoinRequestsScreen() {
         ) : (
           active.map((member) => (
             <AppCard key={member.id} className="mb-2 flex-row items-center gap-3">
-              <InitialsAvatar name={member.full_name ?? 'R'} size={44} />
+              <InitialsAvatar
+                name={member.full_name ?? 'R'}
+                size={44}
+                seed={member.id}
+                imageUrl={member.avatar_url}
+              />
               <View className="min-w-0 flex-1">
                 <Text className="text-base text-ink" style={{ fontFamily: FontFamily.heading }}>
                   {member.full_name ?? 'Unnamed'}

@@ -21,6 +21,7 @@
     "@react-native-community/netinfo": "^11.5.2",
     "@react-native-masked-view/masked-view": "0.3.2",
     "@react-navigation/bottom-tabs": "^7.15.5",
+    "@react-navigation/drawer": "^7.13.2",
     "@react-navigation/elements": "^2.9.10",
     "@react-navigation/native": "^7.1.33",
     "@supabase/supabase-js": "^2.110.5",
