@@ -42,6 +42,14 @@ export default function AdminHome() {
     enabled: Boolean(societyId),
   });
 
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await statsQuery.refetch();
+    setRefreshing(false);
+  }, [statsQuery]);
+
   if (!societyId) {
     return (
       <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
@@ -56,13 +64,6 @@ export default function AdminHome() {
 
   const stats = statsQuery.data;
   const go = (href: Href) => router.push(href);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await statsQuery.refetch();
-    setRefreshing(false);
-  }, [statsQuery]);
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>

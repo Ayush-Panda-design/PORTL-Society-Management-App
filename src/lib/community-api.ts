@@ -1,5 +1,12 @@
-import { parseJsonStringArray } from '@/lib/community';
-import { invokeSendPush } from '@/lib/push-notifications';
+import { isPollExpired, parseJsonStringArray } from '@/lib/community';
+import {
+  notifyComplaintCreated,
+  notifyComplaintUpdated,
+  notifyNoticeCreated,
+  notifyPollCreated,
+  notifyPollResultsPublished,
+  societyIdForFlat,
+} from '@/lib/notifications';
 import { uploadLocalImage } from '@/lib/storage-upload';
 import { supabase } from '@/lib/supabase';
 import type {
@@ -54,62 +61,25 @@ export async function upsertNotice(input: {
     return;
   }
 
-  const { error } = await supabase.from('notices').insert({
-    society_id: input.societyId,
-    title: input.title,
-    body: input.body,
-    posted_by: input.postedBy,
-    cover_url: input.coverUrl ?? null,
-  });
+  const { data, error } = await supabase
+    .from('notices')
+    .insert({
+      society_id: input.societyId,
+      title: input.title,
+      body: input.body,
+      posted_by: input.postedBy,
+      cover_url: input.coverUrl ?? null,
+    })
+    .select('id')
+    .single();
   if (error) throw new Error(error.message);
 
-  // Notify society residents (batched via Edge Function). Non-blocking.
-  void notifySocietyResidentsOfNotice({
+  void notifyNoticeCreated({
     societyId: input.societyId,
     title: input.title,
     body: input.body,
+    noticeId: data?.id,
   });
-}
-
-async function notifySocietyResidentsOfNotice(params: {
-  societyId: string;
-  title: string;
-  body: string;
-}): Promise<void> {
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('society_id', params.societyId)
-      .eq('role', 'resident');
-
-    if (error) {
-      console.warn('[push] Failed to load residents for notice:', error.message);
-      return;
-    }
-
-    const userIds = (data ?? []).map((row) => row.id as string);
-    if (userIds.length === 0) return;
-
-    const preview =
-      params.body.length > 120 ? `${params.body.slice(0, 117)}…` : params.body;
-
-    // Expo accepts up to 100 messages per request; Edge Function chunks further.
-    const BATCH = 100;
-    for (let i = 0; i < userIds.length; i += BATCH) {
-      await invokeSendPush({
-        userIds: userIds.slice(i, i + BATCH),
-        title: params.title,
-        body: preview,
-        data: {
-          type: 'notice',
-          societyId: params.societyId,
-        },
-      });
-    }
-  } catch (e) {
-    console.warn('[push] notice notify failed:', e);
-  }
 }
 
 export async function deleteNotice(id: string): Promise<void> {
@@ -132,9 +102,38 @@ export async function fetchPolls(societyId: string): Promise<Poll[]> {
   }));
 }
 
+export async function fetchPoll(pollId: string): Promise<Poll | null> {
+  const { data, error } = await supabase.from('polls').select('*').eq('id', pollId).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  const row = data as Omit<Poll, 'options'> & { options: unknown };
+  return {
+    ...row,
+    options: parseJsonStringArray(row.options),
+  };
+}
+
 export async function fetchVotesForPolls(pollIds: string[]): Promise<PollVote[]> {
   if (pollIds.length === 0) return [];
   const { data, error } = await supabase.from('poll_votes').select('*').in('poll_id', pollIds);
+  if (error) throw new Error(error.message);
+  return (data as PollVote[]) ?? [];
+}
+
+/** Own votes only (RLS also enforces this for non-admins). */
+export async function fetchMyVotesForPolls(pollIds: string[]): Promise<PollVote[]> {
+  if (pollIds.length === 0) return [];
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) throw new Error('You must be signed in.');
+
+  const { data, error } = await supabase
+    .from('poll_votes')
+    .select('*')
+    .in('poll_id', pollIds)
+    .eq('user_id', user.id);
   if (error) throw new Error(error.message);
   return (data as PollVote[]) ?? [];
 }
@@ -235,15 +234,29 @@ export async function createPoll(input: {
   options: string[];
   expiresAt: string | null;
   createdBy: string;
-}): Promise<void> {
-  const { error } = await supabase.from('polls').insert({
-    society_id: input.societyId,
-    question: input.question,
-    options: input.options,
-    expires_at: input.expiresAt,
-    created_by: input.createdBy,
-  });
+}): Promise<{ id: string }> {
+  const { data, error } = await supabase
+    .from('polls')
+    .insert({
+      society_id: input.societyId,
+      question: input.question,
+      options: input.options,
+      expires_at: input.expiresAt,
+      created_by: input.createdBy,
+    })
+    .select('id')
+    .single();
   if (error) throw new Error(error.message);
+
+  const pollId = data.id as string;
+  void notifyPollCreated({
+    societyId: input.societyId,
+    pollId,
+    question: input.question,
+    excludeUserId: input.createdBy,
+  });
+
+  return { id: pollId };
 }
 
 export async function castVote(input: { pollId: string; option: string }): Promise<void> {
@@ -252,6 +265,12 @@ export async function castVote(input: { pollId: string; option: string }): Promi
     error: authError,
   } = await supabase.auth.getUser();
   if (authError || !user) throw new Error('You must be signed in to vote.');
+
+  const poll = await fetchPoll(input.pollId);
+  if (!poll) throw new Error('Poll not found.');
+  if (isPollExpired(poll.expires_at)) {
+    throw new Error('This poll has ended. Voting is closed.');
+  }
 
   const { error } = await supabase.from('poll_votes').upsert(
     {
@@ -262,6 +281,49 @@ export async function castVote(input: { pollId: string; option: string }): Promi
     { onConflict: 'poll_id,user_id' },
   );
   if (error) throw new Error(error.message);
+}
+
+export type PollOptionCountRow = { option: string; count: number };
+
+/** Published tallies for members (or any tallies for admins via RPC). */
+export async function fetchPollOptionCounts(pollId: string): Promise<PollOptionCountRow[]> {
+  const { data, error } = await supabase.rpc('poll_option_counts', {
+    p_poll_id: pollId,
+  });
+  if (error) throw new Error(error.message);
+
+  if (data == null) return [];
+  const rows = typeof data === 'string' ? (JSON.parse(data) as unknown) : data;
+  if (!Array.isArray(rows)) return [];
+  return rows.map((row: { option?: string; count?: number }) => ({
+    option: String(row.option ?? ''),
+    count: Number(row.count ?? 0),
+  }));
+}
+
+export async function publishPollResults(pollId: string): Promise<{
+  poll_id: string;
+  results_published_at: string;
+}> {
+  const { data, error } = await supabase.rpc('publish_poll_results', {
+    p_poll_id: pollId,
+  });
+  if (error) throw new Error(error.message);
+  const row =
+    typeof data === 'string'
+      ? (JSON.parse(data) as { poll_id: string; results_published_at: string })
+      : (data as { poll_id: string; results_published_at: string });
+
+  const poll = await fetchPoll(pollId);
+  if (poll) {
+    void notifyPollResultsPublished({
+      societyId: poll.society_id,
+      pollId: poll.id,
+      question: poll.question,
+    });
+  }
+
+  return row;
 }
 
 export async function fetchComplaintsForFlat(flatId: string): Promise<Complaint[]> {
@@ -354,14 +416,29 @@ export async function createComplaint(input: {
   description: string;
   createdBy: string;
 }): Promise<void> {
-  const { error } = await supabase.from('complaints').insert({
-    flat_id: input.flatId,
-    category: input.category,
-    description: input.description,
-    status: 'open',
-    created_by: input.createdBy,
-  });
+  const { data, error } = await supabase
+    .from('complaints')
+    .insert({
+      flat_id: input.flatId,
+      category: input.category,
+      description: input.description,
+      status: 'open',
+      created_by: input.createdBy,
+    })
+    .select('id')
+    .single();
   if (error) throw new Error(error.message);
+
+  const societyId = await societyIdForFlat(input.flatId);
+  if (societyId && data?.id) {
+    void notifyComplaintCreated({
+      societyId,
+      complaintId: data.id as string,
+      category: input.category,
+      description: input.description,
+      excludeUserId: input.createdBy,
+    });
+  }
 }
 
 export async function updateComplaint(input: {
@@ -369,11 +446,25 @@ export async function updateComplaint(input: {
   status: ComplaintStatus;
   assignedTo: string | null;
 }): Promise<void> {
+  const { data: existing } = await supabase
+    .from('complaints')
+    .select('status, created_by')
+    .eq('id', input.id)
+    .maybeSingle();
+
   const { error } = await supabase
     .from('complaints')
     .update({ status: input.status, assigned_to: input.assignedTo })
     .eq('id', input.id);
   if (error) throw new Error(error.message);
+
+  if (existing && existing.status !== input.status) {
+    void notifyComplaintUpdated({
+      reporterId: (existing.created_by as string | null) ?? null,
+      complaintId: input.id,
+      status: input.status,
+    });
+  }
 }
 
 export async function fetchAmenities(societyId: string): Promise<Amenity[]> {

@@ -225,6 +225,12 @@ export type Poll = {
   options: string[];
   expires_at: string | null;
   created_by: string | null;
+  results_published_at?: string | null;
+};
+
+export type PollOptionCount = {
+  option: string;
+  count: number;
 };
 
 export type PollVote = {

@@ -8,6 +8,7 @@ import { Camera, CameraView, useCameraPermissions } from 'expo-camera';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { supabase } from '@/lib/supabase';
 import { uploadLocalImage } from '@/lib/storage-upload';
+import { notifyFlatOfVisitorEntry } from '@/lib/visitors';
 import { useAuthStore } from '@/stores/authStore';
 import type { VisitorWithFlat } from '@/types/database';
 
@@ -155,6 +156,15 @@ export default function ScanPassScreen() {
         entry_time: new Date().toISOString(),
         guard_id: profile.id,
       });
+
+      if (profile.society_id && visitor?.flat_id) {
+        void notifyFlatOfVisitorEntry({
+          flatId: visitor.flat_id,
+          societyId: profile.society_id,
+          visitorName: visitor.name,
+          visitorId,
+        });
+      }
 
       setSuccess(true);
       setTakingPhoto(false);

@@ -121,12 +121,22 @@ export default function DiscoverSocietyScreen() {
 
     setSubmitting(true);
     try {
+      const effectiveFlatId =
+        role === 'resident' ? flatId || flatOptions[0]?.value || null : null;
+
       await requestJoinSociety({
         societyId: selected.id,
         role,
-        flatId: role === 'resident' ? flatId : null,
+        flatId: effectiveFlatId,
       });
-      if (user?.id) await fetchProfile(user.id);
+      if (user?.id) {
+        const profile = await fetchProfile(user.id);
+        if (!profile?.society_id || profile.status !== 'pending') {
+          throw new Error(
+            'Join request was not saved. Try again, or join with an invite code.',
+          );
+        }
+      }
       router.replace('/(onboarding)/pending');
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Could not request to join';

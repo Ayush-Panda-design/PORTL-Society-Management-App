@@ -1,4 +1,8 @@
-import { invokeSendPush } from '@/lib/push-notifications';
+import {
+  notifyVisitorCheckedIn,
+  notifyVisitorDecision,
+  notifyVisitorPending,
+} from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
 import type { VisitorStatus, VisitorType, VisitorWithFlat } from '@/types/database';
 
@@ -142,37 +146,10 @@ export async function notifyResidentOfVisitor(params: {
   visitorName: string;
   visitorType: VisitorType;
   societyId: string;
+  visitorId?: string;
+  flatLabel?: string;
 }): Promise<void> {
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('flat_id', params.flatId)
-      .eq('role', 'resident')
-      .eq('society_id', params.societyId);
-
-    if (error) {
-      console.warn('[push] Failed to look up residents:', error.message);
-      return;
-    }
-
-    const userIds = (data ?? []).map((row) => row.id as string);
-    if (userIds.length === 0) return;
-
-    const typeLabelText = typeLabel(params.visitorType);
-    await invokeSendPush({
-      userIds,
-      title: 'Visitor at the gate',
-      body: `${params.visitorName} (${typeLabelText}) is waiting for your approval.`,
-      data: {
-        type: 'visitor_pending',
-        flatId: params.flatId,
-        societyId: params.societyId,
-      },
-    });
-  } catch (e) {
-    console.warn('[push] notifyResidentOfVisitor failed:', e);
-  }
+  await notifyVisitorPending(params);
 }
 
 /** Notify the guard who created a visitor request after approve/reject. */
@@ -181,18 +158,17 @@ export async function notifyGuardOfVisitorDecision(params: {
   visitorName: string;
   status: 'approved' | 'rejected';
 }): Promise<void> {
-  if (!params.createdBy) return;
+  await notifyVisitorDecision(params);
+}
 
-  const verb = params.status === 'approved' ? 'approved' : 'rejected';
-  await invokeSendPush({
-    userId: params.createdBy,
-    title: `Visitor ${verb}`,
-    body: `${params.visitorName} was ${verb} by the resident.`,
-    data: {
-      type: 'visitor_decision',
-      status: params.status,
-    },
-  });
+/** Notify flat residents when a visitor is checked in at the gate. */
+export async function notifyFlatOfVisitorEntry(params: {
+  flatId: string;
+  societyId: string;
+  visitorName: string;
+  visitorId?: string;
+}): Promise<void> {
+  await notifyVisitorCheckedIn(params);
 }
 
 /** Approve or reject a pending visitor and notify the creating guard. */

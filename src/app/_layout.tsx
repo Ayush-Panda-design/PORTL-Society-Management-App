@@ -16,8 +16,10 @@ import Toast from 'react-native-toast-message';
 import { AppThemeProvider } from '@/components/theme/app-theme-provider';
 import { OfflineBanner } from '@/components/ui/offline-banner';
 import { Brand } from '@/constants/theme';
+import { useNotificationRouting } from '@/hooks/use-notification-routing';
 import { usePortlFonts } from '@/hooks/use-portl-fonts';
 import { destinationForProfile } from '@/lib/auth-routing';
+import { configurePushPresentation } from '@/lib/push-notifications';
 import { queryClient } from '@/lib/query-client';
 import {
   isEmailVerified,
@@ -60,10 +62,15 @@ function AuthGate({ children }: { children: ReactNode }) {
   const router = useRouter();
   const segments = useSegments();
   const { session, user, profile, isLoading, isInitialized, initialize } = useAuthStore();
+  useNotificationRouting();
 
   useEffect(() => {
     void initialize();
   }, [initialize]);
+
+  useEffect(() => {
+    void configurePushPresentation();
+  }, []);
 
   useEffect(() => {
     if (!isInitialized || isLoading) return;

@@ -279,11 +279,12 @@ export default function RegisterVisitorScreen() {
         visitorName: name.trim(),
         visitorType: type,
         societyId: profile.society_id,
+        visitorId: data?.id,
+        flatLabel: `${flatTowerName(selectedFlat.towers) ? `${flatTowerName(selectedFlat.towers)} · ` : ''}${selectedFlat.number}`,
       });
 
       setSuccess(`Request sent for ${name.trim()}. Waiting for resident approval.`);
       resetForm();
-      void data;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to register visitor');
     } finally {

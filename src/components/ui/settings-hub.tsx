@@ -1,12 +1,17 @@
 import { useRouter, type Href } from 'expo-router';
-import { ChevronRight, LogOut, Monitor, Moon, Sun, type LucideIcon } from 'lucide-react-native';
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { Bell, ChevronRight, LogOut, Monitor, Moon, Sun, type LucideIcon } from 'lucide-react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
 import { DrawerMenuButton } from '@/components/navigation/drawer-menu-button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
+import {
+  getPushRegistrationHint,
+  registerForPushNotifications,
+} from '@/lib/push-notifications';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore, type ThemeMode } from '@/stores/themeStore';
 
@@ -93,9 +98,53 @@ function LinkRow({
 export function SettingsHub({ title, subtitle, links, sections }: Props) {
   const router = useRouter();
   const signOut = useAuthStore((s) => s.signOut);
+  const userId = useAuthStore((s) => s.user?.id);
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
   const [signingOut, setSigningOut] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushHint, setPushHint] = useState('Checking…');
+
+  const refreshPushHint = useCallback(async () => {
+    const info = await getPushRegistrationHint();
+    setPushHint(info.hint);
+  }, []);
+
+  useEffect(() => {
+    void refreshPushHint();
+  }, [refreshPushHint]);
+
+  const onEnablePush = async () => {
+    if (!userId || pushBusy) return;
+    setPushBusy(true);
+    try {
+      const info = await getPushRegistrationHint();
+      if (!info.canRegister) {
+        Toast.show({ type: 'info', text1: 'Push unavailable', text2: info.hint });
+        setPushHint(info.hint);
+        return;
+      }
+      if (info.permission === 'denied') {
+        await Linking.openSettings();
+        return;
+      }
+      const token = await registerForPushNotifications(userId, { force: true });
+      if (token) {
+        Toast.show({
+          type: 'success',
+          text1: 'Notifications ready',
+          text2: 'This device will get Portl alerts.',
+        });
+        setPushHint('Allowed — this device is synced for alerts.');
+      } else {
+        const again = await getPushRegistrationHint();
+        Toast.show({ type: 'info', text1: 'Could not sync', text2: again.hint });
+        setPushHint(again.hint);
+      }
+    } finally {
+      setPushBusy(false);
+    }
+  };
 
   const onSignOut = async () => {
     if (signingOut) return;
@@ -174,6 +223,41 @@ export function SettingsHub({ title, subtitle, links, sections }: Props) {
             onChange={setMode}
           />
         </View>
+
+        <Pressable
+          onPress={() => {
+            void onEnablePush();
+          }}
+          disabled={pushBusy}
+          className="mb-6 flex-row items-center gap-3.5 rounded-card bg-surface-card px-4 py-3.5"
+          style={{
+            shadowColor: '#101512',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.05,
+            shadowRadius: 6,
+            elevation: 1,
+          }}
+        >
+          <View
+            className="h-10 w-10 items-center justify-center rounded-card"
+            style={{ backgroundColor: Pastels.mint }}
+          >
+            <Bell color={Brand.primary} size={17} strokeWidth={1.5} />
+          </View>
+          <View className="flex-1">
+            <Text className="text-[15px] text-ink" style={{ fontFamily: FontFamily.heading }}>
+              Push notifications
+            </Text>
+            <Text className="mt-0.5 text-xs text-ink-muted" numberOfLines={2}>
+              {pushHint}
+            </Text>
+          </View>
+          {pushBusy ? (
+            <ActivityIndicator color={Brand.primary} />
+          ) : (
+            <ChevronRight color={Brand.inkMuted} size={16} strokeWidth={1.5} />
+          )}
+        </Pressable>
 
         {/* Sections or flat links */}
         {sections

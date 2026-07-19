@@ -1,11 +1,12 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { ActivityIndicator, Animated, Pressable, Text, View } from 'react-native';
-import { Check, Users } from 'lucide-react-native';
+import { Check, ChevronRight, Lock, Megaphone, Users } from 'lucide-react-native';
 
+import { AnimatedPressable } from '@/components/ui/animated-pressable';
 import { AppCard, InitialsAvatar } from '@/components/ui/brand';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
-import { pollRespondentLabel } from '@/lib/community';
-import type { PollVoteWithProfile } from '@/types/database';
+import { pollRespondentLabel, pollStatusKind, type PollStatusKind } from '@/lib/community';
+import type { Poll, PollVoteWithProfile } from '@/types/database';
 
 export function PollProgressBar({
   pct,
@@ -43,6 +44,101 @@ export function PollProgressBar({
           opacity: active ? 1 : 0.55,
         }}
       />
+    </View>
+  );
+}
+
+export function PollStatusChip({ kind }: { kind: PollStatusKind }) {
+  const label = kind === 'live' ? 'Live' : kind === 'results' ? 'Results' : 'Closed';
+  const bg =
+    kind === 'live' ? Brand.primarySoft : kind === 'results' ? Pastels.mint : Pastels.peach;
+  const color =
+    kind === 'live' ? Brand.primaryDark : kind === 'results' ? Brand.primary : Brand.accentDark;
+
+  return (
+    <View className="rounded-pill px-2.5 py-1" style={{ backgroundColor: bg }}>
+      <Text className="text-[11px]" style={{ color, fontFamily: FontFamily.heading }}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+export function PollListRow({
+  poll,
+  subtitle,
+  onPress,
+}: {
+  poll: Poll;
+  subtitle?: string;
+  onPress: () => void;
+}) {
+  const kind = pollStatusKind(poll);
+  const accent =
+    kind === 'live' ? Pastels.mint : kind === 'results' ? Brand.primarySoft : Pastels.peach;
+
+  return (
+    <AnimatedPressable onPress={onPress} scaleTo={0.98}>
+      <View
+        className="overflow-hidden rounded-panel border border-surface-border bg-surface-card"
+        style={{
+          shadowColor: '#101512',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 8,
+          elevation: 1,
+        }}
+      >
+        <View className="h-1 w-full" style={{ backgroundColor: accent }} />
+        <View className="flex-row items-center gap-3 px-4 py-3.5">
+          <View className="min-w-0 flex-1">
+            <View className="mb-1.5 flex-row items-center gap-2">
+              <PollStatusChip kind={kind} />
+              {subtitle ? (
+                <Text className="text-[11px] text-ink-faint" numberOfLines={1}>
+                  {subtitle}
+                </Text>
+              ) : null}
+            </View>
+            <Text
+              className="text-[16px] leading-5 text-ink"
+              style={{ fontFamily: FontFamily.heading }}
+              numberOfLines={2}
+            >
+              {poll.question}
+            </Text>
+          </View>
+          <ChevronRight color={Brand.inkMuted} size={18} strokeWidth={1.5} />
+        </View>
+      </View>
+    </AnimatedPressable>
+  );
+}
+
+export function PollDetailHeader({
+  poll,
+  meta,
+}: {
+  poll: Poll;
+  meta?: string;
+}) {
+  const kind = pollStatusKind(poll);
+  return (
+    <View className="mb-5">
+      <View className="mb-3 flex-row items-start justify-between gap-3">
+        <PollStatusChip kind={kind} />
+        {meta ? (
+          <Text className="max-w-[55%] text-right text-xs text-ink-faint" numberOfLines={2}>
+            {meta}
+          </Text>
+        ) : null}
+      </View>
+      <Text
+        className="text-[28px] leading-8 tracking-tight text-ink"
+        style={{ fontFamily: FontFamily.display }}
+      >
+        {poll.question}
+      </Text>
     </View>
   );
 }
@@ -95,7 +191,8 @@ export function PollOptionRow({
   disabled = false,
   votes = [],
   onPress,
-  showVoters = true,
+  showTallies = false,
+  showVoters = false,
 }: {
   label: string;
   count: number;
@@ -104,6 +201,7 @@ export function PollOptionRow({
   disabled?: boolean;
   votes?: PollVoteWithProfile[];
   onPress?: () => void;
+  showTallies?: boolean;
   showVoters?: boolean;
 }) {
   const content = (
@@ -128,19 +226,21 @@ export function PollOptionRow({
         </View>
         <View className="flex-row items-center gap-2">
           {showVoters ? <PollVoterStack votes={votes} /> : null}
-          <Text
-            className="text-sm tabular-nums"
-            style={{
-              color: selected ? Brand.primary : Brand.inkMuted,
-              fontFamily: FontFamily.heading,
-            }}
-          >
-            {pct}%
-          </Text>
+          {showTallies ? (
+            <Text
+              className="text-sm tabular-nums"
+              style={{
+                color: selected ? Brand.primary : Brand.inkMuted,
+                fontFamily: FontFamily.heading,
+              }}
+            >
+              {pct}%
+            </Text>
+          ) : null}
         </View>
       </View>
-      <PollProgressBar pct={pct} active={selected} />
-      {count > 0 ? (
+      {showTallies ? <PollProgressBar pct={pct} active={selected} /> : null}
+      {showTallies && count > 0 ? (
         <Text className="mt-1.5 text-[11px] text-ink-faint">
           {count} vote{count === 1 ? '' : 's'}
         </Text>
@@ -177,6 +277,63 @@ export function PollOptionRow({
     >
       {content}
     </Pressable>
+  );
+}
+
+export function PollOptionsPanel({
+  options,
+  counts,
+  total,
+  myVote,
+  locked,
+  showTallies,
+  voting,
+  optionVotes,
+  showVoters = false,
+  onVote,
+}: {
+  options: string[];
+  counts: Record<string, number>;
+  total: number;
+  myVote?: string | null;
+  locked: boolean;
+  showTallies: boolean;
+  voting?: boolean;
+  optionVotes?: Record<string, PollVoteWithProfile[]>;
+  showVoters?: boolean;
+  onVote?: (option: string) => void;
+}) {
+  return (
+    <View>
+      {options.map((option) => {
+        const count = counts[option] ?? 0;
+        const pct = total === 0 ? 0 : Math.round((count / total) * 100);
+        const selected = myVote === option;
+        return (
+          <PollOptionRow
+            key={option}
+            label={option}
+            count={showTallies ? count : 0}
+            pct={showTallies ? pct : 0}
+            selected={selected}
+            disabled={locked || voting}
+            votes={optionVotes?.[option] ?? []}
+            showTallies={showTallies}
+            showVoters={showVoters && showTallies}
+            onPress={
+              locked || !onVote
+                ? undefined
+                : () => onVote(option)
+            }
+          />
+        );
+      })}
+      {voting ? (
+        <View className="mt-1 items-center py-2">
+          <ActivityIndicator color={Brand.primary} />
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -258,6 +415,131 @@ export function PollRespondentsList({
           );
         })
       )}
+    </View>
+  );
+}
+
+export function PollAdminBreakdown({
+  total,
+  totalResidents,
+  votes,
+  loading,
+}: {
+  total: number;
+  totalResidents?: number;
+  votes: PollVoteWithProfile[];
+  loading?: boolean;
+}) {
+  const participationPct =
+    totalResidents && totalResidents > 0
+      ? Math.round((total / totalResidents) * 100)
+      : null;
+
+  return (
+    <View className="mt-5">
+      <View className="mb-3 flex-row items-end gap-2">
+        <Text className="text-3xl text-ink" style={{ fontFamily: FontFamily.display }}>
+          {total}
+        </Text>
+        <Text className="mb-1 text-sm text-ink-muted">
+          {totalResidents && totalResidents > 0
+            ? `of ${totalResidents} residents${
+                participationPct != null ? ` · ${participationPct}%` : ''
+              }`
+            : `response${total === 1 ? '' : 's'}`}
+        </Text>
+      </View>
+      <PollRespondentsList votes={votes} loading={loading} />
+    </View>
+  );
+}
+
+export function PollPublishCard({
+  canPublish,
+  published,
+  publishing,
+  onPublish,
+}: {
+  canPublish: boolean;
+  published: boolean;
+  publishing?: boolean;
+  onPublish: () => void;
+}) {
+  if (published) {
+    return (
+      <View
+        className="mt-5 flex-row items-center gap-3 rounded-panel px-4 py-3.5"
+        style={{ backgroundColor: Pastels.mint }}
+      >
+        <Megaphone color={Brand.primary} size={18} strokeWidth={1.5} />
+        <View className="min-w-0 flex-1">
+          <Text className="text-[15px] text-ink" style={{ fontFamily: FontFamily.heading }}>
+            Results published
+          </Text>
+          <Text className="mt-0.5 text-xs text-ink-muted">
+            Members can see option percentages — not who voted.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!canPublish) {
+    return (
+      <View
+        className="mt-5 flex-row items-center gap-3 rounded-panel px-4 py-3.5"
+        style={{ backgroundColor: Pastels.sage }}
+      >
+        <Lock color={Brand.inkMuted} size={18} strokeWidth={1.5} />
+        <View className="min-w-0 flex-1">
+          <Text className="text-[15px] text-ink" style={{ fontFamily: FontFamily.heading }}>
+            Results stay private
+          </Text>
+          <Text className="mt-0.5 text-xs text-ink-muted">
+            After the poll ends, you can publish tallies without names.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View className="mt-5 rounded-panel border border-surface-border bg-surface-card px-4 py-4">
+      <Text className="text-[15px] text-ink" style={{ fontFamily: FontFamily.heading }}>
+        Publish results?
+      </Text>
+      <Text className="mt-1 text-sm leading-5 text-ink-muted">
+        Members will see option percentages only — never who voted for what.
+      </Text>
+      <Pressable
+        accessibilityRole="button"
+        disabled={publishing}
+        onPress={onPublish}
+        className="mt-4 items-center rounded-card py-3.5"
+        style={{ backgroundColor: Brand.primary, opacity: publishing ? 0.7 : 1 }}
+      >
+        {publishing ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text className="text-[15px] text-white" style={{ fontFamily: FontFamily.heading }}>
+            Publish results
+          </Text>
+        )}
+      </Pressable>
+    </View>
+  );
+}
+
+export function PollAwaitingResultsNote() {
+  return (
+    <View
+      className="mt-4 flex-row items-start gap-2.5 rounded-card px-3.5 py-3"
+      style={{ backgroundColor: Pastels.butter }}
+    >
+      <Lock color={Brand.accentDark} size={16} strokeWidth={1.5} style={{ marginTop: 1 }} />
+      <Text className="min-w-0 flex-1 text-sm leading-5 text-ink-muted">
+        Voting is closed. Results appear here once an admin publishes them.
+      </Text>
     </View>
   );
 }

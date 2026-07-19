@@ -1,0 +1,29 @@
+{
+    "project_info": {
+      "project_number": "506126478515",
+      "project_id": "portl-8584b",
+      "storage_bucket": "portl-8584b.firebasestorage.app"
+    },
+    "client": [
+      {
+        "client_info": {
+          "mobilesdk_app_id": "1:506126478515:android:54ce1e1233a5a99e53d4c6",
+          "android_client_info": {
+            "package_name": "com.ayush_panda.portl"
+          }
+        },
+        "oauth_client": [],
+        "api_key": [
+          {
+            "current_key": "AIzaSyDDghDMHVAWfOsIU5Yd0sNZ3D2DV5BeyLo"
+          }
+        ],
+        "services": {
+          "appinvite_service": {
+            "other_platform_oauth_client": []
+          }
+        }
+      }
+    ],
+    "configuration_version": "1"
+  }

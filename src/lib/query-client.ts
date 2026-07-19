@@ -14,8 +14,12 @@ export const queryClient = new QueryClient({
 export const queryKeys = {
   notices: (societyId: string) => ['notices', societyId] as const,
   polls: (societyId: string) => ['polls', societyId] as const,
+  poll: (pollId: string) => ['poll', pollId] as const,
   pollVotes: (societyId: string, pollIds: string[]) =>
     [...queryKeys.polls(societyId), 'votes', ...pollIds] as const,
+  myPollVotes: (societyId: string, pollIds: string[]) =>
+    [...queryKeys.polls(societyId), 'my-votes', ...pollIds] as const,
+  pollOptionCounts: (pollId: string) => ['poll-option-counts', pollId] as const,
   complaints: (key: string) => ['complaints', key] as const,
   amenities: (societyId: string) => ['amenities', societyId] as const,
   amenityBookings: (amenityId: string, date: string) =>

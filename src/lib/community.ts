@@ -21,6 +21,25 @@ export function isPollExpired(expiresAt: string | null | undefined): boolean {
   return new Date(expiresAt).getTime() < Date.now();
 }
 
+export function isPollPublished(poll: Pick<Poll, 'results_published_at'>): boolean {
+  return Boolean(poll.results_published_at);
+}
+
+/** Admin may publish only after the poll has a past expiry. */
+export function canPublishPoll(poll: Pick<Poll, 'expires_at' | 'results_published_at'>): boolean {
+  return isPollExpired(poll.expires_at) && !isPollPublished(poll);
+}
+
+export type PollStatusKind = 'live' | 'closed' | 'results';
+
+export function pollStatusKind(
+  poll: Pick<Poll, 'expires_at' | 'results_published_at'>,
+): PollStatusKind {
+  if (isPollPublished(poll)) return 'results';
+  if (isPollExpired(poll.expires_at)) return 'closed';
+  return 'live';
+}
+
 export function pollStats(poll: Poll, votes: PollVote[]) {
   const pollVotes = votes.filter((v) => v.poll_id === poll.id);
   const total = pollVotes.length;

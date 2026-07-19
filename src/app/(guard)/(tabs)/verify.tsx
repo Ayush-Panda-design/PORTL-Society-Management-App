@@ -10,6 +10,7 @@ import { SkeletonList } from '@/components/visitors/loading-state';
 import { VisitorCard } from '@/components/visitors/visitor-card';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { supabase } from '@/lib/supabase';
+import { notifyFlatOfVisitorEntry } from '@/lib/visitors';
 import { useAuthStore } from '@/stores/authStore';
 import type { VisitorWithFlat } from '@/types/database';
 
@@ -63,6 +64,13 @@ export default function GuardVerifyScreen() {
 
       if (updateError) {
         setError(updateError.message);
+      } else if (profile.society_id && visitor.flat_id) {
+        void notifyFlatOfVisitorEntry({
+          flatId: visitor.flat_id,
+          societyId: profile.society_id,
+          visitorName: visitor.name,
+          visitorId: visitor.id,
+        });
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to mark entry');

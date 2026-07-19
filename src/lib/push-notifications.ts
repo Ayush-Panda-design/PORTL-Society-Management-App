@@ -8,9 +8,15 @@ import Toast from 'react-native-toast-message';
 import { supabase } from '@/lib/supabase';
 
 const DENIED_EXPLAINED_KEY = 'portl_push_denied_explained';
+const ANDROID_CHANNEL_ID = 'default';
 
 /** Prevents double registration from getSession + INITIAL_SESSION racing. */
 const inFlightByUser = new Map<string, Promise<string | null>>();
+
+type NotificationsModule = typeof import('expo-notifications');
+
+let notificationsModule: NotificationsModule | null | undefined;
+let handlerConfigured = false;
 
 function resolveProjectId(): string | undefined {
   const fromEnv = process.env.EXPO_PUBLIC_EAS_PROJECT_ID?.trim();
@@ -20,19 +26,30 @@ function resolveProjectId(): string | undefined {
   if (fromEas) return fromEas;
 
   const fromExtra = (
-    Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined
+    Constants.expoConfig?.extra as { eas?: { projectId?: string } | undefined } | undefined
   )?.eas?.projectId;
 
   if (fromExtra && !fromExtra.startsWith('REPLACE_')) return fromExtra;
   return undefined;
 }
 
-/** Wait until JS interactions settle and the app reports active (Activity is usually ready then). */
+/**
+ * Expo Go (store client) cannot receive remote push on modern Android SDKs.
+ * Prefer executionEnvironment over isRunningInExpoGo alone — some sessions mis-report.
+ */
+export function canUseRemotePush(): boolean {
+  if (Platform.OS === 'web') return false;
+  const env = Constants.executionEnvironment;
+  if (env === 'storeClient') return false;
+  // Bare / standalone / null (dev client) are OK if the native module loads.
+  return true;
+}
+
+/** Wait until JS interactions settle and the app reports active. */
 async function whenUiReady(timeoutMs = 10_000): Promise<boolean> {
   await new Promise<void>((resolve) => {
     InteractionManager.runAfterInteractions(() => resolve());
   });
-  // Give Android Activity a beat after Fast Refresh / cold start.
   await new Promise((r) => setTimeout(r, 400));
 
   if (AppState.currentState === 'active') return true;
@@ -59,14 +76,13 @@ async function maybeExplainDenied(): Promise<void> {
     if (already === '1') return;
     await SecureStore.setItemAsync(DENIED_EXPLAINED_KEY, '1');
   } catch {
-    // SecureStore can fail on web / locked devices — still show once this session.
+    // ignore
   }
 
-  // Toast does not need a native Alert Activity (avoids InvocationTargetException on HMR).
   Toast.show({
     type: 'info',
     text1: 'Notifications are off',
-    text2: 'Enable them in settings for visitor alerts and notices.',
+    text2: 'Enable them for gate alerts, polls, notices, and join updates.',
     visibilityTime: 5000,
     onPress: () => {
       void Linking.openSettings();
@@ -75,27 +91,67 @@ async function maybeExplainDenied(): Promise<void> {
 }
 
 /**
- * Lazy-load expo-notifications only outside Expo Go.
- * SDK 53+ throws on Android if this module is imported inside Expo Go.
+ * Lazy-load expo-notifications. Returns null when the native module is unavailable
+ * (Expo Go Android, web, etc.).
  */
-async function loadNotifications() {
-  if (isRunningInExpoGo()) {
+export async function loadNotifications(): Promise<NotificationsModule | null> {
+  if (notificationsModule !== undefined) return notificationsModule;
+
+  if (!canUseRemotePush()) {
+    notificationsModule = null;
     return null;
   }
-  return import('expo-notifications');
+
+  // Still skip known Expo Go — importing can crash Android in store client.
+  if (isRunningInExpoGo() && Constants.executionEnvironment === 'storeClient') {
+    notificationsModule = null;
+    return null;
+  }
+
+  try {
+    notificationsModule = await import('expo-notifications');
+    return notificationsModule;
+  } catch (e) {
+    console.info('[push] expo-notifications unavailable:', e);
+    notificationsModule = null;
+    return null;
+  }
+}
+
+/** Show banners while the app is open; call once at startup. */
+export async function configurePushPresentation(): Promise<void> {
+  const Notifications = await loadNotifications();
+  if (!Notifications) return;
+
+  if (!handlerConfigured) {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+    handlerConfigured = true;
+  }
+
+  if (Platform.OS === 'android') {
+    try {
+      // Omit `sound` — the string "default" is treated as a missing custom sound file.
+      await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
+        name: 'Portl alerts',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#0F766E',
+      });
+    } catch (e) {
+      console.warn('[push] Channel setup skipped:', e);
+    }
+  }
 }
 
 async function registerForPushNotificationsInner(userId: string): Promise<string | null> {
-  if (Platform.OS === 'web') {
-    return null;
-  }
-
-  if (isRunningInExpoGo()) {
-    console.info(
-      '[push] Skipping token registration — remote push is unavailable in Expo Go (use a development build).',
-    );
-    return null;
-  }
+  if (Platform.OS === 'web') return null;
 
   if (!Device.isDevice) {
     console.info('[push] Skipping token registration — not a physical device.');
@@ -107,34 +163,25 @@ async function registerForPushNotificationsInner(userId: string): Promise<string
     return null;
   }
 
+  await configurePushPresentation();
   const Notifications = await loadNotifications();
-  if (!Notifications) return null;
-
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
-  });
-
-  if (Platform.OS === 'android') {
-    try {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'Default',
-        importance: Notifications.AndroidImportance.DEFAULT,
-      });
-    } catch (e) {
-      console.warn('[push] Channel setup skipped:', e);
-    }
+  if (!Notifications) {
+    console.info(
+      '[push] Skipping token registration — use a development build (not Expo Go) for remote push.',
+    );
+    return null;
   }
 
   const current = await Notifications.getPermissionsAsync();
   let status = current.status;
+  console.info('[push] Permission status:', status, {
+    canAskAgain: current.canAskAgain,
+    env: Constants.executionEnvironment,
+  });
 
   if (status !== 'granted') {
-    if (current.canAskAgain === false || status === 'denied') {
+    // On Android, status is often "denied" before the first prompt; only stop if we cannot ask.
+    if (current.canAskAgain === false) {
       await maybeExplainDenied();
       return null;
     }
@@ -143,10 +190,13 @@ async function registerForPushNotificationsInner(userId: string): Promise<string
     try {
       const requested = await Notifications.requestPermissionsAsync();
       status = requested.status;
+      console.info('[push] Permission after request:', status);
     } catch (e) {
       console.warn('[push] Permission request skipped (no Activity):', e);
       return null;
     }
+  } else {
+    console.info('[push] Already allowed — skipping dialog, fetching Expo push token…');
   }
 
   if (status !== 'granted') {
@@ -155,12 +205,32 @@ async function registerForPushNotificationsInner(userId: string): Promise<string
   }
 
   const projectId = resolveProjectId();
-  const tokenResult = projectId
-    ? await Notifications.getExpoPushTokenAsync({ projectId })
-    : await Notifications.getExpoPushTokenAsync();
+  if (!projectId) {
+    console.warn(
+      '[push] Missing EAS projectId — set extra.eas.projectId or EXPO_PUBLIC_EAS_PROJECT_ID.',
+    );
+  }
 
+  let tokenResult;
+  try {
+    tokenResult = projectId
+      ? await Notifications.getExpoPushTokenAsync({ projectId })
+      : await Notifications.getExpoPushTokenAsync();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes('FirebaseApp') || msg.includes('fcm-credentials')) {
+      console.warn(
+        '[push] Android FCM not configured. Add google-services.json, set android.googleServicesFile in app.json, upload FCM V1 key to EAS, then rebuild the dev client. See https://docs.expo.dev/push-notifications/fcm-credentials/',
+      );
+      return null;
+    }
+    throw e;
+  }
   const token = tokenResult.data;
-  if (!token) return null;
+  if (!token) {
+    console.warn('[push] getExpoPushTokenAsync returned empty token');
+    return null;
+  }
 
   const { error } = await supabase
     .from('profiles')
@@ -172,16 +242,24 @@ async function registerForPushNotificationsInner(userId: string): Promise<string
     return null;
   }
 
+  console.info('[push] Token registered for', userId.slice(0, 8) + '…');
   return token;
 }
 
 /**
- * Requests permission (first time) and saves an Expo push token on the profile.
- * Safe on Expo Go / emulators / web / denied permissions — never throws to callers.
+ * Requests permission (only if not already decided) and saves an Expo push token.
+ * Safe when the native module is missing — never throws to callers.
+ *
+ * @param force When true, bypasses in-flight dedupe so Settings can re-sync.
  */
-export async function registerForPushNotifications(userId: string): Promise<string | null> {
-  const existing = inFlightByUser.get(userId);
-  if (existing) return existing;
+export async function registerForPushNotifications(
+  userId: string,
+  options?: { force?: boolean },
+): Promise<string | null> {
+  if (!options?.force) {
+    const existing = inFlightByUser.get(userId);
+    if (existing) return existing;
+  }
 
   const run = (async () => {
     try {
@@ -196,6 +274,52 @@ export async function registerForPushNotifications(userId: string): Promise<stri
 
   inFlightByUser.set(userId, run);
   return run;
+}
+
+/** Human-readable status for Settings / debugging. */
+export async function getPushRegistrationHint(): Promise<{
+  canRegister: boolean;
+  permission: string;
+  hint: string;
+}> {
+  if (Platform.OS === 'web') {
+    return { canRegister: false, permission: 'n/a', hint: 'Push is not available on web.' };
+  }
+  if (!canUseRemotePush() || isRunningInExpoGo()) {
+    return {
+      canRegister: false,
+      permission: 'n/a',
+      hint: 'Open the Portl development build (not Expo Go) to receive alerts.',
+    };
+  }
+  const Notifications = await loadNotifications();
+  if (!Notifications) {
+    return {
+      canRegister: false,
+      permission: 'n/a',
+      hint: 'Rebuild the Portl development client with expo-notifications.',
+    };
+  }
+  const { status, canAskAgain } = await Notifications.getPermissionsAsync();
+  if (status === 'granted') {
+    return {
+      canRegister: true,
+      permission: status,
+      hint: 'Allowed — tap to sync your device for alerts.',
+    };
+  }
+  if (status === 'denied' || canAskAgain === false) {
+    return {
+      canRegister: true,
+      permission: status,
+      hint: 'Blocked — open system settings to allow notifications.',
+    };
+  }
+  return {
+    canRegister: true,
+    permission: status,
+    hint: 'Tap to allow notifications for gate alerts and polls.',
+  };
 }
 
 /** Best-effort clear of stored token on sign-out. */
@@ -225,7 +349,7 @@ export async function invokeSendPush(payload: SendPushPayload): Promise<void> {
   if (ids.length === 0) return;
 
   try {
-    const { error } = await supabase.functions.invoke('send-push', {
+    const { data, error } = await supabase.functions.invoke('send-push', {
       body: {
         userId: payload.userId,
         userIds: ids,
@@ -234,8 +358,26 @@ export async function invokeSendPush(payload: SendPushPayload): Promise<void> {
         data: payload.data ?? {},
       },
     });
+
     if (error) {
-      console.warn('[push] send-push invoke failed:', error.message);
+      console.warn('[push] send-push invoke failed:', error.message, error);
+      return;
+    }
+
+    const result = data as { sent?: number; skipped?: number; detail?: string; error?: string } | null;
+    if (result?.error) {
+      console.warn('[push] send-push error:', result.error);
+      return;
+    }
+    if (result && (result.sent === 0 || (result.skipped ?? 0) > 0)) {
+      console.warn(
+        '[push] send-push delivered to 0 devices — recipients need a saved push_token (open the Portl development build and allow notifications).',
+        result,
+      );
+      return;
+    }
+    if (result?.sent) {
+      console.info('[push] send-push sent', result.sent, 'message(s)');
     }
   } catch (e) {
     console.warn('[push] send-push invoke error:', e);

@@ -26,6 +26,12 @@ export function friendlyInviteError(raw: string | null | undefined, fallback: st
   if (lower.includes('no flats') || lower.includes('flat does not belong')) {
     return 'This society isn’t set up with flats yet, or the flat is invalid. Ask the admin to add towers and flats.';
   }
+  if (lower.includes('could not find the function') || lower.includes('schema cache')) {
+    return 'Society search join isn’t set up on the server yet. Ask the admin to run the latest database migration, or join with an invite code.';
+  }
+  if (lower.includes('invalid input syntax for type uuid')) {
+    return 'Pick your society and flat again, then request to join.';
+  }
   if (lower.includes('not open for discovery') || lower.includes('society not found')) {
     return 'That society isn’t available to join from search. Try an invite code, or ask the office for help.';
   }

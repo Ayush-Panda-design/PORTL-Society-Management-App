@@ -17,6 +17,8 @@ type ExpoMessage = {
   body: string;
   data?: Record<string, unknown>;
   sound: 'default';
+  channelId?: string;
+  priority?: 'default' | 'normal' | 'high';
 };
 
 const corsHeaders: Record<string, string> = {
@@ -127,6 +129,8 @@ Deno.serve(async (req) => {
       body: payload.body,
       data: payload.data ?? {},
       sound: 'default',
+      channelId: 'default',
+      priority: 'high',
     }));
 
     const expoAccessToken = Deno.env.get('EXPO_ACCESS_TOKEN');

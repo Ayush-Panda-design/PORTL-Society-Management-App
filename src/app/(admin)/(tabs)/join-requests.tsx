@@ -141,7 +141,7 @@ export default function AdminJoinRequestsScreen() {
           <View className="mb-8">
             <EmptyState
               visual="invites"
-              subtitle="When someone uses an invite code, they appear here."
+              subtitle="When someone searches for your society or uses an invite code, they appear here for approval."
             />
           </View>
         )}
