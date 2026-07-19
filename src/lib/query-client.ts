@@ -17,13 +17,16 @@ export const queryKeys = {
   poll: (pollId: string) => ['poll', pollId] as const,
   pollVotes: (societyId: string, pollIds: string[]) =>
     [...queryKeys.polls(societyId), 'votes', ...pollIds] as const,
-  myPollVotes: (societyId: string, pollIds: string[]) =>
-    [...queryKeys.polls(societyId), 'my-votes', ...pollIds] as const,
+  myPollVotes: (societyId: string, userId: string, pollIds: string[]) =>
+    [...queryKeys.polls(societyId), 'my-votes', userId, ...pollIds] as const,
   pollOptionCounts: (pollId: string) => ['poll-option-counts', pollId] as const,
   complaints: (key: string) => ['complaints', key] as const,
   amenities: (societyId: string) => ['amenities', societyId] as const,
   amenityBookings: (amenityId: string, date: string) =>
     ['amenity-bookings', amenityId, date] as const,
+  myAmenityBookings: (flatId: string) => ['my-amenity-bookings', flatId] as const,
+  societyAmenityBookings: (societyId: string) =>
+    ['society-amenity-bookings', societyId] as const,
   staff: (societyId: string) => ['staff', societyId] as const,
   directoryMembers: (societyId: string) => ['directory-members', societyId] as const,
   societyProfiles: (societyId: string) => ['society-profiles', societyId] as const,

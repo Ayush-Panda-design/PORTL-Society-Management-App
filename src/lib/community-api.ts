@@ -1,4 +1,4 @@
-import { isPollExpired, parseJsonStringArray } from '@/lib/community';
+import { isPollExpired, parseJsonStringArray, todayISODate } from '@/lib/community';
 import {
   notifyComplaintCreated,
   notifyComplaintUpdated,
@@ -13,6 +13,7 @@ import type {
   AdminDashboardStats,
   Amenity,
   AmenityBooking,
+  AmenityBookingWithDetails,
   Complaint,
   ComplaintReporter,
   ComplaintStatus,
@@ -493,7 +494,10 @@ export async function upsertAmenity(input: {
   location?: string | null;
   capacity?: number | null;
   rules?: string | null;
+  bookingHorizonDays?: number | null;
+  maxActiveBookingsPerFlat?: number | null;
 }): Promise<void> {
+  const horizon = input.bookingHorizonDays ?? 7;
   const payload = {
     name: input.name,
     description: input.description || null,
@@ -501,8 +505,10 @@ export async function upsertAmenity(input: {
     cover_url: input.coverUrl ?? null,
     is_featured: Boolean(input.isFeatured),
     location: input.location?.trim() || null,
-    capacity: input.capacity ?? null,
+    capacity: input.capacity ?? 1,
     rules: input.rules?.trim() || null,
+    booking_horizon_days: Math.max(1, Math.min(14, horizon)),
+    max_active_bookings_per_flat: input.maxActiveBookingsPerFlat ?? 2,
   };
 
   if (input.isFeatured) {
@@ -550,25 +556,121 @@ export async function fetchBookingsForDate(
   return (data as AmenityBooking[]) ?? [];
 }
 
+type FlatTowerJoin = {
+  number: string;
+  towers: { name: string } | { name: string }[] | null;
+};
+
+type AmenityBookingJoinRow = AmenityBooking & {
+  amenities: { id: string; name: string } | { id: string; name: string }[] | null;
+  flats: FlatTowerJoin | FlatTowerJoin[] | null;
+};
+
+function normalizeBookingDetails(row: AmenityBookingJoinRow): AmenityBookingWithDetails {
+  const amenityRaw = row.amenities;
+  const amenity = Array.isArray(amenityRaw) ? amenityRaw[0] ?? null : amenityRaw;
+  const flatRaw = row.flats;
+  const flat = Array.isArray(flatRaw) ? flatRaw[0] ?? null : flatRaw;
+  const towerRaw = flat?.towers ?? null;
+  const tower = Array.isArray(towerRaw) ? towerRaw[0] ?? null : towerRaw;
+  const { amenities: _a, flats: _f, ...booking } = row;
+  return {
+    ...booking,
+    amenity: amenity ? { id: amenity.id, name: amenity.name } : null,
+    flat: flat
+      ? {
+          number: flat.number,
+          towers: tower ? { name: tower.name } : null,
+        }
+      : null,
+  };
+}
+
+/** Upcoming (and today) active bookings for a flat — My Bookings. */
+export async function fetchMyAmenityBookings(flatId: string): Promise<AmenityBookingWithDetails[]> {
+  const today = todayISODate();
+  const { data, error } = await supabase
+    .from('amenity_bookings')
+    .select(
+      `
+      *,
+      amenities ( id, name ),
+      flats (
+        number,
+        towers ( name )
+      )
+    `,
+    )
+    .eq('flat_id', flatId)
+    .eq('status', 'booked')
+    .gte('date', today)
+    .order('date', { ascending: true })
+    .order('slot', { ascending: true });
+  if (error) throw new Error(error.message);
+  return ((data as AmenityBookingJoinRow[]) ?? []).map(normalizeBookingDetails);
+}
+
+/** Society-wide upcoming bookings for admin oversight. */
+export async function fetchSocietyAmenityBookings(
+  societyId: string,
+): Promise<AmenityBookingWithDetails[]> {
+  const today = todayISODate();
+  const { data: amenities, error: amenitiesError } = await supabase
+    .from('amenities')
+    .select('id')
+    .eq('society_id', societyId);
+  if (amenitiesError) throw new Error(amenitiesError.message);
+  const amenityIds = ((amenities as { id: string }[]) ?? []).map((a) => a.id);
+  if (amenityIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('amenity_bookings')
+    .select(
+      `
+      *,
+      amenities ( id, name ),
+      flats (
+        number,
+        towers ( name )
+      )
+    `,
+    )
+    .in('amenity_id', amenityIds)
+    .eq('status', 'booked')
+    .gte('date', today)
+    .order('date', { ascending: true })
+    .order('slot', { ascending: true });
+  if (error) throw new Error(error.message);
+  return ((data as AmenityBookingJoinRow[]) ?? []).map(normalizeBookingDetails);
+}
+
 export async function bookAmenitySlot(input: {
   amenityId: string;
   flatId: string;
   date: string;
   slot: string;
 }): Promise<void> {
-  const existing = await fetchBookingsForDate(input.amenityId, input.date);
-  if (existing.some((b) => b.slot === input.slot)) {
-    throw new Error('That slot is already booked for this date.');
-  }
-
-  const { error } = await supabase.from('amenity_bookings').insert({
-    amenity_id: input.amenityId,
-    flat_id: input.flatId,
-    date: input.date,
-    slot: input.slot,
-    status: 'booked',
+  const { error } = await supabase.rpc('book_amenity_slot', {
+    p_amenity_id: input.amenityId,
+    p_flat_id: input.flatId,
+    p_date: input.date,
+    p_slot: input.slot,
   });
   if (error) throw new Error(error.message);
+}
+
+export async function cancelAmenityBooking(bookingId: string): Promise<void> {
+  const { error } = await supabase.rpc('cancel_amenity_booking', {
+    p_booking_id: bookingId,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export function amenityBookingFlatLabel(booking: AmenityBookingWithDetails): string {
+  const flat = booking.flat;
+  if (!flat) return 'Flat';
+  const tower = flat.towers?.name;
+  return tower ? `${tower} · Flat ${flat.number}` : `Flat ${flat.number}`;
 }
 
 export async function fetchStaff(societyId: string): Promise<StaffMember[]> {

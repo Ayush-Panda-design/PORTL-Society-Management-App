@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
-import { ImagePlus, MapPin, Plus, Star, Trash2, Users, Edit2 } from 'lucide-react-native';
+import { ImagePlus, MapPin, Plus, Star, Trash2, Edit2, Users } from 'lucide-react-native';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -20,13 +20,18 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { FloatingActionBtn } from '@/components/ui/brand';
 import { Card } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand, FontFamily, Pastels, amenityCoverUri } from '@/constants/theme';
+import { amenitySlotCapacity, formatAmenityBookingDate } from '@/lib/community';
 import {
+  amenityBookingFlatLabel,
+  cancelAmenityBooking,
   deleteAmenity,
   fetchAmenities,
+  fetchSocietyAmenityBookings,
   uploadAmenityCover,
   upsertAmenity,
 } from '@/lib/community-api';
@@ -36,16 +41,21 @@ import type { Amenity } from '@/types/database';
 import { DEFAULT_AMENITY_SLOTS } from '@/types/database';
 import { Tokens } from '@/theme/tokens';
 
+type AdminTab = 'facilities' | 'bookings';
+
 export default function AdminAmenitiesScreen() {
   const societyId = useAuthStore((s) => s.profile?.society_id);
   const queryClient = useQueryClient();
 
+  const [tab, setTab] = useState<AdminTab>('facilities');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Amenity | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
-  const [capacity, setCapacity] = useState('');
+  const [capacity, setCapacity] = useState('1');
+  const [horizonDays, setHorizonDays] = useState('7');
+  const [maxPerFlat, setMaxPerFlat] = useState('2');
   const [rules, setRules] = useState('');
   const [isFeatured, setIsFeatured] = useState(false);
   const [slotsText, setSlotsText] = useState(DEFAULT_AMENITY_SLOTS.join('\n'));
@@ -56,6 +66,12 @@ export default function AdminAmenitiesScreen() {
     queryKey: queryKeys.amenities(societyId ?? 'none'),
     queryFn: () => fetchAmenities(societyId!),
     enabled: Boolean(societyId),
+  });
+
+  const bookingsQuery = useQuery({
+    queryKey: queryKeys.societyAmenityBookings(societyId ?? 'none'),
+    queryFn: () => fetchSocietyAmenityBookings(societyId!),
+    enabled: Boolean(societyId) && tab === 'bookings',
   });
 
   const saveMutation = useMutation({
@@ -74,9 +90,23 @@ export default function AdminAmenitiesScreen() {
         if (!nextCover) throw new Error('Cover upload failed.');
       }
 
-      const capacityNum = capacity.trim() ? Number.parseInt(capacity.trim(), 10) : null;
-      if (capacity.trim() && (capacityNum == null || Number.isNaN(capacityNum) || capacityNum < 1)) {
-        throw new Error('Capacity must be a positive number.');
+      const capacityNum = capacity.trim() ? Number.parseInt(capacity.trim(), 10) : 1;
+      if (Number.isNaN(capacityNum) || capacityNum < 1) {
+        throw new Error('Capacity must be at least 1 (spots per slot).');
+      }
+
+      const horizonNum = horizonDays.trim()
+        ? Number.parseInt(horizonDays.trim(), 10)
+        : 7;
+      if (Number.isNaN(horizonNum) || horizonNum < 1 || horizonNum > 14) {
+        throw new Error('Booking window must be between 1 and 14 days.');
+      }
+
+      const maxNum = maxPerFlat.trim()
+        ? Number.parseInt(maxPerFlat.trim(), 10)
+        : 2;
+      if (Number.isNaN(maxNum) || maxNum < 1) {
+        throw new Error('Max bookings per flat must be at least 1.');
       }
 
       await upsertAmenity({
@@ -90,6 +120,8 @@ export default function AdminAmenitiesScreen() {
         location: location.trim() || null,
         capacity: capacityNum,
         rules: rules.trim() || null,
+        bookingHorizonDays: horizonNum,
+        maxActiveBookingsPerFlat: maxNum,
       });
     },
     onSuccess: async () => {
@@ -108,6 +140,20 @@ export default function AdminAmenitiesScreen() {
     },
   });
 
+  const cancelMutation = useMutation({
+    mutationFn: cancelAmenityBooking,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.societyAmenityBookings(societyId!),
+        }),
+        queryClient.invalidateQueries({ queryKey: ['amenity-bookings'] }),
+        queryClient.invalidateQueries({ queryKey: ['my-amenity-bookings'] }),
+      ]);
+    },
+    onError: (e: Error) => Alert.alert('Could not cancel', e.message),
+  });
+
   const confirmDelete = (item: Amenity) => {
     Alert.alert('Delete amenity?', `“${item.name}” will be permanently removed.`, [
       { text: 'Cancel', style: 'cancel' },
@@ -119,12 +165,25 @@ export default function AdminAmenitiesScreen() {
     ]);
   };
 
+  const confirmCancelBooking = (id: string, label: string) => {
+    Alert.alert('Cancel booking?', `Override and free ${label}?`, [
+      { text: 'Keep', style: 'cancel' },
+      {
+        text: 'Cancel booking',
+        style: 'destructive',
+        onPress: () => cancelMutation.mutate(id),
+      },
+    ]);
+  };
+
   const resetForm = () => {
     setEditing(null);
     setName('');
     setDescription('');
     setLocation('');
-    setCapacity('');
+    setCapacity('1');
+    setHorizonDays('7');
+    setMaxPerFlat('2');
     setRules('');
     setIsFeatured(false);
     setSlotsText(DEFAULT_AMENITY_SLOTS.join('\n'));
@@ -142,7 +201,9 @@ export default function AdminAmenitiesScreen() {
     setName(item.name);
     setDescription(item.description ?? '');
     setLocation(item.location ?? '');
-    setCapacity(item.capacity != null ? String(item.capacity) : '');
+    setCapacity(String(amenitySlotCapacity(item.capacity)));
+    setHorizonDays(String(item.booking_horizon_days ?? 7));
+    setMaxPerFlat(String(item.max_active_bookings_per_flat ?? 2));
     setRules(item.rules ?? '');
     setIsFeatured(Boolean(item.is_featured));
     setSlotsText(item.slots.join('\n'));
@@ -184,170 +245,251 @@ export default function AdminAmenitiesScreen() {
   const featured = amenities.find((a) => a.is_featured) ?? null;
 
   return (
-    <ScreenHeader title="Amenities" subtitle="Manage bookable facilities" showBack>
-      {listQuery.error ? (
-        <ErrorBanner
-          message={listQuery.error.message}
-          onRetry={() => void listQuery.refetch()}
+    <ScreenHeader title="Amenities" subtitle="Facilities & bookings" showBack>
+      <View className="mb-3 px-4">
+        <SegmentedControl
+          options={[
+            { value: 'facilities', label: 'Facilities' },
+            { value: 'bookings', label: 'Bookings' },
+          ]}
+          value={tab}
+          onChange={setTab}
         />
-      ) : null}
+      </View>
 
-      {listQuery.isLoading && !listQuery.data ? (
-        <SkeletonList count={3} />
+      {tab === 'bookings' ? (
+        <>
+          {bookingsQuery.error ? (
+            <ErrorBanner
+              message={bookingsQuery.error.message}
+              onRetry={() => void bookingsQuery.refetch()}
+            />
+          ) : null}
+          {bookingsQuery.isLoading && !bookingsQuery.data ? (
+            <SkeletonList count={4} />
+          ) : (
+            <FlatList
+              data={bookingsQuery.data ?? []}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={{
+                paddingHorizontal: 16,
+                paddingBottom: 100,
+                flexGrow: 1,
+              }}
+              ItemSeparatorComponent={() => <View className="h-2.5" />}
+              refreshing={bookingsQuery.isRefetching}
+              onRefresh={() => void bookingsQuery.refetch()}
+              ListEmptyComponent={
+                <EmptyState
+                  visual="amenities"
+                  title="No upcoming bookings"
+                  subtitle="Resident reservations for today and ahead will appear here."
+                />
+              }
+              renderItem={({ item }) => (
+                <Card>
+                  <Text
+                    className="text-base text-ink"
+                    style={{ fontFamily: FontFamily.heading }}
+                  >
+                    {item.amenity?.name ?? 'Amenity'}
+                  </Text>
+                  <Text className="mt-1 text-sm text-ink-muted">
+                    {formatAmenityBookingDate(item.date)} · {item.slot}
+                  </Text>
+                  <Text className="mt-1 text-sm text-ink">
+                    {amenityBookingFlatLabel(item)}
+                  </Text>
+                  <Pressable
+                    disabled={cancelMutation.isPending}
+                    onPress={() =>
+                      confirmCancelBooking(
+                        item.id,
+                        `${item.amenity?.name ?? 'slot'} · ${item.slot}`,
+                      )
+                    }
+                    className="mt-3 self-start rounded-pill px-3 py-1.5"
+                    style={{ backgroundColor: Pastels.peach }}
+                  >
+                    <Text
+                      className="text-[12px]"
+                      style={{ fontFamily: FontFamily.heading, color: Brand.accentDark }}
+                    >
+                      Cancel booking
+                    </Text>
+                  </Pressable>
+                </Card>
+              )}
+            />
+          )}
+        </>
       ) : (
-        <FlatList
-          data={amenities}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100, flexGrow: 1 }}
-          ItemSeparatorComponent={() => <View className="h-3" />}
-          refreshing={listQuery.isRefetching}
-          onRefresh={() => void listQuery.refetch()}
-          ListHeaderComponent={
-            featured ? (
-              <View className="mb-5">
-                <Text
-                  className="mb-2 text-xs font-bold uppercase tracking-widest text-ink-muted"
-                  style={{ fontFamily: FontFamily.heading }}
-                >
-                  Featured
-                </Text>
-                <Pressable onPress={() => openEdit(featured)}>
-                  <Card style={{ padding: 0, overflow: 'hidden' }}>
-                    <View className="relative">
-                      <Image
-                        source={{ uri: amenityCoverUri(featured) }}
-                        style={{ width: '100%', height: 168 }}
-                        contentFit="cover"
-                        transition={200}
-                      />
-                      <View
-                        className="absolute left-3 top-3 flex-row items-center gap-1 rounded-pill px-2.5 py-1"
-                        style={{ backgroundColor: 'rgba(16,21,18,0.72)' }}
-                      >
-                        <Star color="#FBBF24" size={12} fill="#FBBF24" strokeWidth={1.5} />
-                        <Text className="text-[11px] font-semibold text-white">Special</Text>
-                      </View>
-                    </View>
-                    <View className="p-4">
-                      <Text
-                        className="text-lg text-ink"
-                        style={{ fontFamily: FontFamily.display }}
-                      >
-                        {featured.name}
-                      </Text>
-                      <Text className="mt-1 text-sm text-ink-muted" numberOfLines={2}>
-                        {featured.description || 'No description'}
-                      </Text>
-                      <View className="mt-3 flex-row flex-wrap gap-3">
-                        {featured.location ? (
-                          <View className="flex-row items-center gap-1">
-                            <MapPin color={Brand.inkMuted} size={13} strokeWidth={1.5} />
-                            <Text className="text-xs text-ink-muted">{featured.location}</Text>
+        <>
+          {listQuery.error ? (
+            <ErrorBanner
+              message={listQuery.error.message}
+              onRetry={() => void listQuery.refetch()}
+            />
+          ) : null}
+
+          {listQuery.isLoading && !listQuery.data ? (
+            <SkeletonList count={3} />
+          ) : (
+            <FlatList
+              data={amenities}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={{
+                paddingHorizontal: 16,
+                paddingBottom: 100,
+                flexGrow: 1,
+              }}
+              ItemSeparatorComponent={() => <View className="h-3" />}
+              refreshing={listQuery.isRefetching}
+              onRefresh={() => void listQuery.refetch()}
+              ListHeaderComponent={
+                featured ? (
+                  <View className="mb-5">
+                    <Text
+                      className="mb-2 text-xs font-bold uppercase tracking-widest text-ink-muted"
+                      style={{ fontFamily: FontFamily.heading }}
+                    >
+                      Featured
+                    </Text>
+                    <Pressable onPress={() => openEdit(featured)}>
+                      <Card style={{ padding: 0, overflow: 'hidden' }}>
+                        <View className="relative">
+                          <Image
+                            source={{ uri: amenityCoverUri(featured) }}
+                            style={{ width: '100%', height: 168 }}
+                            contentFit="cover"
+                            transition={200}
+                          />
+                          <View
+                            className="absolute left-3 top-3 flex-row items-center gap-1 rounded-pill px-2.5 py-1"
+                            style={{ backgroundColor: 'rgba(16,21,18,0.72)' }}
+                          >
+                            <Star color="#FBBF24" size={12} fill="#FBBF24" strokeWidth={1.5} />
+                            <Text className="text-[11px] font-semibold text-white">Special</Text>
                           </View>
-                        ) : null}
-                        {featured.capacity ? (
-                          <View className="flex-row items-center gap-1">
-                            <Users color={Brand.inkMuted} size={13} strokeWidth={1.5} />
+                        </View>
+                        <View className="p-4">
+                          <Text
+                            className="text-lg text-ink"
+                            style={{ fontFamily: FontFamily.display }}
+                          >
+                            {featured.name}
+                          </Text>
+                          <Text className="mt-1 text-sm text-ink-muted" numberOfLines={2}>
+                            {featured.description || 'No description'}
+                          </Text>
+                          <View className="mt-3 flex-row flex-wrap gap-3">
+                            {featured.location ? (
+                              <View className="flex-row items-center gap-1">
+                                <MapPin color={Brand.inkMuted} size={13} strokeWidth={1.5} />
+                                <Text className="text-xs text-ink-muted">{featured.location}</Text>
+                              </View>
+                            ) : null}
+                            <View className="flex-row items-center gap-1">
+                              <Users color={Brand.inkMuted} size={13} strokeWidth={1.5} />
+                              <Text className="text-xs text-ink-muted">
+                                {amenitySlotCapacity(featured.capacity)} / slot ·{' '}
+                                {featured.booking_horizon_days ?? 7}d window
+                              </Text>
+                            </View>
                             <Text className="text-xs text-ink-muted">
-                              Up to {featured.capacity}
+                              {featured.slots.length} slots
                             </Text>
                           </View>
-                        ) : null}
-                        <Text className="text-xs text-ink-muted">
-                          {featured.slots.length} slots
-                        </Text>
+                        </View>
+                      </Card>
+                    </Pressable>
+                    <Text
+                      className="mb-2 mt-5 text-xs font-bold uppercase tracking-widest text-ink-muted"
+                      style={{ fontFamily: FontFamily.heading }}
+                    >
+                      All amenities
+                    </Text>
+                  </View>
+                ) : null
+              }
+              ListEmptyComponent={
+                <EmptyState
+                  visual="amenities"
+                  title="No amenities"
+                  subtitle="Tap + to add gym, clubhouse, etc."
+                  actionLabel="Add your first amenity"
+                  onAction={openCreate}
+                />
+              }
+              renderItem={({ item }) => (
+                <Card style={{ padding: 0, overflow: 'hidden', marginBottom: 4 }}>
+                  <Image
+                    source={{ uri: amenityCoverUri(item) }}
+                    style={{ width: '100%', height: 110 }}
+                    contentFit="cover"
+                    transition={200}
+                  />
+                  <View className="p-4">
+                    <View className="mb-1 flex-row items-center gap-2">
+                      <Text
+                        style={{
+                          ...Tokens.typography.h3,
+                          color: Tokens.color.textPrimary,
+                          flex: 1,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {item.name}
+                      </Text>
+                      {item.is_featured ? (
+                        <Star color="#F59E0B" size={14} fill="#F59E0B" strokeWidth={1.5} />
+                      ) : null}
+                    </View>
+                    <Text
+                      style={{
+                        ...Tokens.typography.body,
+                        color: Tokens.color.textSecondary,
+                        marginBottom: 8,
+                      }}
+                      numberOfLines={2}
+                    >
+                      {item.description || 'No description'}
+                    </Text>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text
+                        style={{ ...Tokens.typography.caption, color: Tokens.color.textMuted }}
+                      >
+                        {amenitySlotCapacity(item.capacity)} spots/slot ·{' '}
+                        {item.booking_horizon_days ?? 7}d · max{' '}
+                        {item.max_active_bookings_per_flat ?? 2}/flat
+                      </Text>
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <Pressable onPress={() => openEdit(item)} style={{ padding: 8 }}>
+                          <Edit2 color={Tokens.color.primary} size={18} />
+                        </Pressable>
+                        <Pressable onPress={() => confirmDelete(item)} style={{ padding: 8 }}>
+                          <Trash2 color={Tokens.color.danger} size={18} />
+                        </Pressable>
                       </View>
                     </View>
-                  </Card>
-                </Pressable>
-                <Text
-                  className="mb-2 mt-5 text-xs font-bold uppercase tracking-widest text-ink-muted"
-                  style={{ fontFamily: FontFamily.heading }}
-                >
-                  All amenities
-                </Text>
-              </View>
-            ) : null
-          }
-          ListEmptyComponent={
-            <EmptyState
-              visual="amenities"
-              title="No amenities"
-              subtitle="Tap + to add gym, clubhouse, etc."
-              actionLabel="Add your first amenity"
-              onAction={openCreate}
-            />
-          }
-          renderItem={({ item }) => (
-            <Card style={{ padding: 0, overflow: 'hidden', marginBottom: 4 }}>
-              <Image
-                source={{ uri: amenityCoverUri(item) }}
-                style={{ width: '100%', height: 110 }}
-                contentFit="cover"
-                transition={200}
-              />
-              <View className="p-4">
-                <View className="mb-1 flex-row items-center gap-2">
-                  <Text
-                    style={{
-                      ...Tokens.typography.h3,
-                      color: Tokens.color.textPrimary,
-                      flex: 1,
-                    }}
-                    numberOfLines={1}
-                  >
-                    {item.name}
-                  </Text>
-                  {item.is_featured ? (
-                    <Star color="#F59E0B" size={14} fill="#F59E0B" strokeWidth={1.5} />
-                  ) : null}
-                  {item.cover_url ? (
-                    <View
-                      className="rounded-pill px-2 py-0.5"
-                      style={{ backgroundColor: Pastels.mint }}
-                    >
-                      <Text className="text-[10px] font-semibold" style={{ color: Brand.primary }}>
-                        Cover
-                      </Text>
-                    </View>
-                  ) : null}
-                </View>
-                <Text
-                  style={{
-                    ...Tokens.typography.body,
-                    color: Tokens.color.textSecondary,
-                    marginBottom: 8,
-                  }}
-                  numberOfLines={2}
-                >
-                  {item.description || 'No description'}
-                </Text>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text
-                    style={{ ...Tokens.typography.caption, color: Tokens.color.textMuted }}
-                  >
-                    {item.slots.length} slot{item.slots.length === 1 ? '' : 's'}
-                    {item.location ? ` · ${item.location}` : ''}
-                  </Text>
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
-                    <Pressable onPress={() => openEdit(item)} style={{ padding: 8 }}>
-                      <Edit2 color={Tokens.color.primary} size={18} />
-                    </Pressable>
-                    <Pressable onPress={() => confirmDelete(item)} style={{ padding: 8 }}>
-                      <Trash2 color={Tokens.color.danger} size={18} />
-                    </Pressable>
                   </View>
-                </View>
-              </View>
-            </Card>
+                </Card>
+              )}
+            />
           )}
-        />
+
+          <FloatingActionBtn
+            onPress={openCreate}
+            icon={<Plus color="#fff" size={24} />}
+            label="Add Amenity"
+          />
+        </>
       )}
 
       <Modal visible={modalOpen} animationType="slide" transparent>
@@ -446,13 +588,38 @@ export default function AdminAmenitiesScreen() {
                 value={location}
                 onChangeText={setLocation}
               />
+              <Text className="mb-1 text-xs text-ink-muted">
+                Spots per time slot (shared use). Use 1 for exclusive clubhouse booking.
+              </Text>
               <TextInput
                 className="mb-3 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
-                placeholder="Capacity (optional)"
+                placeholder="Capacity / spots per slot"
                 placeholderTextColor="#94A3B8"
                 keyboardType="number-pad"
                 value={capacity}
                 onChangeText={setCapacity}
+              />
+              <Text className="mb-1 text-xs text-ink-muted">
+                How far ahead residents can book (1–14 days, including today).
+              </Text>
+              <TextInput
+                className="mb-3 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+                placeholder="Booking window (days)"
+                placeholderTextColor="#94A3B8"
+                keyboardType="number-pad"
+                value={horizonDays}
+                onChangeText={setHorizonDays}
+              />
+              <Text className="mb-1 text-xs text-ink-muted">
+                Max active upcoming bookings one flat can hold for this amenity.
+              </Text>
+              <TextInput
+                className="mb-3 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+                placeholder="Max bookings per flat"
+                placeholderTextColor="#94A3B8"
+                keyboardType="number-pad"
+                value={maxPerFlat}
+                onChangeText={setMaxPerFlat}
               />
               <TextInput
                 className="mb-3 min-h-[80px] rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
@@ -526,11 +693,6 @@ export default function AdminAmenitiesScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-      <FloatingActionBtn
-        onPress={openCreate}
-        icon={<Plus color="#fff" size={24} />}
-        label="Add Amenity"
-      />
     </ScreenHeader>
   );
 }

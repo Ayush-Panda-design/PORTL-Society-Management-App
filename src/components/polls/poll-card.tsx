@@ -67,10 +67,13 @@ export function PollStatusChip({ kind }: { kind: PollStatusKind }) {
 export function PollListRow({
   poll,
   subtitle,
+  voted = false,
   onPress,
 }: {
   poll: Poll;
   subtitle?: string;
+  /** Resident has already cast a vote on this poll. */
+  voted?: boolean;
   onPress: () => void;
 }) {
   const kind = pollStatusKind(poll);
@@ -92,8 +95,22 @@ export function PollListRow({
         <View className="h-1 w-full" style={{ backgroundColor: accent }} />
         <View className="flex-row items-center gap-3 px-4 py-3.5">
           <View className="min-w-0 flex-1">
-            <View className="mb-1.5 flex-row items-center gap-2">
+            <View className="mb-1.5 flex-row flex-wrap items-center gap-2">
               <PollStatusChip kind={kind} />
+              {voted ? (
+                <View
+                  className="flex-row items-center gap-1 rounded-pill px-2.5 py-1"
+                  style={{ backgroundColor: Pastels.mint }}
+                >
+                  <Check color={Brand.primaryDark} size={11} strokeWidth={2.5} />
+                  <Text
+                    className="text-[11px]"
+                    style={{ color: Brand.primaryDark, fontFamily: FontFamily.heading }}
+                  >
+                    Voted
+                  </Text>
+                </View>
+              ) : null}
               {subtitle ? (
                 <Text className="text-[11px] text-ink-faint" numberOfLines={1}>
                   {subtitle}

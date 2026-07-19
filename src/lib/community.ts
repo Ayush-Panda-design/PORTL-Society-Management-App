@@ -118,3 +118,36 @@ export function addDaysISO(isoDate: string, days: number): string {
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
+
+/** Rolling bookable dates starting today (inclusive), length = horizonDays (1–14). */
+export function amenityDateOptions(horizonDays: number, today = todayISODate()) {
+  const days = Math.max(1, Math.min(14, Math.floor(horizonDays) || 7));
+  return Array.from({ length: days }, (_, offset) => {
+    const value = addDaysISO(today, offset);
+    const label =
+      offset === 0
+        ? 'Today'
+        : offset === 1
+          ? 'Tomorrow'
+          : new Date(`${value}T12:00:00`).toLocaleDateString(undefined, {
+              weekday: 'short',
+              day: 'numeric',
+              month: 'short',
+            });
+    return { value, label };
+  });
+}
+
+/** Concurrent spots available for a slot (capacity null/invalid → 1). */
+export function amenitySlotCapacity(capacity: number | null | undefined): number {
+  if (capacity == null || !Number.isFinite(capacity) || capacity < 1) return 1;
+  return Math.floor(capacity);
+}
+
+export function formatAmenityBookingDate(isoDate: string): string {
+  return new Date(`${isoDate}T12:00:00`).toLocaleDateString(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+}

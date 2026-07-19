@@ -28,6 +28,7 @@ export default function ResidentPollDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const pollId = typeof id === 'string' ? id : id?.[0] ?? '';
   const societyId = useAuthStore((s) => s.profile?.society_id);
+  const userId = useAuthStore((s) => s.user?.id);
   const queryClient = useQueryClient();
   const [successVisible, setSuccessVisible] = useState(false);
 
@@ -38,9 +39,9 @@ export default function ResidentPollDetailScreen() {
   });
 
   const myVoteQuery = useQuery({
-    queryKey: queryKeys.myPollVotes(societyId ?? 'none', [pollId]),
+    queryKey: queryKeys.myPollVotes(societyId ?? 'none', userId ?? 'none', [pollId]),
     queryFn: () => fetchMyVotesForPolls([pollId]),
-    enabled: Boolean(societyId && pollId),
+    enabled: Boolean(societyId && userId && pollId),
   });
 
   const poll = pollQuery.data;
@@ -70,7 +71,10 @@ export default function ResidentPollDetailScreen() {
     mutationFn: (option: string) => castVote({ pollId, option }),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.myPollVotes(societyId ?? 'none', [pollId]) }),
+        // Prefix match so list + detail "my votes" caches refresh together.
+        queryClient.invalidateQueries({
+          queryKey: [...queryKeys.polls(societyId ?? 'none'), 'my-votes', userId ?? 'none'],
+        }),
         queryClient.invalidateQueries({ queryKey: queryKeys.polls(societyId ?? 'none') }),
       ]);
       setSuccessVisible(true);

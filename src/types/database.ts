@@ -292,9 +292,16 @@ export type Amenity = {
   /** Highlighted in the resident “Featured” section. */
   is_featured?: boolean;
   location?: string | null;
+  /** Max concurrent bookings per slot (shared-use). Defaults to 1 (exclusive). */
   capacity?: number | null;
   rules?: string | null;
+  /** How many days ahead residents can book, inclusive of today (1–14). */
+  booking_horizon_days?: number | null;
+  /** Cap on upcoming booked slots per flat for this amenity. Null = unlimited. */
+  max_active_bookings_per_flat?: number | null;
 };
+
+export type AmenityBookingStatus = 'booked' | 'cancelled';
 
 export type AmenityBooking = {
   id: string;
@@ -302,7 +309,18 @@ export type AmenityBooking = {
   flat_id: string;
   date: string;
   slot: string;
-  status: string;
+  status: AmenityBookingStatus | string;
+  created_at?: string;
+  cancelled_at?: string | null;
+  booked_by?: string | null;
+};
+
+export type AmenityBookingWithDetails = AmenityBooking & {
+  amenity: { id: string; name: string } | null;
+  flat: {
+    number: string;
+    towers: { name: string } | null;
+  } | null;
 };
 
 export type StaffMember = {

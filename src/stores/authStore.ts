@@ -2,6 +2,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { create } from 'zustand';
 
 import { clearPushToken, registerForPushNotifications } from '@/lib/push-notifications';
+import { queryClient } from '@/lib/query-client';
 import { supabase } from '@/lib/supabase';
 import type { MembershipStatus, Profile, UserRole } from '@/types/database';
 
@@ -185,6 +186,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             syncPushToken(nextSession.user.id);
           }
         } else {
+          queryClient.clear();
           set({ profile: null, role: null, membershipStatus: null });
         }
       });
@@ -202,6 +204,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await supabase.auth.signOut();
     } finally {
+      // Drop cached queries so the next account never sees prior user data
+      // (e.g. "you voted" on polls from another resident in the same society).
+      queryClient.clear();
       set({
         session: null,
         user: null,

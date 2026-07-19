@@ -12,7 +12,7 @@ import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { isPollExpired } from '@/lib/community';
-import { fetchPolls } from '@/lib/community-api';
+import { fetchMyVotesForPolls, fetchPolls } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
 import type { Poll } from '@/types/database';
@@ -43,12 +43,30 @@ function pollMeta(poll: Poll): string {
 export default function ResidentPollsScreen() {
   const router = useRouter();
   const societyId = useAuthStore((s) => s.profile?.society_id);
+  const userId = useAuthStore((s) => s.user?.id);
 
   const pollsQuery = useQuery({
     queryKey: queryKeys.polls(societyId ?? 'none'),
     queryFn: () => fetchPolls(societyId!),
     enabled: Boolean(societyId),
   });
+
+  const pollIds = useMemo(
+    () => (pollsQuery.data ?? []).map((p) => p.id).sort(),
+    [pollsQuery.data],
+  );
+
+  const myVotesQuery = useQuery({
+    queryKey: queryKeys.myPollVotes(societyId ?? 'none', userId ?? 'none', pollIds),
+    queryFn: () => fetchMyVotesForPolls(pollIds),
+    enabled: Boolean(societyId && userId && pollIds.length > 0),
+  });
+
+  const votedPollIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const vote of myVotesQuery.data ?? []) set.add(vote.poll_id);
+    return set;
+  }, [myVotesQuery.data]);
 
   const { active, ended } = useMemo(() => {
     const list = pollsQuery.data ?? [];
@@ -104,8 +122,11 @@ export default function ResidentPollsScreen() {
           ItemSeparatorComponent={() => <View className="h-2.5" />}
           refreshControl={
             <ThemedRefreshControl
-              refreshing={pollsQuery.isRefetching}
-              onRefresh={() => void pollsQuery.refetch()}
+              refreshing={pollsQuery.isRefetching || myVotesQuery.isRefetching}
+              onRefresh={() => {
+                void pollsQuery.refetch();
+                void myVotesQuery.refetch();
+              }}
             />
           }
           ListEmptyComponent={
@@ -133,6 +154,7 @@ export default function ResidentPollsScreen() {
               <PollListRow
                 poll={poll}
                 subtitle={pollMeta(poll)}
+                voted={votedPollIds.has(poll.id)}
                 onPress={() =>
                   router.push(`/(resident)/polls/${poll.id}` as Href)
                 }
