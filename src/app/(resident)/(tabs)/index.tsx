@@ -31,6 +31,7 @@ import { VisitorSwipeDeck } from '@/components/visitors/visitor-swipe-deck';
 import type { SwipeDecision } from '@/components/visitors/swipeable-visitor-card';
 import { AnimatedPressable } from '@/components/ui/animated-pressable';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
+import { useUnreadNoticesCount } from '@/hooks/use-unread-notices-count';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { updateVisitorStatus } from '@/lib/visitors';
 import { useAuthStore } from '@/stores/authStore';
@@ -173,6 +174,7 @@ export default function ResidentHome() {
     [dismissedIds, visitors],
   );
   const pendingCount = pendingVisitors.length;
+  const unreadNotices = useUnreadNoticesCount();
 
   const handleDecision = useCallback(
     async (visitor: VisitorWithFlat, decision: SwipeDecision) => {
@@ -339,6 +341,7 @@ export default function ResidentHome() {
             icon={<Bell color="#7C6BA8" size={22} strokeWidth={1.5} />}
             bg={Pastels.lilac}
             onPress={() => router.push('/(resident)/notices')}
+            badge={unreadNotices}
           />
           <QuickIcon
             label="Helpdesk"

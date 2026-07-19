@@ -86,7 +86,7 @@ export function VisitorCard({ visitor, actions, showStatus = true }: Props) {
               >
                 <StatusIcon status={visitor.status} color={colors.icon} />
                 <Text className={`text-xs font-medium ${colors.text}`}>
-                  {statusLabel(visitor.status)}
+                  {visitor.is_missed && visitor.status === 'pending' ? 'Missed' : statusLabel(visitor.status)}
                 </Text>
               </View>
             ) : null}
@@ -99,6 +99,13 @@ export function VisitorCard({ visitor, actions, showStatus = true }: Props) {
             <Text className="mt-0.5 text-sm text-ink-muted" numberOfLines={2}>
               {visitor.purpose}
             </Text>
+          ) : null}
+          {visitor.status === 'rejected' && visitor.reject_reason ? (
+            <View className="mt-1 rounded bg-status-rejectedSoft px-2 py-1">
+              <Text className="text-xs font-medium text-status-rejected">
+                Reason: {visitor.reject_reason}
+              </Text>
+            </View>
           ) : null}
           <Text className="mt-1 text-xs text-ink-faint">
             {formatRelativeTime(visitor.created_at)}

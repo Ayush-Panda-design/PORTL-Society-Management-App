@@ -48,6 +48,11 @@ export async function upsertNotice(input: {
   body: string;
   postedBy: string;
   coverUrl?: string | null;
+  targetAudience?: string | null;
+  targetTowerId?: string | null;
+  isPinned?: boolean;
+  publishAt?: string | null;
+  expiresAt?: string | null;
 }): Promise<void> {
   if (input.id) {
     const { error } = await supabase
@@ -56,6 +61,11 @@ export async function upsertNotice(input: {
         title: input.title,
         body: input.body,
         cover_url: input.coverUrl ?? null,
+        target_audience: input.targetAudience ?? 'all',
+        target_tower_id: input.targetTowerId ?? null,
+        is_pinned: input.isPinned ?? false,
+        publish_at: input.publishAt ?? null,
+        expires_at: input.expiresAt ?? null,
       })
       .eq('id', input.id);
     if (error) throw new Error(error.message);
@@ -70,6 +80,11 @@ export async function upsertNotice(input: {
       body: input.body,
       posted_by: input.postedBy,
       cover_url: input.coverUrl ?? null,
+      target_audience: input.targetAudience ?? 'all',
+      target_tower_id: input.targetTowerId ?? null,
+      is_pinned: input.isPinned ?? false,
+      publish_at: input.publishAt ?? null,
+      expires_at: input.expiresAt ?? null,
     })
     .select('id')
     .single();
@@ -416,6 +431,8 @@ export async function createComplaint(input: {
   category: string;
   description: string;
   createdBy: string;
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  photoUrls?: string[];
 }): Promise<void> {
   const { data, error } = await supabase
     .from('complaints')
@@ -425,6 +442,8 @@ export async function createComplaint(input: {
       description: input.description,
       status: 'open',
       created_by: input.createdBy,
+      priority: input.priority ?? 'medium',
+      photo_urls: input.photoUrls && input.photoUrls.length > 0 ? input.photoUrls : null,
     })
     .select('id')
     .single();
@@ -466,6 +485,30 @@ export async function updateComplaint(input: {
       status: input.status,
     });
   }
+}
+
+export async function fetchComplaintComments(complaintId: string) {
+  const { data, error } = await supabase
+    .from('complaint_comments')
+    .select('*, author:profiles!author_id(full_name, avatar_url, role)')
+    .eq('complaint_id', complaintId)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function addComplaintComment(complaintId: string, content: string): Promise<void> {
+  const { data: user } = await supabase.auth.getUser();
+  if (!user.user) throw new Error('Not authenticated');
+
+  const { error } = await supabase
+    .from('complaint_comments')
+    .insert({
+      complaint_id: complaintId,
+      content,
+      author_id: user.user.id,
+    });
+  if (error) throw new Error(error.message);
 }
 
 export async function fetchAmenities(societyId: string): Promise<Amenity[]> {
@@ -691,16 +734,28 @@ export async function upsertStaff(input: {
   role: string;
   phone: string | null;
   photoUrl: string | null;
+  staffType?: 'staff' | 'service_provider';
+  shiftStart?: string | null;
+  shiftEnd?: string | null;
+  companyName?: string | null;
+  serviceCategory?: string | null;
 }): Promise<void> {
+  const payload: Record<string, unknown> = {
+    name: input.name,
+    role: input.role,
+    phone: input.phone,
+    photo_url: input.photoUrl,
+    staff_type: input.staffType ?? 'staff',
+    shift_start: input.shiftStart ?? null,
+    shift_end: input.shiftEnd ?? null,
+    company_name: input.companyName ?? null,
+    service_category: input.serviceCategory ?? null,
+  };
+
   if (input.id) {
     const { error } = await supabase
       .from('staff_directory')
-      .update({
-        name: input.name,
-        role: input.role,
-        phone: input.phone,
-        photo_url: input.photoUrl,
-      })
+      .update(payload)
       .eq('id', input.id);
     if (error) throw new Error(error.message);
     return;
@@ -708,10 +763,7 @@ export async function upsertStaff(input: {
 
   const { error } = await supabase.from('staff_directory').insert({
     society_id: input.societyId,
-    name: input.name,
-    role: input.role,
-    phone: input.phone,
-    photo_url: input.photoUrl,
+    ...payload,
   });
   if (error) throw new Error(error.message);
 }

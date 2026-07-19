@@ -31,6 +31,7 @@ export default function PreApproveGuestScreen() {
   const [phone, setPhone] = useState('');
   const [purpose, setPurpose] = useState('');
   const [type, setType] = useState<VisitorType>('guest');
+  const [validity, setValidity] = useState<'today' | '24h' | 'week'>('today');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -52,6 +53,15 @@ export default function PreApproveGuestScreen() {
 
     setSubmitting(true);
 
+    let expires_at = new Date();
+    if (validity === 'today') {
+      expires_at.setHours(23, 59, 59, 999);
+    } else if (validity === '24h') {
+      expires_at.setHours(expires_at.getHours() + 24);
+    } else if (validity === 'week') {
+      expires_at.setDate(expires_at.getDate() + 7);
+    }
+
     try {
       const { data, error: insertError } = await supabase.from('visitors').insert({
         name: name.trim(),
@@ -63,6 +73,7 @@ export default function PreApproveGuestScreen() {
         flat_id: profile.flat_id,
         created_by: user.id,
         society_id: profile.society_id,
+        expires_at: expires_at.toISOString(),
       }).select('*, flats(*)').single();
 
       if (insertError) {
@@ -173,6 +184,19 @@ export default function PreApproveGuestScreen() {
             options={VISITOR_TYPES.map((t) => ({ value: t.value, label: t.label }))}
             value={type}
             onChange={setType}
+          />
+
+          <Text className="mb-2 text-sm font-medium text-ink-soft">Validity</Text>
+          <ChipSelector
+            className="mb-6"
+            presentation="tiles"
+            options={[
+              { value: 'today', label: 'Today only' },
+              { value: '24h', label: 'Next 24h' },
+              { value: 'week', label: 'This week' }
+            ]}
+            value={validity}
+            onChange={(v) => setValidity(v as any)}
           />
 
           <Pressable

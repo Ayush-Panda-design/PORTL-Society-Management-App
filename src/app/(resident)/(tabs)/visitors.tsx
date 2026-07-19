@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
 import { History, UserPlus } from 'lucide-react-native';
-import { useCallback, useState } from 'react';
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
+import type { BottomSheetModal as GorhomBottomSheetModal } from '@gorhom/bottom-sheet';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -12,6 +13,7 @@ import { SkeletonList } from '@/components/visitors/loading-state';
 import { VisitorCard } from '@/components/visitors/visitor-card';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { SuccessOverlay } from '@/components/ui/success-overlay';
+import { BottomSheetModal } from '@/components/ui/bottom-sheet-modal';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { useThemePalette } from '@/hooks/use-theme';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
@@ -27,6 +29,10 @@ export default function ResidentVisitorsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [successVisible, setSuccessVisible] = useState(false);
 
+  const rejectModalRef = useRef<GorhomBottomSheetModal>(null);
+  const [rejectVisitorId, setRejectVisitorId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+
   const { visitors, isLoading, error, refresh } = useVisitorsRealtime({
     flatId: profile?.flat_id,
     statuses: ['pending'],
@@ -39,7 +45,20 @@ export default function ResidentVisitorsScreen() {
     setRefreshing(false);
   }, [refresh]);
 
-  const updateStatus = async (visitorId: string, status: 'approved' | 'rejected') => {
+  const handleRejectClick = (visitorId: string) => {
+    setRejectVisitorId(visitorId);
+    setRejectReason('');
+    rejectModalRef.current?.present();
+  };
+
+  const confirmReject = async () => {
+    if (!rejectVisitorId) return;
+    rejectModalRef.current?.dismiss();
+    await updateStatus(rejectVisitorId, 'rejected', rejectReason);
+    setRejectVisitorId(null);
+  };
+
+  const updateStatus = async (visitorId: string, status: 'approved' | 'rejected', reason?: string) => {
     if (!profile?.flat_id) return;
 
     setActionId(visitorId);
@@ -52,6 +71,7 @@ export default function ResidentVisitorsScreen() {
         visitorId,
         flatId: profile.flat_id,
         status,
+        rejectReason: reason,
         createdBy: visitor?.created_by,
         visitorName: visitor?.name,
       });
@@ -178,7 +198,7 @@ export default function ResidentVisitorsScreen() {
                   variant: 'danger',
                   icon: 'x',
                   loading: actionId === item.id,
-                  onPress: () => updateStatus(item.id, 'rejected'),
+                  onPress: () => handleRejectClick(item.id),
                 },
                 {
                   label: 'Approve',
@@ -197,6 +217,32 @@ export default function ResidentVisitorsScreen() {
         message="Visitor Approved"
         onDone={() => setSuccessVisible(false)}
       />
+
+      <BottomSheetModal ref={rejectModalRef} snapPoints={['40%']}>
+        <Text className="mb-4 text-xl font-bold text-ink">Reject Visitor</Text>
+        <Text className="mb-2 text-sm text-ink-muted">Reason (optional):</Text>
+        <TextInput
+          className="mb-4 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+          placeholder="Not expecting anyone..."
+          placeholderTextColor="#94A3B8"
+          value={rejectReason}
+          onChangeText={setRejectReason}
+        />
+        <View className="flex-row gap-3">
+          <Pressable
+            className="flex-1 rounded-xl bg-surface-muted py-3"
+            onPress={() => rejectModalRef.current?.dismiss()}
+          >
+            <Text className="text-center font-semibold text-ink">Cancel</Text>
+          </Pressable>
+          <Pressable
+            className="flex-1 rounded-xl bg-status-rejected py-3"
+            onPress={confirmReject}
+          >
+            <Text className="text-center font-semibold text-white">Confirm</Text>
+          </Pressable>
+        </View>
+      </BottomSheetModal>
     </SafeAreaView>
   );
 }

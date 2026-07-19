@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronRight } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { Pressable, SectionList, ScrollView, Text, View } from 'react-native';
+import { Pressable, SectionList, ScrollView, Text, View, TextInput, ActivityIndicator } from 'react-native';
+import { Send } from 'lucide-react-native';
+import { Image } from 'expo-image';
 
 import { AppCard, InitialsAvatar } from '@/components/ui/brand';
 import { ChipSelector } from '@/components/ui/chip-selector';
@@ -17,6 +19,8 @@ import {
   fetchComplaintsForSociety,
   fetchSocietyProfiles,
   updateComplaint,
+  fetchComplaintComments,
+  addComplaintComment,
 } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
 import { flatTowerName } from '@/lib/visitors';
@@ -73,6 +77,7 @@ export default function AdminComplaintsScreen() {
 
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [commentText, setCommentText] = useState('');
 
   const complaintsKey = queryKeys.complaints(`society:${societyId ?? 'none'}`);
 
@@ -110,6 +115,23 @@ export default function AdminComplaintsScreen() {
       await queryClient.invalidateQueries({
         queryKey: queryKeys.complaints(`society:${societyId}`),
       });
+    },
+  });
+
+  const commentsQuery = useQuery({
+    queryKey: queryKeys.complaintComments(selectedId || ''),
+    queryFn: () => fetchComplaintComments(selectedId!),
+    enabled: Boolean(selectedId),
+  });
+
+  const commentMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedId || !commentText.trim()) return;
+      await addComplaintComment(selectedId, commentText.trim());
+    },
+    onSuccess: () => {
+      setCommentText('');
+      queryClient.invalidateQueries({ queryKey: queryKeys.complaintComments(selectedId!) });
     },
   });
 
@@ -217,6 +239,25 @@ export default function AdminComplaintsScreen() {
           </Text>
           <Text className="mb-6 text-[15px] leading-6 text-ink">{selected.description}</Text>
 
+          {selected.priority && (
+             <View className="mb-4 self-start rounded-pill bg-brand-50 border border-brand-200 px-3 py-1">
+               <Text className="text-xs font-semibold text-brand-800 capitalize">
+                 Priority: {selected.priority}
+               </Text>
+             </View>
+          )}
+
+          {selected.photo_urls && selected.photo_urls.length > 0 && (
+            <View className="mb-4">
+              <Text className="mb-2 text-xs font-bold uppercase tracking-widest text-ink-muted">Photos</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {selected.photo_urls.map((url, i) => (
+                  <Image key={i} source={{ uri: url }} style={{ width: 100, height: 100, borderRadius: 8, marginRight: 8 }} />
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           <Text className="mb-2 text-xs font-semibold uppercase text-ink-muted">Status</Text>
           <SegmentedControl
             className="mb-4"
@@ -266,6 +307,35 @@ export default function AdminComplaintsScreen() {
                 'society staff'}
             </Text>
           ) : null}
+
+          <View className="mt-8">
+             <Text className="mb-2 text-xs font-bold uppercase tracking-widest text-ink-muted">Comments</Text>
+             {commentsQuery.isLoading ? <ActivityIndicator /> : null}
+             {commentsQuery.data?.map(comment => (
+               <View key={comment.id} className="mb-3 rounded-xl bg-surface-muted p-3">
+                 <Text className="text-sm font-semibold text-ink">{comment.author?.full_name} ({comment.author?.role})</Text>
+                 <Text className="text-sm text-ink-soft">{comment.content}</Text>
+                 <Text className="text-xs text-ink-faint mt-1">{new Date(comment.created_at).toLocaleString()}</Text>
+               </View>
+             ))}
+             
+             <View className="mt-2 flex-row items-center gap-2">
+               <TextInput
+                 className="flex-1 rounded-full border border-surface-border bg-surface-card px-4 py-2 text-sm text-ink"
+                 placeholder="Add a comment..."
+                 value={commentText}
+                 onChangeText={setCommentText}
+               />
+               <Pressable 
+                 className="h-10 w-10 items-center justify-center rounded-full bg-brand-primary"
+                 onPress={() => commentMutation.mutate()}
+                 disabled={commentMutation.isPending || !commentText.trim()}
+                 style={{ backgroundColor: Brand.primary }}
+               >
+                 {commentMutation.isPending ? <ActivityIndicator size="small" color="#fff" /> : <Send size={16} color="#fff" />}
+               </Pressable>
+             </View>
+          </View>
         </ScrollView>
       </ScreenHeader>
     );

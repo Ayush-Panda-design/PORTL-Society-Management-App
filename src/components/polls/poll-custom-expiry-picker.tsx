@@ -1,166 +1,224 @@
-import { Calendar, Clock } from 'lucide-react-native';
-import { useEffect, useState, type ComponentType } from 'react';
-import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
+import { ChevronDown, ChevronUp } from 'lucide-react-native';
+import { useMemo } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Brand, FontFamily } from '@/constants/theme';
-import { isDatePickerNativeAvailable, mergeDateAndTime } from '@/lib/poll-form';
 import { formatDateTime } from '@/lib/visitors';
-
-type DateTimePickerEvent = {
-  type: string;
-  nativeEvent?: { timestamp?: number };
-};
-
-type DateTimePickerProps = {
-  value: Date;
-  mode: 'date' | 'time' | 'datetime';
-  display?: 'default' | 'spinner' | 'clock' | 'calendar';
-  minimumDate?: Date;
-  onChange: (event: DateTimePickerEvent, date?: Date) => void;
-};
 
 type Props = {
   value: Date;
   onChange: (next: Date) => void;
 };
 
-export function PollCustomExpiryPicker({ value, onChange }: Props) {
-  const [DateTimePicker, setDateTimePicker] = useState<ComponentType<DateTimePickerProps> | null>(
-    null,
+const TIME_PRESETS = [
+  { label: '9:00', hour: 9, minute: 0 },
+  { label: '12:00', hour: 12, minute: 0 },
+  { label: '15:00', hour: 15, minute: 0 },
+  { label: '18:00', hour: 18, minute: 0 },
+  { label: '21:00', hour: 21, minute: 0 },
+] as const;
+
+function startOfDay(d: Date): Date {
+  const next = new Date(d);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
+function sameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
   );
-  const [androidMode, setAndroidMode] = useState<'date' | 'time' | null>(null);
-  const available = isDatePickerNativeAvailable();
+}
 
-  useEffect(() => {
-    if (!available) return;
+function buildDateOptions(from: Date, days: number): Date[] {
+  const start = startOfDay(from);
+  const options: Date[] = [];
+  for (let i = 0; i < days; i += 1) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    options.push(d);
+  }
+  return options;
+}
 
-    let cancelled = false;
-    void (async () => {
-      try {
-        const mod = await import('@react-native-community/datetimepicker');
-        if (!cancelled) setDateTimePicker(() => mod.default);
-      } catch {
-        // Native module missing until dev build is rebuilt.
-      }
-    })();
+function withDate(base: Date, day: Date): Date {
+  const next = new Date(base);
+  next.setFullYear(day.getFullYear(), day.getMonth(), day.getDate());
+  return next;
+}
 
-    return () => {
-      cancelled = true;
-    };
-  }, [available]);
+function withTime(base: Date, hour: number, minute: number): Date {
+  const next = new Date(base);
+  next.setHours(hour, minute, 0, 0);
+  return next;
+}
 
-  if (!available) {
-    return (
-      <Text className="text-sm text-slate-500" style={{ fontFamily: FontFamily.body }}>
-        Custom dates need a dev build rebuild. Use 1 day / 3 days / 1 week presets for now.
+function clampFuture(next: Date): Date {
+  const min = new Date(Date.now() + 60_000);
+  return next.getTime() < min.getTime() ? min : next;
+}
+
+function Stepper({
+  label,
+  display,
+  onMinus,
+  onPlus,
+}: {
+  label: string;
+  display: string;
+  onMinus: () => void;
+  onPlus: () => void;
+}) {
+  return (
+    <View className="flex-1 items-center rounded-xl border border-slate-200 bg-white px-2 py-2">
+      <Text
+        className="mb-1 text-[11px] uppercase text-slate-400"
+        style={{ fontFamily: FontFamily.medium }}
+      >
+        {label}
       </Text>
-    );
-  }
+      <Pressable
+        onPress={onPlus}
+        hitSlop={8}
+        className="h-9 w-full items-center justify-center rounded-lg bg-slate-50"
+        accessibilityLabel={`Increase ${label}`}
+      >
+        <ChevronUp color={Brand.primary} size={18} />
+      </Pressable>
+      <Text
+        className="py-1 text-2xl text-slate-900"
+        style={{ fontFamily: FontFamily.heading }}
+      >
+        {display}
+      </Text>
+      <Pressable
+        onPress={onMinus}
+        hitSlop={8}
+        className="h-9 w-full items-center justify-center rounded-lg bg-slate-50"
+        accessibilityLabel={`Decrease ${label}`}
+      >
+        <ChevronDown color={Brand.primary} size={18} />
+      </Pressable>
+    </View>
+  );
+}
 
-  if (!DateTimePicker) {
-    return (
-      <View className="items-center py-4">
-        <ActivityIndicator color={Brand.primary} />
-      </View>
-    );
-  }
+/**
+ * Pure JS date + time picker. Avoids Android's native DateTimePicker dialog,
+ * which gets stuck when opened inside a React Native Modal.
+ */
+export function PollCustomExpiryPicker({ value, onChange }: Props) {
+  const today = useMemo(() => startOfDay(new Date()), []);
+  const dateOptions = useMemo(() => buildDateOptions(today, 21), [today]);
 
-  const onAndroidChange = (event: DateTimePickerEvent, selected?: Date) => {
-    if (event.type === 'dismissed') {
-      setAndroidMode(null);
-      return;
-    }
-    if (!selected) {
-      setAndroidMode(null);
-      return;
-    }
-
-    if (androidMode === 'date') {
-      onChange(mergeDateAndTime(selected, value));
-      setAndroidMode('time');
-      return;
-    }
-
-    onChange(mergeDateAndTime(value, selected));
-    setAndroidMode(null);
-  };
-
-  if (Platform.OS === 'ios') {
-    return (
-      <View className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-        <DateTimePicker
-          value={value}
-          mode="datetime"
-          display="spinner"
-          minimumDate={new Date()}
-          onChange={(_, selected) => {
-            if (selected) onChange(selected);
-          }}
-        />
-      </View>
-    );
-  }
+  const hour = value.getHours();
+  const minute = value.getMinutes();
 
   return (
-    <View className="gap-2">
-      <View className="flex-row gap-2">
-        <Pressable
-          onPress={() => setAndroidMode('date')}
-          className="flex-1 flex-row items-center gap-2 rounded-xl border border-slate-200 bg-surface-card px-4 py-3"
+    <View className="gap-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-3">
+      <View>
+        <Text className="mb-1 text-sm text-slate-800" style={{ fontFamily: FontFamily.heading }}>
+          1. Date
+        </Text>
+        <Text className="mb-2 text-xs text-slate-500" style={{ fontFamily: FontFamily.body }}>
+          Pick the day the poll should close
+        </Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 8, paddingRight: 4 }}
         >
-          <Calendar color={Brand.primary} size={18} />
-          <View className="min-w-0 flex-1">
-            <Text
-              className="text-[11px] uppercase text-slate-400"
-              style={{ fontFamily: FontFamily.medium }}
-            >
-              Date
-            </Text>
-            <Text className="text-base text-slate-900" style={{ fontFamily: FontFamily.heading }}>
-              {value.toLocaleDateString(undefined, {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-              })}
-            </Text>
-          </View>
-        </Pressable>
-
-        <Pressable
-          onPress={() => setAndroidMode('time')}
-          className="flex-1 flex-row items-center gap-2 rounded-xl border border-slate-200 bg-surface-card px-4 py-3"
-        >
-          <Clock color={Brand.primary} size={18} />
-          <View className="min-w-0 flex-1">
-            <Text
-              className="text-[11px] uppercase text-slate-400"
-              style={{ fontFamily: FontFamily.medium }}
-            >
-              Time
-            </Text>
-            <Text className="text-base text-slate-900" style={{ fontFamily: FontFamily.heading }}>
-              {value.toLocaleTimeString(undefined, {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </Text>
-          </View>
-        </Pressable>
+          {dateOptions.map((day) => {
+            const selected = sameDay(day, value);
+            const label = day.toLocaleDateString(undefined, {
+              weekday: 'short',
+              day: 'numeric',
+              month: 'short',
+            });
+            return (
+              <Pressable
+                key={day.toISOString()}
+                onPress={() => onChange(clampFuture(withDate(value, day)))}
+                className={`rounded-xl px-3 py-2.5 ${
+                  selected ? 'bg-brand-700' : 'border border-slate-200 bg-white'
+                }`}
+              >
+                <Text
+                  className={`text-sm ${selected ? 'text-white' : 'text-slate-800'}`}
+                  style={{ fontFamily: FontFamily.heading }}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       </View>
 
-      <Text className="text-center text-sm text-slate-500" style={{ fontFamily: FontFamily.body }}>
-        Ends {formatDateTime(value.toISOString())}
-      </Text>
+      <View className="border-t border-slate-200 pt-3">
+        <Text className="mb-1 text-sm text-slate-800" style={{ fontFamily: FontFamily.heading }}>
+          2. Time
+        </Text>
+        <Text className="mb-2 text-xs text-slate-500" style={{ fontFamily: FontFamily.body }}>
+          Choose a quick time, or fine-tune hour and minute
+        </Text>
 
-      {androidMode ? (
-        <DateTimePicker
-          value={value}
-          mode={androidMode}
-          minimumDate={androidMode === 'date' ? new Date() : undefined}
-          onChange={onAndroidChange}
-        />
-      ) : null}
+        <View className="mb-3 flex-row flex-wrap gap-2">
+          {TIME_PRESETS.map((preset) => {
+            const selected = hour === preset.hour && minute === preset.minute;
+            return (
+              <Pressable
+                key={preset.label}
+                onPress={() =>
+                  onChange(clampFuture(withTime(value, preset.hour, preset.minute)))
+                }
+                className={`rounded-full px-3 py-1.5 ${
+                  selected ? 'bg-brand-700' : 'border border-slate-200 bg-white'
+                }`}
+              >
+                <Text
+                  className={`text-sm ${selected ? 'text-white' : 'text-slate-700'}`}
+                  style={{ fontFamily: FontFamily.heading }}
+                >
+                  {preset.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <View className="flex-row gap-3">
+          <Stepper
+            label="Hour"
+            display={String(hour).padStart(2, '0')}
+            onMinus={() =>
+              onChange(clampFuture(withTime(value, (hour + 23) % 24, minute)))
+            }
+            onPlus={() =>
+              onChange(clampFuture(withTime(value, (hour + 1) % 24, minute)))
+            }
+          />
+          <Stepper
+            label="Minute"
+            display={String(minute).padStart(2, '0')}
+            onMinus={() =>
+              onChange(clampFuture(withTime(value, hour, (minute + 55) % 60)))
+            }
+            onPlus={() =>
+              onChange(clampFuture(withTime(value, hour, (minute + 5) % 60)))
+            }
+          />
+        </View>
+      </View>
+
+      <Text
+        className="text-center text-sm text-slate-700"
+        style={{ fontFamily: FontFamily.heading }}
+      >
+        Closes {formatDateTime(value.toISOString())}
+      </Text>
     </View>
   );
 }

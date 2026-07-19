@@ -77,6 +77,10 @@ export default function ScanPassScreen() {
         throw new Error(`Pass is not valid. Status: ${vData.status}`);
       }
 
+      if (vData.expires_at && new Date(vData.expires_at) < new Date()) {
+        throw new Error('This QR pass has expired.');
+      }
+
       setVisitor(vData as VisitorWithFlat);
 
       // If no photo URL exists (pre-approved guest), we MUST take a photo

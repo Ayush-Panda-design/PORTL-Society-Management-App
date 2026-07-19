@@ -21,6 +21,7 @@ export const queryKeys = {
     [...queryKeys.polls(societyId), 'my-votes', userId, ...pollIds] as const,
   pollOptionCounts: (pollId: string) => ['poll-option-counts', pollId] as const,
   complaints: (key: string) => ['complaints', key] as const,
+  complaintComments: (complaintId: string) => ['complaint-comments', complaintId] as const,
   amenities: (societyId: string) => ['amenities', societyId] as const,
   amenityBookings: (amenityId: string, date: string) =>
     ['amenity-bookings', amenityId, date] as const,

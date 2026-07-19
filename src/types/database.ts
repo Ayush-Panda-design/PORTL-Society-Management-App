@@ -166,6 +166,10 @@ export type Visitor = {
   created_by: string | null;
   society_id: string;
   created_at: string;
+  expires_at?: string | null;
+  reject_reason?: string | null;
+  responded_at?: string | null;
+  is_missed?: boolean;
 };
 
 export type VisitorWithFlat = Visitor & {
@@ -185,6 +189,8 @@ export type VisitorLog = {
   entry_time: string | null;
   exit_time: string | null;
   guard_id: string | null;
+  notes?: string | null;
+  is_flagged?: boolean;
 };
 
 export type VisitorLogWithVisitor = VisitorLog & {
@@ -208,6 +214,8 @@ export const VISITOR_STATUSES: { value: VisitorStatus; label: string }[] = [
 
 export type ComplaintStatus = 'open' | 'in_progress' | 'resolved';
 
+export type ComplaintPriority = 'low' | 'medium' | 'high' | 'critical';
+
 export type Notice = {
   id: string;
   society_id: string;
@@ -216,6 +224,11 @@ export type Notice = {
   cover_url?: string | null;
   posted_by: string | null;
   created_at: string;
+  target_audience?: string | null;
+  target_tower_id?: string | null;
+  is_pinned?: boolean;
+  publish_at?: string | null;
+  expires_at?: string | null;
 };
 
 export type Poll = {
@@ -259,6 +272,16 @@ export type Complaint = {
   status: ComplaintStatus;
   assigned_to: string | null;
   created_by?: string | null;
+  created_at: string;
+  priority?: ComplaintPriority;
+  photo_urls?: string[] | null;
+};
+
+export type ComplaintComment = {
+  id: string;
+  complaint_id: string;
+  author_id: string | null;
+  content: string;
   created_at: string;
 };
 
@@ -330,6 +353,14 @@ export type StaffMember = {
   role: string;
   phone: string | null;
   photo_url: string | null;
+  staff_type?: 'staff' | 'service_provider';
+  shift_start?: string | null;
+  shift_end?: string | null;
+  shift_days?: string[] | null;
+  is_on_duty?: boolean;
+  company_name?: string | null;
+  service_category?: string | null;
+  rating?: number | null;
 };
 
 export const COMPLAINT_CATEGORIES = [

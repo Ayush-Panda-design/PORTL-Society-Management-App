@@ -156,13 +156,15 @@ export async function notifyVisitorDecision(params: {
   createdBy: string | null;
   visitorName: string;
   status: 'approved' | 'rejected';
+  rejectReason?: string;
 }): Promise<void> {
   if (!params.createdBy) return;
   const verb = params.status === 'approved' ? 'approved' : 'rejected';
+  const reasonText = params.rejectReason ? ` Reason: ${params.rejectReason}` : '';
   await notifyUsers({
     userIds: [params.createdBy],
     title: `Visitor ${verb}`,
-    body: `${params.visitorName} was ${verb} by the resident.`,
+    body: `${params.visitorName} was ${verb} by the resident.${reasonText}`,
     data: {
       type: 'visitor_decision',
       status: params.status,

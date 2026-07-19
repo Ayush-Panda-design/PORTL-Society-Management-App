@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
-import { Plus, Trash2 } from 'lucide-react-native';
+import { Plus, Trash2, Clock } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -9,6 +9,7 @@ import {
   FlatList,
   Modal,
   Pressable,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -17,6 +18,7 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
 import { AvatarRing, InitialsAvatar, FloatingActionBtn } from '@/components/ui/brand';
 import { Card } from '@/components/ui/card';
+import { ChipSelector } from '@/components/ui/chip-selector';
 import { Tokens } from '@/theme/tokens';
 import { Edit2 } from 'lucide-react-native';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -54,6 +56,11 @@ export default function AdminStaffScreen() {
   const [phone, setPhone] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [staffType, setStaffType] = useState<'staff' | 'service_provider'>('staff');
+  const [shiftStart, setShiftStart] = useState('');
+  const [shiftEnd, setShiftEnd] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [serviceCategory, setServiceCategory] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
   const listQuery = useQuery({
@@ -84,6 +91,11 @@ export default function AdminStaffScreen() {
         role: role.trim(),
         phone: phone.trim() || null,
         photoUrl: nextPhoto,
+        staffType,
+        shiftStart: shiftStart.trim() || null,
+        shiftEnd: shiftEnd.trim() || null,
+        companyName: companyName.trim() || null,
+        serviceCategory: serviceCategory.trim() || null,
       });
     },
     onMutate: async () => {
@@ -94,7 +106,7 @@ export default function AdminStaffScreen() {
       if (!societyId || !trimmedName || !trimmedRole) return { previous };
 
       if (editing) {
-        queryClient.setQueryData<StaffMember[]>(staffKey, (old = []) =>
+          queryClient.setQueryData<StaffMember[]>(staffKey, (old = []) =>
           old.map((s) =>
             s.id === editing.id
               ? {
@@ -103,6 +115,11 @@ export default function AdminStaffScreen() {
                   role: trimmedRole,
                   phone: phone.trim() || null,
                   photo_url: photoUrl ?? s.photo_url,
+                  staff_type: staffType,
+                  shift_start: shiftStart.trim() || null,
+                  shift_end: shiftEnd.trim() || null,
+                  company_name: companyName.trim() || null,
+                  service_category: serviceCategory.trim() || null,
                 }
               : s,
           ),
@@ -115,6 +132,11 @@ export default function AdminStaffScreen() {
           role: trimmedRole,
           phone: phone.trim() || null,
           photo_url: photoUrl,
+          staff_type: staffType,
+          shift_start: shiftStart.trim() || null,
+          shift_end: shiftEnd.trim() || null,
+          company_name: companyName.trim() || null,
+          service_category: serviceCategory.trim() || null,
         };
         queryClient.setQueryData<StaffMember[]>(staffKey, (old = []) =>
           [...old, optimistic].sort(
@@ -179,6 +201,11 @@ export default function AdminStaffScreen() {
     setPhone('');
     setPhotoUri(null);
     setPhotoUrl(null);
+    setStaffType('staff');
+    setShiftStart('');
+    setShiftEnd('');
+    setCompanyName('');
+    setServiceCategory('');
     setFormError(null);
     setModalOpen(true);
   };
@@ -190,6 +217,11 @@ export default function AdminStaffScreen() {
     setPhone(item.phone ?? '');
     setPhotoUri(item.photo_url);
     setPhotoUrl(item.photo_url);
+    setStaffType((item.staff_type as any) ?? 'staff');
+    setShiftStart(item.shift_start ?? '');
+    setShiftEnd(item.shift_end ?? '');
+    setCompanyName(item.company_name ?? '');
+    setServiceCategory(item.service_category ?? '');
     setFormError(null);
     setModalOpen(true);
   };
@@ -308,7 +340,8 @@ export default function AdminStaffScreen() {
           behavior="padding"
           className="flex-1 justify-end bg-black/40"
         >
-          <View className="rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
+          <View className="max-h-[90%] rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
+            <ScrollView keyboardShouldPersistTaps="handled">
             <Text style={{ ...Tokens.typography.h2, color: Tokens.color.textPrimary, marginBottom: 16 }}>
               {editing ? 'Edit staff' : 'Add staff'}
             </Text>
@@ -357,6 +390,54 @@ export default function AdminStaffScreen() {
               onChangeText={setPhone}
             />
 
+            <Text style={{ fontSize: 11, fontWeight: '600', color: Tokens.color.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>Staff Type</Text>
+            <ChipSelector
+              className="mb-4"
+              presentation="tiles"
+              options={[
+                { value: 'staff', label: 'Staff' },
+                { value: 'service_provider', label: 'Service Provider' },
+              ]}
+              value={staffType}
+              onChange={(v) => setStaffType(v as any)}
+            />
+
+            {staffType === 'service_provider' && (
+              <>
+                <TextInput
+                  className="mb-3 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+                  placeholder="Company Name"
+                  placeholderTextColor="#94A3B8"
+                  value={companyName}
+                  onChangeText={setCompanyName}
+                />
+                <TextInput
+                  className="mb-4 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+                  placeholder="Service Category (e.g. Plumbing)"
+                  placeholderTextColor="#94A3B8"
+                  value={serviceCategory}
+                  onChangeText={setServiceCategory}
+                />
+              </>
+            )}
+
+            <View className="flex-row gap-2 mb-3">
+              <TextInput
+                className="flex-1 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+                placeholder="Shift start (e.g. 08:00)"
+                placeholderTextColor="#94A3B8"
+                value={shiftStart}
+                onChangeText={setShiftStart}
+              />
+              <TextInput
+                className="flex-1 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+                placeholder="Shift end (e.g. 17:00)"
+                placeholderTextColor="#94A3B8"
+                value={shiftEnd}
+                onChangeText={setShiftEnd}
+              />
+            </View>
+
             <View className="flex-row gap-2">
               <Pressable
                 onPress={() => setModalOpen(false)}
@@ -377,6 +458,7 @@ export default function AdminStaffScreen() {
                 )}
               </Pressable>
             </View>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </Modal>

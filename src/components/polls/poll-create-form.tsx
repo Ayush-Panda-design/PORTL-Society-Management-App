@@ -1,5 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react-native';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -18,7 +18,6 @@ import {
   type PollTemplateId,
   defaultCustomExpiryDate,
   describePollExpiry,
-  isDatePickerNativeAvailable,
   pollDurationOptions,
   validatePollForm,
 } from '@/lib/poll-form';
@@ -35,17 +34,10 @@ export function PollCreateForm({ onSubmit, onCancel, isSubmitting, error }: Prop
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState<string[]>(['Yes', 'No']);
   const [duration, setDuration] = useState<PollDurationPreset>('3d');
-  const [customExpiry, setCustomExpiry] = useState(defaultCustomExpiryDate);
+  const [customExpiry, setCustomExpiry] = useState(() => defaultCustomExpiryDate());
   const [localError, setLocalError] = useState<string | null>(null);
 
   const durationOptions = useMemo(() => pollDurationOptions(), []);
-  const canPickCustomDate = isDatePickerNativeAvailable();
-
-  useEffect(() => {
-    if (!canPickCustomDate && duration === 'custom') {
-      setDuration('3d');
-    }
-  }, [canPickCustomDate, duration]);
 
   const activeTemplate = useMemo(
     () => POLL_TEMPLATES.find((t) => t.value === template) ?? POLL_TEMPLATES[0],
@@ -185,8 +177,14 @@ export function PollCreateForm({ onSubmit, onCancel, isSubmitting, error }: Prop
           {expiryHint}
         </Text>
 
-        {duration === 'custom' && canPickCustomDate ? (
+        {duration === 'custom' ? (
           <View className="mb-2">
+            <Text
+              className="mb-2 text-sm text-slate-700"
+              style={{ fontFamily: FontFamily.heading }}
+            >
+              Choose end date & time
+            </Text>
             <PollCustomExpiryPicker value={customExpiry} onChange={setCustomExpiry} />
           </View>
         ) : null}

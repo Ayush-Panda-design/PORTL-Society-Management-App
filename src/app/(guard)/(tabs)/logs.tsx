@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { Alert, FlatList, Modal, Pressable, Share, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Flag, Download, X } from 'lucide-react-native';
 
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
@@ -11,7 +12,7 @@ import { ChipSelector } from '@/components/ui/chip-selector';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
-import { formatDateTime } from '@/lib/visitors';
+import { formatDateTime, flatTowerName } from '@/lib/visitors';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { VisitorStatus, VisitorWithFlat } from '@/types/database';
@@ -38,9 +39,10 @@ export default function GuardLogsScreen() {
   const [actionId, setActionId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [logMeta, setLogMeta] = useState<Record<string, { logId: string; entry: string | null; exit: string | null }>>(
-    {},
-  );
+  const [notesModal, setNotesModal] = useState<{ visitorId: string; logId: string | null } | null>(null);
+  const [notesText, setNotesText] = useState('');
+  const [flagged, setFlagged] = useState<Set<string>>(new Set());
+  const [logMeta, setLogMeta] = useState<Record<string, { logId: string; entry: string | null; exit: string | null; notes: string | null; isFlagged: boolean }>>({});
 
   const statuses = useMemo(
     () => (statusFilter === 'all' ? undefined : [statusFilter]),
@@ -71,21 +73,29 @@ export default function GuardLogsScreen() {
 
     const { data } = await supabase
       .from('visitor_logs')
-      .select('id, visitor_id, entry_time, exit_time')
+      .select('id, visitor_id, entry_time, exit_time, notes, is_flagged')
       .in('visitor_id', ids)
       .order('entry_time', { ascending: false });
 
-    const map: Record<string, { logId: string; entry: string | null; exit: string | null }> = {};
+    const map: Record<string, { logId: string; entry: string | null; exit: string | null; notes: string | null; isFlagged: boolean }> = {};
     for (const row of data ?? []) {
       if (!map[row.visitor_id]) {
         map[row.visitor_id] = {
           logId: row.id,
           entry: row.entry_time,
           exit: row.exit_time,
+          notes: row.notes ?? null,
+          isFlagged: row.is_flagged ?? false,
         };
       }
     }
     setLogMeta(map);
+    // Sync flagged set
+    const newFlagged = new Set<string>();
+    for (const [visitorId, meta] of Object.entries(map)) {
+      if (meta.isFlagged) newFlagged.add(visitorId);
+    }
+    setFlagged(newFlagged);
   }, []);
 
   const filteredRef = useRef(filtered);
@@ -165,6 +175,67 @@ export default function GuardLogsScreen() {
     }
   };
 
+  const toggleFlag = async (visitor: VisitorWithFlat) => {
+    const meta = logMeta[visitor.id];
+    if (!meta?.logId) return;
+    const newVal = !meta.isFlagged;
+    const { error } = await supabase
+      .from('visitor_logs')
+      .update({ is_flagged: newVal })
+      .eq('id', meta.logId);
+    if (!error) {
+      setLogMeta(prev => ({
+        ...prev,
+        [visitor.id]: { ...prev[visitor.id]!, isFlagged: newVal },
+      }));
+      setFlagged(prev => {
+        const next = new Set(prev);
+        if (newVal) next.add(visitor.id); else next.delete(visitor.id);
+        return next;
+      });
+    }
+  };
+
+  const openNotes = (visitor: VisitorWithFlat) => {
+    const meta = logMeta[visitor.id];
+    setNotesModal({ visitorId: visitor.id, logId: meta?.logId ?? null });
+    setNotesText(meta?.notes ?? '');
+  };
+
+  const saveNotes = async () => {
+    if (!notesModal) return;
+    const { logId, visitorId } = notesModal;
+    if (logId) {
+      await supabase.from('visitor_logs').update({ notes: notesText.trim() || null }).eq('id', logId);
+    }
+    setLogMeta(prev => ({
+      ...prev,
+      [visitorId]: { ...prev[visitorId]!, notes: notesText.trim() || null },
+    }));
+    setNotesModal(null);
+  };
+
+  const exportCsv = async () => {
+    const rows = filtered.map(v => {
+      const meta = logMeta[v.id];
+      const flat = v.flats ? `Flat ${v.flats.number}${flatTowerName(v.flats.towers) ? ` (${flatTowerName(v.flats.towers)})` : ''}` : 'Unknown';
+      return [
+        `"${v.name}"`,
+        `"${v.phone ?? ''}"`,
+        `"${v.type}"`,
+        `"${v.status}"`,
+        `"${flat}"`,
+        `"${formatDateTime(meta?.entry ?? null)}"`,
+        `"${formatDateTime(meta?.exit ?? null)}"`,
+        `"${meta?.isFlagged ? 'YES' : 'no'}"`,
+        `"${(meta?.notes ?? '').replace(/"/g, '""')}"`,
+      ].join(',');
+    });
+    const header = 'Name,Phone,Type,Status,Flat,Entry,Exit,Flagged,Notes';
+    const csv = [header, ...rows].join('\n');
+    await Share.share({ message: csv, title: 'Visitor Logs Export' });
+  };
+
   if (!profile?.society_id) {
     return (
       <SafeAreaView className="flex-1 bg-surface">
@@ -176,10 +247,21 @@ export default function GuardLogsScreen() {
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
       <View className="px-4 pb-2 pt-3">
-        <Text className="text-2xl text-ink" style={{ fontFamily: FontFamily.display }}>
-          Visitor logs
-        </Text>
-        <Text className="mb-4 mt-0.5 text-sm text-ink-muted">Society history · filters live</Text>
+        <View className="flex-row items-center justify-between">
+          <View>
+            <Text className="text-2xl text-ink" style={{ fontFamily: FontFamily.display }}>
+              Visitor logs
+            </Text>
+            <Text className="mb-2 mt-0.5 text-sm text-ink-muted">Society history · filters live</Text>
+          </View>
+          <Pressable
+            onPress={() => void exportCsv()}
+            className="flex-row items-center gap-1.5 rounded-xl bg-brand-50 border border-brand-200 px-3 py-2"
+          >
+            <Download size={14} color={Brand.primary} />
+            <Text className="text-xs font-semibold" style={{ color: Brand.primary }}>Export</Text>
+          </Pressable>
+        </View>
 
         <View className="mb-3">
           <SegmentedControl
@@ -230,28 +312,36 @@ export default function GuardLogsScreen() {
           renderItem={({ item }) => {
             const meta = logMeta[item.id];
             const canExit = item.status === 'checked_in';
+            const isFlagged = flagged.has(item.id);
 
             return (
               <View>
                 <VisitorCard
                   visitor={item}
-                  actions={
-                    canExit
-                      ? [
-                          {
-                            label: 'Mark Exit',
-                            variant: 'secondary',
-                            loading: actionId === item.id,
-                            onPress: () => markExit(item),
-                          },
-                        ]
-                      : undefined
-                  }
+                  actions={[
+                    ...(canExit ? [{
+                      label: 'Mark Exit',
+                      variant: 'secondary' as const,
+                      loading: actionId === item.id,
+                      onPress: () => markExit(item),
+                    }] : []),
+                    {
+                      label: isFlagged ? '🚩 Flagged' : 'Flag',
+                      variant: isFlagged ? 'danger' as const : 'secondary' as const,
+                      onPress: () => void toggleFlag(item),
+                    },
+                    {
+                      label: 'Notes',
+                      variant: 'secondary' as const,
+                      onPress: () => openNotes(item),
+                    },
+                  ]}
                 />
                 {(meta?.entry || meta?.exit) && (
                   <View className="-mt-1 mb-1 rounded-b-card bg-surface-muted px-4 py-2" style={{ borderWidth: 1, borderColor: '#E5E8E4', borderTopWidth: 0 }}>
                     <Text className="text-xs text-ink-muted" style={{ fontFamily: FontFamily.heading }}>
                       In {formatDateTime(meta.entry)} {meta?.exit ? `· Out ${formatDateTime(meta.exit)}` : ''}
+                      {meta?.notes ? ` · 📝 ${meta.notes}` : ''}
                     </Text>
                   </View>
                 )}
@@ -260,6 +350,35 @@ export default function GuardLogsScreen() {
           }}
         />
       )}
+
+      {/* Notes Modal */}
+      <Modal visible={notesModal !== null} animationType="fade" transparent>
+        <View className="flex-1 justify-center bg-black/50 px-6">
+          <View className="rounded-2xl bg-surface-card p-5">
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className="text-lg text-ink" style={{ fontFamily: FontFamily.display }}>Guard Notes</Text>
+              <Pressable onPress={() => setNotesModal(null)}>
+                <X size={20} color={Brand.inkMuted} />
+              </Pressable>
+            </View>
+            <TextInput
+              className="min-h-[80px] rounded-xl border border-surface-border bg-surface-muted px-4 py-3 text-base text-ink mb-4"
+              placeholder="Record anything unusual about this visit…"
+              multiline
+              textAlignVertical="top"
+              value={notesText}
+              onChangeText={setNotesText}
+            />
+            <Pressable
+              className="items-center rounded-xl py-3"
+              style={{ backgroundColor: Brand.primary }}
+              onPress={() => void saveNotes()}
+            >
+              <Text className="font-semibold text-white">Save Notes</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

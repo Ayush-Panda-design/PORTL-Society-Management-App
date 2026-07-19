@@ -20,11 +20,13 @@ import {
   ScrollView,
   Text,
   TextInput,
+  Switch,
   View,
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
 import { AppCard, FloatingActionBtn } from '@/components/ui/brand';
+import { ChipSelector } from '@/components/ui/chip-selector';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SearchField } from '@/components/ui/search-field';
 import { EmptyState } from '@/components/visitors/empty-state';
@@ -32,7 +34,7 @@ import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { formatNoticeDate } from '@/lib/community';
-import { deleteNotice, fetchNotices, uploadNoticeCover, upsertNotice } from '@/lib/community-api';
+import { deleteNotice, fetchNotices, fetchTowers, uploadNoticeCover, upsertNotice } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
 import { useCommunityUiStore } from '@/stores/communityUiStore';
@@ -62,9 +64,18 @@ export default function AdminNoticesScreen() {
   const [body, setBody] = useState('');
   const [coverUri, setCoverUri] = useState<string | null>(null);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [targetAudience, setTargetAudience] = useState<'all' | 'tower'>('all');
+  const [targetTowerId, setTargetTowerId] = useState<string>('');
+  const [isPinned, setIsPinned] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const noticesKey = queryKeys.notices(societyId ?? 'none');
+
+  const towersQuery = useQuery({
+    queryKey: queryKeys.towers(societyId ?? 'none'),
+    queryFn: () => fetchTowers(societyId!),
+    enabled: Boolean(societyId),
+  });
 
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: noticesKey,
@@ -102,6 +113,9 @@ export default function AdminNoticesScreen() {
         body: body.trim(),
         postedBy: userId,
         coverUrl: nextCover,
+        targetAudience,
+        targetTowerId: targetAudience === 'tower' ? targetTowerId : null,
+        isPinned,
       });
     },
     onMutate: async () => {
@@ -116,6 +130,9 @@ export default function AdminNoticesScreen() {
                 title: title.trim(),
                 body: body.trim(),
                 cover_url: coverUri ?? n.cover_url,
+                target_audience: targetAudience,
+                target_tower_id: targetAudience === 'tower' ? targetTowerId : null,
+                is_pinned: isPinned,
               }
             : n,
         ),
@@ -159,6 +176,9 @@ export default function AdminNoticesScreen() {
     setBody('');
     setCoverUri(null);
     setCoverUrl(null);
+    setTargetAudience('all');
+    setTargetTowerId('');
+    setIsPinned(false);
     setFormError(null);
     setModalOpen(true);
   };
@@ -170,6 +190,9 @@ export default function AdminNoticesScreen() {
     setBody(notice.body);
     setCoverUri(notice.cover_url ?? null);
     setCoverUrl(notice.cover_url ?? null);
+    setTargetAudience((notice.target_audience as any) ?? 'all');
+    setTargetTowerId(notice.target_tower_id ?? '');
+    setIsPinned(notice.is_pinned ?? false);
     setFormError(null);
     setModalOpen(true);
   };
@@ -297,6 +320,36 @@ export default function AdminNoticesScreen() {
               value={body}
               onChangeText={setBody}
             />
+
+            <View className="mb-4 flex-row items-center justify-between">
+              <Text className="text-base text-ink font-medium">Pin Notice</Text>
+              <Switch value={isPinned} onValueChange={setIsPinned} />
+            </View>
+
+            <Text className="mb-2 text-xs font-semibold uppercase text-ink-muted">Audience</Text>
+            <ChipSelector
+              className="mb-4"
+              presentation="tiles"
+              options={[
+                { value: 'all', label: 'All Residents' },
+                { value: 'tower', label: 'Specific Tower' }
+              ]}
+              value={targetAudience}
+              onChange={(v) => setTargetAudience(v as any)}
+            />
+
+            {targetAudience === 'tower' && (
+              <View className="mb-4">
+                <ChipSelector
+                  title="Select Tower"
+                  presentation="sheet"
+                  options={(towersQuery.data || []).map(t => ({ value: t.id, label: t.name }))}
+                  value={targetTowerId}
+                  onChange={setTargetTowerId}
+                />
+              </View>
+            )}
+
             <View className="flex-row gap-2">
               <Pressable
                 onPress={closeModal}
@@ -475,6 +528,11 @@ export default function AdminNoticesScreen() {
                       >
                         {item.title}
                       </Text>
+                      {item.is_pinned && (
+                        <View className="rounded bg-brand-50 px-1 py-0.5">
+                          <Text className="text-[10px] font-bold text-brand-800">PINNED</Text>
+                        </View>
+                      )}
                       {unread ? (
                         <View
                           className="h-2 w-2 rounded-pill"

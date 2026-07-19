@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
 import {
   ActivityIndicator,
   FlatList,
@@ -23,22 +24,27 @@ import {
   ShieldAlert,
   Wrench,
   Zap,
+  Image as ImageIcon,
+  Send,
 } from 'lucide-react-native';
+import { Image } from 'expo-image';
 
 import { AppCard, FloatingActionBtn } from '@/components/ui/brand';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SearchField } from '@/components/ui/search-field';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
+import { ChipSelector } from '@/components/ui/chip-selector';
 import { SuccessOverlay } from '@/components/ui/success-overlay';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { complaintStatusTone } from '@/lib/community';
-import { createComplaint, fetchComplaintsForFlat } from '@/lib/community-api';
+import { uploadLocalImage } from '@/lib/storage-upload';
+import { createComplaint, fetchComplaintsForFlat, fetchComplaintComments, addComplaintComment } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
-import { COMPLAINT_CATEGORIES, type Complaint } from '@/types/database';
+import { COMPLAINT_CATEGORIES, type Complaint, type ComplaintPriority } from '@/types/database';
 
 const CATEGORY_ICONS: Record<string, { Icon: typeof Wrench; color: string; bg: string }> = {
   Parking: { Icon: Car, color: '#6B5CC4', bg: Pastels.lilac },
@@ -98,8 +104,11 @@ export default function ResidentHelpdeskScreen() {
   const [composeOpen, setComposeOpen] = useState(false);
   const [category, setCategory] = useState<string>(COMPLAINT_CATEGORIES[0]);
   const [description, setDescription] = useState('');
+  const [priority, setPriority] = useState<ComplaintPriority>('medium');
+  const [photos, setPhotos] = useState<string[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
   const [successVisible, setSuccessVisible] = useState(false);
+  const [commentText, setCommentText] = useState('');
 
   const listQuery = useQuery({
     queryKey: queryKeys.complaints(`flat:${flatId ?? 'none'}`),
@@ -120,15 +129,32 @@ export default function ResidentHelpdeskScreen() {
       if (!flatId) throw new Error('No flat linked to your profile.');
       if (!userId) throw new Error('Not signed in.');
       if (!description.trim()) throw new Error('Please describe the issue.');
+      
+      const photoUrls: string[] = [];
+      if (photos.length > 0) {
+        for (const uri of photos) {
+          const { publicUrl } = await uploadLocalImage({
+            bucket: 'complaint-photos',
+            societyId: profile?.society_id || 'unknown',
+            uri,
+          });
+          if (publicUrl) photoUrls.push(publicUrl);
+        }
+      }
+
       await createComplaint({
         flatId,
         category,
         description: description.trim(),
         createdBy: userId,
+        priority,
+        photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
       });
     },
     onSuccess: async () => {
       setDescription('');
+      setPhotos([]);
+      setPriority('medium');
       setComposeOpen(false);
       setSuccessVisible(true);
       setFormError(null);
@@ -153,6 +179,34 @@ export default function ResidentHelpdeskScreen() {
       </ScreenHeader>
     );
   }
+
+  const commentsQuery = useQuery({
+    queryKey: queryKeys.complaintComments(selectedId || ''),
+    queryFn: () => fetchComplaintComments(selectedId!),
+    enabled: Boolean(selectedId),
+  });
+
+  const commentMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedId || !commentText.trim()) return;
+      await addComplaintComment(selectedId, commentText.trim());
+    },
+    onSuccess: () => {
+      setCommentText('');
+      queryClient.invalidateQueries({ queryKey: queryKeys.complaintComments(selectedId!) });
+    },
+  });
+
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0].uri) {
+      setPhotos([...photos, result.assets[0].uri]);
+    }
+  };
 
   if (selected) {
     const { Icon: CatIcon, color: catColor, bg: catBg } = getCategory(selected.category);
@@ -198,9 +252,54 @@ export default function ResidentHelpdeskScreen() {
             <Text className="mt-1 text-base text-ink" style={{ fontFamily: FontFamily.heading }}>
               {complaintStatusTone(selected.status).label}
             </Text>
+            {selected.priority && (
+               <Text className="mt-1 text-sm text-ink-soft">
+                 Priority: <Text className="font-semibold capitalize">{selected.priority}</Text>
+               </Text>
+            )}
             <Text className="mt-1 text-xs text-ink-muted">
               Admins update this as they work on your ticket.
             </Text>
+          </View>
+          
+          {selected.photo_urls && selected.photo_urls.length > 0 && (
+            <View className="mt-4">
+              <Text className="mb-2 text-xs font-bold uppercase tracking-widest text-ink-muted">Photos</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {selected.photo_urls.map((url, i) => (
+                  <Image key={i} source={{ uri: url }} style={{ width: 100, height: 100, borderRadius: 8, marginRight: 8 }} />
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          <View className="mt-6">
+             <Text className="mb-2 text-xs font-bold uppercase tracking-widest text-ink-muted">Comments</Text>
+             {commentsQuery.isLoading ? <ActivityIndicator /> : null}
+             {commentsQuery.data?.map(comment => (
+               <View key={comment.id} className="mb-3 rounded-xl bg-surface-muted p-3">
+                 <Text className="text-sm font-semibold text-ink">{comment.author?.full_name}</Text>
+                 <Text className="text-sm text-ink-soft">{comment.content}</Text>
+                 <Text className="text-xs text-ink-faint mt-1">{new Date(comment.created_at).toLocaleString()}</Text>
+               </View>
+             ))}
+             
+             <View className="mt-2 flex-row items-center gap-2">
+               <TextInput
+                 className="flex-1 rounded-full border border-surface-border bg-surface-card px-4 py-2 text-sm text-ink"
+                 placeholder="Add a comment..."
+                 value={commentText}
+                 onChangeText={setCommentText}
+               />
+               <Pressable 
+                 className="h-10 w-10 items-center justify-center rounded-full bg-brand-primary"
+                 onPress={() => commentMutation.mutate()}
+                 disabled={commentMutation.isPending || !commentText.trim()}
+                 style={{ backgroundColor: Brand.primary }}
+               >
+                 {commentMutation.isPending ? <ActivityIndicator size="small" color="#fff" /> : <Send size={16} color="#fff" />}
+               </Pressable>
+             </View>
           </View>
         </ScrollView>
       </ScreenHeader>
@@ -366,6 +465,25 @@ export default function ResidentHelpdeskScreen() {
                   );
                 })}
               </View>
+              
+              <Text
+                className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-muted mt-2"
+                style={{ fontFamily: FontFamily.heading }}
+              >
+                Priority
+              </Text>
+              <ChipSelector
+                className="mb-4"
+                presentation="tiles"
+                options={[
+                  { value: 'low', label: 'Low' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'high', label: 'High' },
+                  { value: 'critical', label: 'Critical' }
+                ]}
+                value={priority}
+                onChange={(v) => setPriority(v as any)}
+              />
 
               <TextInput
                 className="mb-4 min-h-[100px] rounded-card bg-surface-muted px-4 py-3 text-base text-ink"
@@ -376,6 +494,28 @@ export default function ResidentHelpdeskScreen() {
                 value={description}
                 onChangeText={setDescription}
               />
+              
+              <View className="mb-4">
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                   {photos.map((uri, i) => (
+                     <View key={i} className="mr-2">
+                       <Image source={{ uri }} style={{ width: 80, height: 80, borderRadius: 8 }} />
+                       <Pressable 
+                         className="absolute right-1 top-1 rounded-full bg-black/50 p-1"
+                         onPress={() => setPhotos(photos.filter(p => p !== uri))}
+                       >
+                         <Text className="text-white text-xs">X</Text>
+                       </Pressable>
+                     </View>
+                   ))}
+                   <Pressable 
+                     className="h-20 w-20 items-center justify-center rounded-xl border border-dashed border-brand-200 bg-brand-50"
+                     onPress={pickImage}
+                   >
+                     <ImageIcon size={24} color={Brand.primary} />
+                   </Pressable>
+                </ScrollView>
+              </View>
 
               <View className="flex-row gap-2">
                 <Pressable

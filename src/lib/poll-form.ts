@@ -51,7 +51,7 @@ export const POLL_DURATION_OPTIONS: { value: PollDurationPreset; label: string }
   { value: '1w', label: '1 week' },
   { value: '2w', label: '2 weeks' },
   { value: 'none', label: 'No limit' },
-  { value: 'custom', label: 'Pick date' },
+  { value: 'custom', label: 'Date & time' },
 ];
 
 /** True when the dev build includes @react-native-community/datetimepicker native code. */
@@ -63,9 +63,8 @@ export function isDatePickerNativeAvailable(): boolean {
   );
 }
 
-export function pollDurationOptions(includeCustom = isDatePickerNativeAvailable()) {
-  if (includeCustom) return POLL_DURATION_OPTIONS;
-  return POLL_DURATION_OPTIONS.filter((o) => o.value !== 'custom');
+export function pollDurationOptions() {
+  return POLL_DURATION_OPTIONS;
 }
 
 export function defaultCustomExpiryDate(): Date {

@@ -157,6 +157,7 @@ export async function notifyGuardOfVisitorDecision(params: {
   createdBy: string | null;
   visitorName: string;
   status: 'approved' | 'rejected';
+  rejectReason?: string;
 }): Promise<void> {
   await notifyVisitorDecision(params);
 }
@@ -175,13 +176,20 @@ export async function notifyFlatOfVisitorEntry(params: {
 export async function updateVisitorStatus(params: {
   visitorId: string;
   flatId: string;
-  status: 'approved' | 'rejected';
+  status: 'approved' | 'rejected' | 'pending';
+  rejectReason?: string;
+  isMissed?: boolean;
   createdBy?: string | null;
   visitorName?: string;
 }): Promise<{ error: string | null }> {
   const { error } = await supabase
     .from('visitors')
-    .update({ status: params.status })
+    .update({ 
+      status: params.status,
+      reject_reason: params.rejectReason || null,
+      responded_at: new Date().toISOString(),
+      is_missed: params.isMissed || false,
+    })
     .eq('id', params.visitorId)
     .eq('flat_id', params.flatId);
 
@@ -192,7 +200,8 @@ export async function updateVisitorStatus(params: {
   void notifyGuardOfVisitorDecision({
     createdBy: params.createdBy ?? null,
     visitorName: params.visitorName ?? 'Visitor',
-    status: params.status,
+    status: params.status as 'approved' | 'rejected',
+    rejectReason: params.rejectReason,
   });
 
   return { error: null };
