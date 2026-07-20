@@ -322,6 +322,8 @@ export type Amenity = {
   booking_horizon_days?: number | null;
   /** Cap on upcoming booked slots per flat for this amenity. Null = unlimited. */
   max_active_bookings_per_flat?: number | null;
+  /** Booking fee in paise. 0 = free. */
+  fee_paise?: number | null;
 };
 
 export type AmenityBookingStatus = 'booked' | 'cancelled';
@@ -336,6 +338,32 @@ export type AmenityBooking = {
   created_at?: string;
   cancelled_at?: string | null;
   booked_by?: string | null;
+};
+
+export type PaymentPurpose =
+  | 'maintenance_due'
+  | 'amenity_booking'
+  | 'one_off_charge'
+  | 'fine';
+
+export type PaymentStatus =
+  | 'pending_payment'
+  | 'confirmed'
+  | 'expired'
+  | 'failed';
+
+export type Payment = {
+  id: string;
+  society_id: string;
+  payer_id: string;
+  purpose: PaymentPurpose | string;
+  reference_id: string | null;
+  amount_paise: number;
+  status: PaymentStatus | string;
+  razorpay_order_id: string | null;
+  razorpay_payment_id: string | null;
+  created_at: string;
+  expires_at: string | null;
 };
 
 export type AmenityBookingWithDetails = AmenityBooking & {

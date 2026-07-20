@@ -539,6 +539,7 @@ export async function upsertAmenity(input: {
   rules?: string | null;
   bookingHorizonDays?: number | null;
   maxActiveBookingsPerFlat?: number | null;
+  feePaise?: number | null;
 }): Promise<void> {
   const horizon = input.bookingHorizonDays ?? 7;
   const payload = {
@@ -552,6 +553,7 @@ export async function upsertAmenity(input: {
     rules: input.rules?.trim() || null,
     booking_horizon_days: Math.max(1, Math.min(14, horizon)),
     max_active_bookings_per_flat: input.maxActiveBookingsPerFlat ?? 2,
+    fee_paise: Math.max(0, input.feePaise ?? 0),
   };
 
   if (input.isFeatured) {
@@ -692,14 +694,15 @@ export async function bookAmenitySlot(input: {
   flatId: string;
   date: string;
   slot: string;
-}): Promise<void> {
-  const { error } = await supabase.rpc('book_amenity_slot', {
+}): Promise<AmenityBooking> {
+  const { data, error } = await supabase.rpc('book_amenity_slot', {
     p_amenity_id: input.amenityId,
     p_flat_id: input.flatId,
     p_date: input.date,
     p_slot: input.slot,
   });
   if (error) throw new Error(error.message);
+  return data as AmenityBooking;
 }
 
 export async function cancelAmenityBooking(bookingId: string): Promise<void> {

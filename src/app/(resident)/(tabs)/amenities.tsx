@@ -25,6 +25,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { SuccessOverlay } from '@/components/ui/success-overlay';
+import { PaymentSheet } from '@/components/payments/payment-sheet';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
@@ -138,6 +139,11 @@ export default function ResidentAmenitiesScreen() {
   const [message, setMessage] = useState<string | null>(null);
   const [successVisible, setSuccessVisible] = useState(false);
   const [pendingSlot, setPendingSlot] = useState<string | null>(null);
+  const [payBooking, setPayBooking] = useState<{
+    bookingId: string;
+    amountPaise: number;
+    label: string;
+  } | null>(null);
 
   const amenitiesQuery = useQuery({
     queryKey: queryKeys.amenities(societyId ?? 'none'),
@@ -181,16 +187,36 @@ export default function ResidentAmenitiesScreen() {
   const bookMutation = useMutation({
     mutationFn: async (slot: string) => {
       if (!selected || !flatId) throw new Error('Missing amenity or flat.');
-      await bookAmenitySlot({
+      const booking = await bookAmenitySlot({
         amenityId: selected.id,
         flatId,
         date,
         slot,
       });
+      return { booking, slot, feePaise: selected.fee_paise ?? 0 };
     },
-    onSuccess: async (_data, slot) => {
+    onSuccess: async (result) => {
       setPendingSlot(null);
-      setMessage(`Booked ${slot} on ${formatAmenityBookingDate(date)}.`);
+      const label = `${result.slot} on ${formatAmenityBookingDate(date)}`;
+
+      if (result.feePaise > 0) {
+        setPayBooking({
+          bookingId: result.booking.id,
+          amountPaise: result.feePaise,
+          label,
+        });
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.amenityBookings(selected!.id, date),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.myAmenityBookings(flatId!),
+          }),
+        ]);
+        return;
+      }
+
+      setMessage(`Booked ${label}.`);
       setSuccessVisible(true);
       await Promise.all([
         queryClient.invalidateQueries({
@@ -207,6 +233,16 @@ export default function ResidentAmenitiesScreen() {
     },
   });
 
+  const refreshAfterPayment = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.amenityBookings(selected?.id ?? 'none', date),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.myAmenityBookings(flatId ?? 'none'),
+      }),
+    ]);
+  };
   const cancelMutation = useMutation({
     mutationFn: cancelAmenityBooking,
     onSuccess: async () => {
@@ -424,7 +460,11 @@ export default function ResidentAmenitiesScreen() {
               </Text>
               <Text className="mb-5 text-sm leading-5 text-ink-muted">
                 Book {selected.name} for {pendingSlot} on{' '}
-                {formatAmenityBookingDate(date)}?
+                {formatAmenityBookingDate(date)}
+                {(selected.fee_paise ?? 0) > 0
+                  ? ` · ₹${((selected.fee_paise ?? 0) / 100).toFixed(0)}`
+                  : ''}
+                ?
               </Text>
               <View className="flex-row gap-2">
                 <Pressable
@@ -459,6 +499,29 @@ export default function ResidentAmenitiesScreen() {
           message="Booking Confirmed"
           onDone={() => setSuccessVisible(false)}
         />
+
+        {societyId && payBooking ? (
+          <PaymentSheet
+            visible
+            societyId={societyId}
+            purpose="amenity_booking"
+            referenceId={payBooking.bookingId}
+            amountPaise={payBooking.amountPaise}
+            title="Pay for booking"
+            description={`Confirm ${selected?.name ?? 'amenity'} · ${payBooking.label}`}
+            onConfirmed={async () => {
+              const label = payBooking.label;
+              setPayBooking(null);
+              setMessage(`Paid & booked ${label}.`);
+              setSuccessVisible(true);
+              await refreshAfterPayment();
+            }}
+            onClose={async () => {
+              setPayBooking(null);
+              await refreshAfterPayment();
+            }}
+          />
+        ) : null}
       </ScreenHeader>
     );
   }

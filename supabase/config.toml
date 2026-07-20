@@ -1,12 +1,21 @@
 # Minimal Supabase CLI config for Edge Functions.
-# Deploy: supabase functions deploy send-push
-# Optional secret: supabase secrets set EXPO_ACCESS_TOKEN=...
-
-[project]
-id = "portl"
+# Deploy:
+#   supabase functions deploy send-push
+#   supabase functions deploy create-razorpay-order
+#   supabase functions deploy razorpay-webhook
+# Secrets:
+#   supabase secrets set RAZORPAY_KEY_ID=... RAZORPAY_KEY_SECRET=... RAZORPAY_WEBHOOK_SECRET=...
+# Optional: supabase secrets set EXPO_ACCESS_TOKEN=...
+# Link project (once): supabase link --project-ref uopbehpstqycyrmrdcav
 
 [api]
 enabled = true
 
 [functions.send-push]
 verify_jwt = true
+
+[functions.create-razorpay-order]
+verify_jwt = true
+
+[functions.razorpay-webhook]
+verify_jwt = false

@@ -56,6 +56,7 @@ export default function AdminAmenitiesScreen() {
   const [capacity, setCapacity] = useState('1');
   const [horizonDays, setHorizonDays] = useState('7');
   const [maxPerFlat, setMaxPerFlat] = useState('2');
+  const [feeRupees, setFeeRupees] = useState('0');
   const [rules, setRules] = useState('');
   const [isFeatured, setIsFeatured] = useState(false);
   const [slotsText, setSlotsText] = useState(DEFAULT_AMENITY_SLOTS.join('\n'));
@@ -109,6 +110,12 @@ export default function AdminAmenitiesScreen() {
         throw new Error('Max bookings per flat must be at least 1.');
       }
 
+      const feeNum = feeRupees.trim() ? Number.parseFloat(feeRupees.trim()) : 0;
+      if (Number.isNaN(feeNum) || feeNum < 0) {
+        throw new Error('Fee must be 0 or greater (₹).');
+      }
+      const feePaise = Math.round(feeNum * 100);
+
       await upsertAmenity({
         id: editing?.id,
         societyId,
@@ -122,6 +129,7 @@ export default function AdminAmenitiesScreen() {
         rules: rules.trim() || null,
         bookingHorizonDays: horizonNum,
         maxActiveBookingsPerFlat: maxNum,
+        feePaise,
       });
     },
     onSuccess: async () => {
@@ -184,6 +192,7 @@ export default function AdminAmenitiesScreen() {
     setCapacity('1');
     setHorizonDays('7');
     setMaxPerFlat('2');
+    setFeeRupees('0');
     setRules('');
     setIsFeatured(false);
     setSlotsText(DEFAULT_AMENITY_SLOTS.join('\n'));
@@ -204,6 +213,7 @@ export default function AdminAmenitiesScreen() {
     setCapacity(String(amenitySlotCapacity(item.capacity)));
     setHorizonDays(String(item.booking_horizon_days ?? 7));
     setMaxPerFlat(String(item.max_active_bookings_per_flat ?? 2));
+    setFeeRupees(String(((item.fee_paise ?? 0) / 100).toFixed(0)));
     setRules(item.rules ?? '');
     setIsFeatured(Boolean(item.is_featured));
     setSlotsText(item.slots.join('\n'));
@@ -620,6 +630,17 @@ export default function AdminAmenitiesScreen() {
                 keyboardType="number-pad"
                 value={maxPerFlat}
                 onChangeText={setMaxPerFlat}
+              />
+              <Text className="mb-1 text-xs text-ink-muted">
+                Booking fee in ₹ (0 = free). Requires a verified Razorpay society account.
+              </Text>
+              <TextInput
+                className="mb-3 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+                placeholder="Fee (₹)"
+                placeholderTextColor="#94A3B8"
+                keyboardType="decimal-pad"
+                value={feeRupees}
+                onChangeText={setFeeRupees}
               />
               <TextInput
                 className="mb-3 min-h-[80px] rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
