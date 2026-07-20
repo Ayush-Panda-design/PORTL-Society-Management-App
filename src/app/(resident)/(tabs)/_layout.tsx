@@ -36,7 +36,10 @@ export default function ResidentLayout() {
   const unreadNotices = useUnreadNoticesCount();
 
   return (
-    <Tabs screenOptions={getResidentTabOptions({ scheme, bottomInset: insets.bottom })}>
+    <Tabs
+      backBehavior="history"
+      screenOptions={getResidentTabOptions({ scheme, bottomInset: insets.bottom })}
+    >
       <Tabs.Screen
         name="index"
         options={{

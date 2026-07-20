@@ -26,7 +26,10 @@ export default function GuardLayout() {
   const insets = useSafeAreaInsets();
 
   return (
-    <Tabs screenOptions={getGuardTabOptions({ scheme, bottomInset: insets.bottom })}>
+    <Tabs
+      backBehavior="history"
+      screenOptions={getGuardTabOptions({ scheme, bottomInset: insets.bottom })}
+    >
       <Tabs.Screen
         name="dashboard"
         options={{

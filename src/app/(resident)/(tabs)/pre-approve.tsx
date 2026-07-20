@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react-native';
 import { useState } from 'react';
 import {
@@ -15,6 +14,7 @@ import { ChipSelector } from '@/components/ui/chip-selector';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { QRCodeModal } from '@/components/visitors/qr-code-modal';
+import { useAppBack } from '@/hooks/use-app-back';
 import { useThemePalette } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
@@ -22,7 +22,7 @@ import type { VisitorType, VisitorWithFlat } from '@/types/database';
 import { VISITOR_TYPES } from '@/types/database';
 
 export default function PreApproveGuestScreen() {
-  const router = useRouter();
+  const goBack = useAppBack();
   const palette = useThemePalette();
   const profile = useAuthStore((s) => s.profile);
   const user = useAuthStore((s) => s.user);
@@ -114,7 +114,9 @@ export default function PreApproveGuestScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Go back"
-          onPress={() => router.back()}
+          onPress={() => {
+            goBack();
+          }}
           className="h-10 w-10 items-center justify-center rounded-full border border-surface-border bg-surface-card"
         >
           <ArrowLeft color={palette.inkMuted} size={18} />

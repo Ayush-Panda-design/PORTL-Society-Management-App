@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { ArrowLeft, CheckCircle2, History, QrCode } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
@@ -12,6 +11,7 @@ import { SkeletonList } from '@/components/visitors/loading-state';
 import { VisitorCard } from '@/components/visitors/visitor-card';
 import { QRCodeModal } from '@/components/visitors/qr-code-modal';
 import { Brand, Pastels } from '@/constants/theme';
+import { useAppBack } from '@/hooks/use-app-back';
 import { useThemePalette } from '@/hooks/use-theme';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { useAuthStore } from '@/stores/authStore';
@@ -19,7 +19,7 @@ import type { VisitorStatus, VisitorWithFlat } from '@/types/database';
 import { VISITOR_STATUSES } from '@/types/database';
 
 export default function ResidentVisitorHistoryScreen() {
-  const router = useRouter();
+  const goBack = useAppBack();
   const palette = useThemePalette();
   const profile = useAuthStore((s) => s.profile);
   const [statusFilter, setStatusFilter] = useState<VisitorStatus | 'all'>('all');
@@ -60,7 +60,7 @@ export default function ResidentVisitorHistoryScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Go back"
-          onPress={() => router.back()}
+          onPress={() => goBack()}
           className="h-10 w-10 items-center justify-center rounded-full border border-surface-border bg-surface-card"
         >
           <ArrowLeft color={palette.inkMuted} size={18} />

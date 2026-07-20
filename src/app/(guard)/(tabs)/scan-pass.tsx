@@ -1,4 +1,4 @@
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Check, Camera as CameraIcon, ScanLine, X } from 'lucide-react-native';
 import { useEffect, useState, useRef } from 'react';
 import { ActivityIndicator, Pressable, Text, View, StyleSheet } from 'react-native';
@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Camera, CameraView, useCameraPermissions } from 'expo-camera';
 
 import { ErrorBanner } from '@/components/visitors/error-banner';
+import { useAppBack } from '@/hooks/use-app-back';
 import { supabase } from '@/lib/supabase';
 import { uploadLocalImage } from '@/lib/storage-upload';
 import { notifyFlatOfVisitorEntry } from '@/lib/visitors';
@@ -13,7 +14,7 @@ import { useAuthStore } from '@/stores/authStore';
 import type { VisitorWithFlat } from '@/types/database';
 
 export default function ScanPassScreen() {
-  const router = useRouter();
+  const goBack = useAppBack();
   const { visitorId } = useLocalSearchParams<{ visitorId?: string }>();
   const profile = useAuthStore((s) => s.profile);
   const [permission, requestPermission] = useCameraPermissions();
@@ -190,7 +191,7 @@ export default function ScanPassScreen() {
           Checked in successfully
         </Text>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => goBack()}
           className="w-full rounded-2xl bg-white py-4 shadow-sm"
         >
           <Text className="text-center text-lg font-bold text-teal-900">Done</Text>
@@ -204,7 +205,7 @@ export default function ScanPassScreen() {
       {/* Header overlay */}
       <View className="absolute left-0 right-0 top-0 z-10 flex-row items-center justify-between p-4 pt-12">
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => goBack()}
           className="h-12 w-12 items-center justify-center rounded-full bg-black/50"
         >
           <ArrowLeft color="#fff" size={24} />

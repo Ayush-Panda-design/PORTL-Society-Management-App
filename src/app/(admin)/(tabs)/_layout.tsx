@@ -36,7 +36,10 @@ export default function AdminLayout() {
   const unreadNotices = useUnreadNoticesCount();
 
   return (
-    <Tabs screenOptions={getAdminTabOptions({ scheme, bottomInset: insets.bottom })}>
+    <Tabs
+      backBehavior="history"
+      screenOptions={getAdminTabOptions({ scheme, bottomInset: insets.bottom })}
+    >
       <Tabs.Screen
         name="index"
         options={{

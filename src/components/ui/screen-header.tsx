@@ -1,5 +1,4 @@
 import { Pressable, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,6 +6,7 @@ import Animated, { interpolate, useAnimatedStyle, Extrapolation, type SharedValu
 
 import { DrawerMenuButton } from '@/components/navigation/drawer-menu-button';
 import { FontFamily } from '@/constants/theme';
+import { useAppBack } from '@/hooks/use-app-back';
 import { useThemePalette } from '@/hooks/use-theme';
 
 type Props = {
@@ -29,7 +29,7 @@ export function ScreenHeader({
   showMenu,
   scrollOffset,
 }: Props) {
-  const router = useRouter();
+  const goBack = useAppBack();
   const palette = useThemePalette();
 
   const animatedStyle = useAnimatedStyle(() => {
@@ -57,13 +57,7 @@ export function ScreenHeader({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Go back"
-              onPress={() => {
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace('/');
-                }
-              }}
+              onPress={goBack}
               className="mt-0.5 h-11 w-11 items-center justify-center rounded-full bg-surface-card"
               style={{
                 shadowColor: palette.shadow,

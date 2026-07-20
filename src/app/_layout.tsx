@@ -13,6 +13,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import Toast from 'react-native-toast-message';
 
+import { HardwareBackHandler } from '@/components/navigation/hardware-back-handler';
 import { AppThemeProvider } from '@/components/theme/app-theme-provider';
 import { OfflineBanner } from '@/components/ui/offline-banner';
 import { Brand } from '@/constants/theme';
@@ -198,6 +199,7 @@ export default function RootLayout() {
             <AppThemeProvider>
               <AuthGate>
                 <View className="flex-1">
+                  <HardwareBackHandler />
                   <OfflineBanner />
                   <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
                     <Stack.Screen name="index" />

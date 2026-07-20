@@ -1,0 +1,55 @@
+import type { Href } from 'expo-router';
+
+type RoleGroup = '(resident)' | '(admin)' | '(guard)';
+
+function isRoleGroup(segment: string | undefined): segment is RoleGroup {
+  return segment === '(resident)' || segment === '(admin)' || segment === '(guard)';
+}
+
+/** Where to land when there is no stack/tab history (e.g. cold deep link). */
+export function backFallbackForSegments(segments: readonly string[]): Href | null {
+  const group = segments[0];
+  if (!isRoleGroup(group)) return null;
+
+  if (segments[1] === 'profile') {
+    return `/${group}` as Href;
+  }
+
+  if (segments[1] !== '(tabs)') return null;
+
+  const tab = segments[2];
+  if (!tab) return null;
+
+  if (tab === 'polls' && segments[3]) {
+    return `${group}/polls` as Href;
+  }
+
+  const residentAux: Record<string, Href> = {
+    'pre-approve': '/(resident)/visitors',
+    'visitor-history': '/(resident)/visitors',
+    polls: '/(resident)/more',
+    helpdesk: '/(resident)/more',
+    amenities: '/(resident)/more',
+    directory: '/(resident)/more',
+  };
+
+  const adminAux: Record<string, Href> = {
+    polls: '/(admin)/settings',
+    complaints: '/(admin)/settings',
+    amenities: '/(admin)/settings',
+    staff: '/(admin)/settings',
+    towers: '/(admin)/settings',
+    flats: '/(admin)/settings',
+    invites: '/(admin)/settings',
+    'join-requests': '/(admin)/settings',
+  };
+
+  const guardAux: Record<string, Href> = {
+    'scan-pass': '/(guard)/verify',
+    index: '/(guard)/dashboard',
+  };
+
+  if (group === '(resident)') return residentAux[tab] ?? null;
+  if (group === '(admin)') return adminAux[tab] ?? null;
+  return guardAux[tab] ?? null;
+}

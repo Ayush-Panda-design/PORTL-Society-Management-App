@@ -10,6 +10,7 @@ export default function AdminDrawerLayout() {
 
   return (
     <Drawer
+      backBehavior="history"
       drawerContent={(props) => <AppDrawerContent {...props} />}
       screenOptions={{
         headerShown: false,
