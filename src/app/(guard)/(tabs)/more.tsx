@@ -3,48 +3,47 @@ import { type Href } from 'expo-router';
 
 import { SettingsHub, type SettingsLink } from '@/components/ui/settings-hub';
 import { useAuthStore } from '@/stores/authStore';
-import { Brand } from '@/constants/theme';
 
-const LINKS: SettingsLink[] = [
+const SECTIONS: { title: string; links: SettingsLink[] }[] = [
   {
-    href: '/(guard)/profile' as Href,
-    title: 'My profile',
-    subtitle: 'Bio, personal details, and private notes',
-    Icon: User,
-    tone: 'mint',
-    iconColor: Brand.primary,
+    title: 'Account',
+    links: [
+      {
+        href: '/(guard)/profile' as Href,
+        title: 'My profile',
+        subtitle: 'Bio, personal details, and private notes',
+        Icon: User,
+      },
+    ],
   },
   {
-    href: '/(guard)/dashboard' as Href,
-    title: 'Pending queue',
-    subtitle: 'Visitors awaiting resident approval',
-    Icon: ShieldCheck,
-    tone: 'rose',
-    iconColor: '#C0392B',
-  },
-  {
-    href: '/(guard)/register-visitor' as Href,
-    title: 'Register visitor',
-    subtitle: 'Create a new gate request',
-    Icon: UserPlus,
-    tone: 'mint',
-    iconColor: Brand.primary,
-  },
-  {
-    href: '/(guard)/verify' as Href,
-    title: 'Entry & verify',
-    subtitle: 'Check in approved visitors',
-    Icon: ScanLine,
-    tone: 'sky',
-    iconColor: '#2563EB',
-  },
-  {
-    href: '/(guard)/logs' as Href,
-    title: 'Visitor logs',
-    subtitle: 'Entry and exit history',
-    Icon: ClipboardList,
-    tone: 'butter',
-    iconColor: '#C4861A',
+    title: 'Gate',
+    links: [
+      {
+        href: '/(guard)/dashboard' as Href,
+        title: 'Pending queue',
+        subtitle: 'Visitors awaiting resident approval',
+        Icon: ShieldCheck,
+      },
+      {
+        href: '/(guard)/register-visitor' as Href,
+        title: 'Register visitor',
+        subtitle: 'Create a new gate request',
+        Icon: UserPlus,
+      },
+      {
+        href: '/(guard)/verify' as Href,
+        title: 'Entry & verify',
+        subtitle: 'Check in approved visitors',
+        Icon: ScanLine,
+      },
+      {
+        href: '/(guard)/logs' as Href,
+        title: 'Visitor logs',
+        subtitle: 'Entry and exit history',
+        Icon: ClipboardList,
+      },
+    ],
   },
 ];
 
@@ -55,7 +54,8 @@ export default function GuardMore() {
     <SettingsHub
       title="More"
       subtitle={`${profile?.full_name ?? 'Guard'} · gate desk tools`}
-      links={LINKS}
+      links={[]}
+      sections={SECTIONS}
     />
   );
 }

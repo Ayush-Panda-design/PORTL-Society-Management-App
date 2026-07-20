@@ -39,4 +39,11 @@ export const queryKeys = {
   adminDashboard: (societyId: string) => ['admin-dashboard', societyId] as const,
   profilePrivate: (userId: string) => ['profile-private', userId] as const,
   profileNotes: (userId: string) => ['profile-notes', userId] as const,
+  frequentVisitors: (flatId: string) => ['frequent-visitors', flatId] as const,
+  paymentStatement: (userId: string) => ['payment-statement', userId] as const,
+  auditLogs: (societyId: string) => ['audit-logs', societyId] as const,
+  myPermissions: (userId: string) => ['my-permissions', userId] as const,
+  noticeAcks: (userId: string, noticeIds: string[]) =>
+    ['notice-acks', userId, ...noticeIds] as const,
+  noticeAckStats: (noticeId: string) => ['notice-ack-stats', noticeId] as const,
 };

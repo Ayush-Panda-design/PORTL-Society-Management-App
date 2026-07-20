@@ -92,6 +92,13 @@ export function complaintStatusTone(status: ComplaintStatus): {
         border: 'border-brand-200',
         label: 'Resolved',
       };
+    case 'reopened':
+      return {
+        bg: 'bg-orange-50',
+        text: 'text-orange-800',
+        border: 'border-orange-200',
+        label: 'Reopened',
+      };
     default:
       return {
         bg: 'bg-slate-50',

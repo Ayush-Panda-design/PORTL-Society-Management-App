@@ -93,6 +93,8 @@ export default function AdminLayout() {
       <Tabs.Screen name="flats" options={{ href: null }} />
       <Tabs.Screen name="invites" options={{ href: null }} />
       <Tabs.Screen name="join-requests" options={{ href: null }} />
+      <Tabs.Screen name="audit-log" options={{ href: null }} />
+      <Tabs.Screen name="roles" options={{ href: null }} />
     </Tabs>
   );
 }

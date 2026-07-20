@@ -111,6 +111,13 @@ export function VisitorCard({ visitor, actions, showStatus = true }: Props) {
             {formatRelativeTime(visitor.created_at)}
             {visitor.phone ? ` · ${visitor.phone}` : ''}
           </Text>
+          {visitor.status === 'pending' && (visitor.escalation_level ?? 0) > 0 ? (
+            <Text className="mt-1 text-xs font-medium text-amber-700">
+              {(visitor.escalation_level ?? 0) >= 2
+                ? 'Escalated to admin / committee'
+                : 'Escalated — other flat members notified'}
+            </Text>
+          ) : null}
         </View>
       </View>
 

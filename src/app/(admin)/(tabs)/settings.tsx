@@ -5,7 +5,9 @@ import {
   KeyRound,
   Layers,
   Phone,
+  Shield,
   User,
+  UserCog,
   UserPlus,
   Users,
 } from 'lucide-react-native';
@@ -13,7 +15,6 @@ import { type Href } from 'expo-router';
 
 import { SettingsHub, type SettingsLink } from '@/components/ui/settings-hub';
 import { useAuthStore } from '@/stores/authStore';
-import { Brand } from '@/constants/theme';
 
 const SECTIONS = [
   {
@@ -24,37 +25,35 @@ const SECTIONS = [
         title: 'My profile',
         subtitle: 'Bio, personal details, and private notes',
         Icon: User,
-        tone: 'mint' as const,
-        iconColor: Brand.primary,
       },
     ] as SettingsLink[],
   },
   {
-    title: 'Community Setup',
+    title: 'Community setup',
     links: [
       {
         href: '/(admin)/towers' as Href,
         title: 'Towers',
         subtitle: 'Add and rename society buildings',
         Icon: Building2,
-        tone: 'sky' as const,
-        iconColor: '#2563EB',
       },
       {
         href: '/(admin)/flats' as Href,
         title: 'Flats',
         subtitle: 'Map units to towers',
         Icon: Layers,
-        tone: 'lilac' as const,
-        iconColor: '#6B5CC4',
       },
       {
         href: '/(admin)/residents',
         title: 'Residents',
         subtitle: 'Assign members to flats',
         Icon: Users,
-        tone: 'mint' as const,
-        iconColor: Brand.primary,
+      },
+      {
+        href: '/(admin)/roles' as Href,
+        title: 'Roles & escalation',
+        subtitle: 'Committee permissions and visitor timers',
+        Icon: UserCog,
       },
     ] as SettingsLink[],
   },
@@ -66,16 +65,12 @@ const SECTIONS = [
         title: 'Invite links',
         subtitle: 'Share resident and guard codes',
         Icon: KeyRound,
-        tone: 'peach' as const,
-        iconColor: Brand.accent,
       },
       {
         href: '/(admin)/join-requests' as Href,
         title: 'Join requests',
         subtitle: 'Approve or deny new members',
         Icon: UserPlus,
-        tone: 'butter' as const,
-        iconColor: '#C4861A',
       },
     ] as SettingsLink[],
   },
@@ -87,32 +82,30 @@ const SECTIONS = [
         title: 'Polls',
         subtitle: 'Create polls and view results',
         Icon: BarChart3,
-        tone: 'sky' as const,
-        iconColor: '#2563EB',
       },
       {
         href: '/(admin)/complaints',
         title: 'Complaints',
         subtitle: 'Triage society helpdesk tickets',
         Icon: ClipboardList,
-        tone: 'rose' as const,
-        iconColor: '#C0392B',
       },
       {
         href: '/(admin)/amenities',
         title: 'Amenities',
         subtitle: 'Manage facilities and booking slots',
         Icon: Building2,
-        tone: 'sage' as const,
-        iconColor: Brand.primary,
       },
       {
         href: '/(admin)/staff',
         title: 'Staff directory',
         subtitle: 'Contacts residents can call',
         Icon: Phone,
-        tone: 'mint' as const,
-        iconColor: Brand.primary,
+      },
+      {
+        href: '/(admin)/audit-log' as Href,
+        title: 'Audit log',
+        subtitle: 'Who changed what, and when',
+        Icon: Shield,
       },
     ] as SettingsLink[],
   },

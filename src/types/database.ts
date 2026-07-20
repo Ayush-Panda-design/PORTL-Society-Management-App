@@ -170,6 +170,25 @@ export type Visitor = {
   reject_reason?: string | null;
   responded_at?: string | null;
   is_missed?: boolean;
+  /** 0 = none, 1 = re-notified flat, 2 = escalated to admin/committee */
+  escalation_level?: number;
+  escalated_at?: string | null;
+  frequent_visitor_id?: string | null;
+};
+
+export type FrequentVisitor = {
+  id: string;
+  society_id: string;
+  flat_id: string;
+  name: string;
+  phone: string | null;
+  photo_url: string | null;
+  type: VisitorType;
+  purpose: string | null;
+  visit_count: number;
+  last_visited_at: string | null;
+  created_by: string | null;
+  created_at: string;
 };
 
 export type VisitorWithFlat = Visitor & {
@@ -212,9 +231,11 @@ export const VISITOR_STATUSES: { value: VisitorStatus; label: string }[] = [
   { value: 'checked_out', label: 'Checked out' },
 ];
 
-export type ComplaintStatus = 'open' | 'in_progress' | 'resolved';
+export type ComplaintStatus = 'open' | 'in_progress' | 'resolved' | 'reopened';
 
 export type ComplaintPriority = 'low' | 'medium' | 'high' | 'critical';
+
+export type NoticeCategory = 'urgent' | 'general' | 'event';
 
 export type Notice = {
   id: string;
@@ -229,6 +250,40 @@ export type Notice = {
   is_pinned?: boolean;
   publish_at?: string | null;
   expires_at?: string | null;
+  category?: NoticeCategory;
+  requires_ack?: boolean;
+};
+
+export type NoticeAcknowledgment = {
+  id: string;
+  notice_id: string;
+  user_id: string;
+  acknowledged_at: string;
+};
+
+export type SocietyPermission =
+  | 'notices.manage'
+  | 'polls.manage'
+  | 'complaints.manage'
+  | 'payments.manage'
+  | 'payments.view'
+  | 'audit.view'
+  | 'visitors.manage'
+  | 'flats.manage'
+  | 'members.review'
+  | 'amenities.manage';
+
+export type CommitteeRole = 'secretary' | 'treasurer' | 'committee';
+
+export type AuditLog = {
+  id: string;
+  society_id: string;
+  actor_id: string | null;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
 };
 
 export type Poll = {
@@ -275,6 +330,13 @@ export type Complaint = {
   created_at: string;
   priority?: ComplaintPriority;
   photo_urls?: string[] | null;
+  sla_due_at?: string | null;
+  resolved_at?: string | null;
+  reopened_at?: string | null;
+  reopen_count?: number;
+  satisfaction_rating?: number | null;
+  satisfaction_comment?: string | null;
+  rated_at?: string | null;
 };
 
 export type ComplaintComment = {
@@ -324,6 +386,10 @@ export type Amenity = {
   max_active_bookings_per_flat?: number | null;
   /** Booking fee in paise. 0 = free. */
   fee_paise?: number | null;
+  allow_waitlist?: boolean;
+  cancel_penalty_paise?: number | null;
+  cancel_penalty_hours?: number | null;
+  allow_recurring?: boolean;
 };
 
 export type AmenityBookingStatus = 'booked' | 'cancelled';
@@ -338,6 +404,20 @@ export type AmenityBooking = {
   created_at?: string;
   cancelled_at?: string | null;
   booked_by?: string | null;
+  recurring_series_id?: string | null;
+  from_waitlist?: boolean;
+};
+
+export type AmenityWaitlistEntry = {
+  id: string;
+  amenity_id: string;
+  flat_id: string;
+  date: string;
+  slot: string;
+  requested_by: string | null;
+  position: number;
+  status: 'waiting' | 'offered' | 'booked' | 'cancelled' | 'expired' | string;
+  created_at: string;
 };
 
 export type PaymentPurpose =
@@ -350,7 +430,8 @@ export type PaymentStatus =
   | 'pending_payment'
   | 'confirmed'
   | 'expired'
-  | 'failed';
+  | 'failed'
+  | 'partially_paid';
 
 export type Payment = {
   id: string;
@@ -364,6 +445,17 @@ export type Payment = {
   razorpay_payment_id: string | null;
   created_at: string;
   expires_at: string | null;
+  paid_paise?: number;
+  retry_of?: string | null;
+  retry_count?: number;
+  next_retry_at?: string | null;
+  max_retries?: number;
+  notes?: string | null;
+};
+
+export type PaymentLedgerEntry = Payment & {
+  credited_paise: number;
+  outstanding_paise: number;
 };
 
 export type AmenityBookingWithDetails = AmenityBooking & {
@@ -405,6 +497,31 @@ export const COMPLAINT_STATUSES: { value: ComplaintStatus; label: string }[] = [
   { value: 'open', label: 'Open' },
   { value: 'in_progress', label: 'In progress' },
   { value: 'resolved', label: 'Resolved' },
+  { value: 'reopened', label: 'Reopened' },
+];
+
+export const NOTICE_CATEGORIES: { value: NoticeCategory; label: string }[] = [
+  { value: 'general', label: 'General' },
+  { value: 'event', label: 'Event' },
+  { value: 'urgent', label: 'Urgent' },
+];
+
+export const COMMITTEE_ROLES: { value: CommitteeRole; label: string; blurb: string }[] = [
+  {
+    value: 'secretary',
+    label: 'Secretary',
+    blurb: 'Notices, polls, join reviews, audit',
+  },
+  {
+    value: 'treasurer',
+    label: 'Treasurer',
+    blurb: 'Payments, amenities, audit',
+  },
+  {
+    value: 'committee',
+    label: 'Committee',
+    blurb: 'Notices, polls, complaints, visitors',
+  },
 ];
 
 export const DEFAULT_AMENITY_SLOTS = [

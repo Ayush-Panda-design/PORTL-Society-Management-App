@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 import { DrawerMenuButton } from '@/components/navigation/drawer-menu-button';
+import { InitialsAvatar } from '@/components/ui/brand';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import {
@@ -15,14 +16,18 @@ import {
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore, type ThemeMode } from '@/stores/themeStore';
 
+/** Shared icon treatment — calm, one system (not rainbow category colors). */
+const ICON_BG = Pastels.sage;
+const ICON_COLOR = Brand.primary;
+
 export type SettingsLink = {
   href: Href;
   title: string;
   subtitle: string;
   Icon: LucideIcon;
-  /** Background tint for the icon container. Defaults to mint. */
+  /** @deprecated Ignored — icons use a single neutral treatment. Kept for call-site compat. */
   tone?: keyof typeof Pastels;
-  /** Icon color override. */
+  /** @deprecated Ignored — icons use a single neutral treatment. Kept for call-site compat. */
   iconColor?: string;
 };
 
@@ -46,28 +51,23 @@ const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
 ];
 
 function ThemeIcon({ mode }: { mode: ThemeMode }) {
-  const color = Brand.primary;
-  if (mode === 'dark') return <Moon color={color} size={18} strokeWidth={1.5} />;
-  if (mode === 'light') return <Sun color={color} size={18} strokeWidth={1.5} />;
-  return <Monitor color={color} size={18} strokeWidth={1.5} />;
+  if (mode === 'dark') return <Moon color={ICON_COLOR} size={18} strokeWidth={1.5} />;
+  if (mode === 'light') return <Sun color={ICON_COLOR} size={18} strokeWidth={1.5} />;
+  return <Monitor color={ICON_COLOR} size={18} strokeWidth={1.5} />;
 }
 
 function LinkRow({
-  href,
+  href: _href,
   title,
   subtitle,
   Icon,
-  tone = 'mint',
-  iconColor,
   onPress,
 }: SettingsLink & { onPress: () => void }) {
-  const bgColor = Pastels[tone];
-  const iconCol = iconColor ?? Brand.primary;
-
   return (
     <Pressable
       onPress={onPress}
-      className="flex-row items-center gap-3.5 rounded-card bg-surface-card px-4 py-3.5 mb-2"
+      accessibilityRole="button"
+      className="mb-2 flex-row items-center gap-3.5 rounded-card bg-surface-card px-4 py-3.5"
       style={{
         shadowColor: '#101512',
         shadowOffset: { width: 0, height: 1 },
@@ -78,11 +78,11 @@ function LinkRow({
     >
       <View
         className="h-10 w-10 items-center justify-center rounded-card"
-        style={{ backgroundColor: bgColor }}
+        style={{ backgroundColor: ICON_BG }}
       >
-        <Icon color={iconCol} size={17} strokeWidth={1.5} />
+        <Icon color={ICON_COLOR} size={17} strokeWidth={1.5} />
       </View>
-      <View className="flex-1">
+      <View className="min-w-0 flex-1">
         <Text className="text-[15px] text-ink" style={{ fontFamily: FontFamily.heading }}>
           {title}
         </Text>
@@ -95,9 +95,21 @@ function LinkRow({
   );
 }
 
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <Text
+      className="mb-2 text-xs font-bold uppercase tracking-widest text-ink-muted"
+      style={{ fontFamily: FontFamily.heading }}
+    >
+      {children}
+    </Text>
+  );
+}
+
 export function SettingsHub({ title, subtitle, links, sections }: Props) {
   const router = useRouter();
   const signOut = useAuthStore((s) => s.signOut);
+  const profile = useAuthStore((s) => s.profile);
   const userId = useAuthStore((s) => s.user?.id);
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
@@ -135,10 +147,10 @@ export function SettingsHub({ title, subtitle, links, sections }: Props) {
           text1: 'Notifications ready',
           text2: 'This device will get Portl alerts.',
         });
-        setPushHint('Allowed — this device is synced for alerts.');
+        setPushHint('On — manage notification settings');
       } else {
         const again = await getPushRegistrationHint();
-        Toast.show({ type: 'info', text1: 'Could not sync', text2: again.hint });
+        Toast.show({ type: 'info', text1: 'Could not enable', text2: again.hint });
         setPushHint(again.hint);
       }
     } finally {
@@ -158,18 +170,15 @@ export function SettingsHub({ title, subtitle, links, sections }: Props) {
   };
 
   const renderLinks = (items: SettingsLink[]) =>
-    items.map(({ href, title: linkTitle, subtitle: linkSubtitle, Icon, tone, iconColor }) => (
+    items.map((item) => (
       <LinkRow
-        key={String(href)}
-        href={href}
-        title={linkTitle}
-        subtitle={linkSubtitle}
-        Icon={Icon}
-        tone={tone}
-        iconColor={iconColor}
-        onPress={() => router.push(href)}
+        key={String(item.href)}
+        {...item}
+        onPress={() => router.push(item.href)}
       />
     ));
+
+  const displayName = profile?.full_name?.trim() || 'You';
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
@@ -182,30 +191,42 @@ export function SettingsHub({ title, subtitle, links, sections }: Props) {
         <View className="mb-4">
           <DrawerMenuButton />
         </View>
-        <Text
-          className="mb-0.5 text-[32px] tracking-tight text-ink"
-          style={{ fontFamily: FontFamily.display }}
-        >
-          {title}
-        </Text>
-        <Text className="mb-7 text-base leading-5 text-ink-muted">{subtitle}</Text>
 
-        {/* Appearance section */}
-        <Text className="mb-2 text-xs font-bold uppercase tracking-widest text-ink-muted" style={{ fontFamily: FontFamily.heading }}>
-          Preferences
-        </Text>
+        <View className="mb-7 flex-row items-center gap-3.5">
+          <InitialsAvatar
+            name={displayName}
+            seed={profile?.id ?? 'user'}
+            size={52}
+            imageUrl={profile?.avatar_url ?? null}
+          />
+          <View className="min-w-0 flex-1">
+            <Text
+              className="text-[32px] tracking-tight text-ink"
+              style={{ fontFamily: FontFamily.display }}
+            >
+              {title}
+            </Text>
+            <Text className="mt-0.5 text-base leading-5 text-ink-muted" numberOfLines={2}>
+              {subtitle}
+            </Text>
+          </View>
+        </View>
+
+        <SectionLabel>Preferences</SectionLabel>
+        {/* Inline control — tinted so it reads as a setting, not a nav row */}
         <View
-          className="mb-6 rounded-panel bg-surface-card p-4"
+          className="mb-2 rounded-panel px-4 py-3.5"
           style={{
-            shadowColor: '#101512',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.06,
-            shadowRadius: 8,
-            elevation: 2,
+            backgroundColor: Pastels.mint,
+            borderWidth: 1,
+            borderColor: Brand.primarySoft,
           }}
         >
           <View className="mb-3 flex-row items-center gap-3">
-            <View className="h-10 w-10 items-center justify-center rounded-card" style={{ backgroundColor: Pastels.mint }}>
+            <View
+              className="h-10 w-10 items-center justify-center rounded-card"
+              style={{ backgroundColor: '#fff' }}
+            >
               <ThemeIcon mode={mode} />
             </View>
             <View className="flex-1">
@@ -216,12 +237,19 @@ export function SettingsHub({ title, subtitle, links, sections }: Props) {
                 Light, Dark, or match your device
               </Text>
             </View>
+            <Text
+              className="rounded-pill px-2 py-0.5 text-[10px]"
+              style={{
+                fontFamily: FontFamily.heading,
+                backgroundColor: '#fff',
+                color: Brand.primary,
+                overflow: 'hidden',
+              }}
+            >
+              Setting
+            </Text>
           </View>
-          <SegmentedControl
-            options={THEME_OPTIONS}
-            value={mode}
-            onChange={setMode}
-          />
+          <SegmentedControl options={THEME_OPTIONS} value={mode} onChange={setMode} />
         </View>
 
         <Pressable
@@ -229,6 +257,7 @@ export function SettingsHub({ title, subtitle, links, sections }: Props) {
             void onEnablePush();
           }}
           disabled={pushBusy}
+          accessibilityRole="button"
           className="mb-6 flex-row items-center gap-3.5 rounded-card bg-surface-card px-4 py-3.5"
           style={{
             shadowColor: '#101512',
@@ -240,11 +269,11 @@ export function SettingsHub({ title, subtitle, links, sections }: Props) {
         >
           <View
             className="h-10 w-10 items-center justify-center rounded-card"
-            style={{ backgroundColor: Pastels.mint }}
+            style={{ backgroundColor: ICON_BG }}
           >
-            <Bell color={Brand.primary} size={17} strokeWidth={1.5} />
+            <Bell color={ICON_COLOR} size={17} strokeWidth={1.5} />
           </View>
-          <View className="flex-1">
+          <View className="min-w-0 flex-1">
             <Text className="text-[15px] text-ink" style={{ fontFamily: FontFamily.heading }}>
               Push notifications
             </Text>
@@ -259,34 +288,26 @@ export function SettingsHub({ title, subtitle, links, sections }: Props) {
           )}
         </Pressable>
 
-        {/* Sections or flat links */}
-        {sections
-          ? sections.map((section) => (
-              <View key={section.title} className="mb-5">
-                <Text className="mb-2 text-xs font-bold uppercase tracking-widest text-ink-muted" style={{ fontFamily: FontFamily.heading }}>
-                  {section.title}
-                </Text>
-                {renderLinks(section.links)}
-              </View>
-            ))
-          : (
-            <View className="mb-5">
-              {renderLinks(links)}
+        {sections ? (
+          sections.map((section) => (
+            <View key={section.title} className="mb-5">
+              <SectionLabel>{section.title}</SectionLabel>
+              {renderLinks(section.links)}
             </View>
-          )
-        }
+          ))
+        ) : (
+          <View className="mb-5">{renderLinks(links)}</View>
+        )}
 
-        {/* Sign out — terracotta accent, visually separated */}
-        <View
-          className="mb-2 mt-4 h-px"
-          style={{ backgroundColor: '#E5E8E4' }}
-        />
+        <View className="mb-2 mt-4 h-px" style={{ backgroundColor: '#E5E8E4' }} />
         <Pressable
           accessibilityRole="button"
           disabled={signingOut}
           className="mt-4 items-center rounded-card py-4"
           style={{ backgroundColor: `${Brand.accent}15` }}
-          onPress={() => { void onSignOut(); }}
+          onPress={() => {
+            void onSignOut();
+          }}
         >
           {signingOut ? (
             <ActivityIndicator color={Brand.accent} />

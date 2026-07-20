@@ -40,6 +40,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useCommunityUiStore } from '@/stores/communityUiStore';
 import { useReadStateStore } from '@/stores/readStateStore';
 import type { Notice } from '@/types/database';
+import { NOTICE_CATEGORIES } from '@/types/database';
 
 function matchesNotice(notice: Notice, query: string): boolean {
   const q = query.trim().toLowerCase();
@@ -67,6 +68,8 @@ export default function AdminNoticesScreen() {
   const [targetAudience, setTargetAudience] = useState<'all' | 'tower'>('all');
   const [targetTowerId, setTargetTowerId] = useState<string>('');
   const [isPinned, setIsPinned] = useState(false);
+  const [category, setCategory] = useState<'urgent' | 'general' | 'event'>('general');
+  const [requiresAck, setRequiresAck] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const noticesKey = queryKeys.notices(societyId ?? 'none');
@@ -116,6 +119,8 @@ export default function AdminNoticesScreen() {
         targetAudience,
         targetTowerId: targetAudience === 'tower' ? targetTowerId : null,
         isPinned,
+        category,
+        requiresAck: category === 'urgent' ? true : requiresAck,
       });
     },
     onMutate: async () => {
@@ -133,6 +138,8 @@ export default function AdminNoticesScreen() {
                 target_audience: targetAudience,
                 target_tower_id: targetAudience === 'tower' ? targetTowerId : null,
                 is_pinned: isPinned,
+                category,
+                requires_ack: category === 'urgent' ? true : requiresAck,
               }
             : n,
         ),
@@ -179,6 +186,8 @@ export default function AdminNoticesScreen() {
     setTargetAudience('all');
     setTargetTowerId('');
     setIsPinned(false);
+    setCategory('general');
+    setRequiresAck(false);
     setFormError(null);
     setModalOpen(true);
   };
@@ -193,6 +202,8 @@ export default function AdminNoticesScreen() {
     setTargetAudience((notice.target_audience as any) ?? 'all');
     setTargetTowerId(notice.target_tower_id ?? '');
     setIsPinned(notice.is_pinned ?? false);
+    setCategory(notice.category ?? 'general');
+    setRequiresAck(notice.requires_ack ?? false);
     setFormError(null);
     setModalOpen(true);
   };
@@ -321,9 +332,36 @@ export default function AdminNoticesScreen() {
               onChangeText={setBody}
             />
 
+            <Text className="mb-2 text-xs font-semibold uppercase text-ink-muted">Category</Text>
+            <ChipSelector
+              className="mb-3"
+              presentation="tiles"
+              options={NOTICE_CATEGORIES.map((c) => ({ value: c.value, label: c.label }))}
+              value={category}
+              onChange={(v) => {
+                const next = v as 'urgent' | 'general' | 'event';
+                setCategory(next);
+                if (next === 'urgent') setRequiresAck(true);
+              }}
+            />
+
             <View className="mb-4 flex-row items-center justify-between">
               <Text className="text-base text-ink font-medium">Pin Notice</Text>
               <Switch value={isPinned} onValueChange={setIsPinned} />
+            </View>
+
+            <View className="mb-4 flex-row items-center justify-between">
+              <View className="flex-1 pr-3">
+                <Text className="text-base text-ink font-medium">Require acknowledgment</Text>
+                <Text className="text-xs text-ink-muted">
+                  Residents must confirm they read this (auto-on for urgent)
+                </Text>
+              </View>
+              <Switch
+                value={requiresAck || category === 'urgent'}
+                onValueChange={setRequiresAck}
+                disabled={category === 'urgent'}
+              />
             </View>
 
             <Text className="mb-2 text-xs font-semibold uppercase text-ink-muted">Audience</Text>

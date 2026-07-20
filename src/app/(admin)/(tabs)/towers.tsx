@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2 } from 'lucide-react-native';
-import { useState } from 'react';
+import { Pencil, Plus, Trash2 } from 'lucide-react-native';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -13,21 +13,59 @@ import {
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
-import { Card } from '@/components/ui/card';
-import { Tokens } from '@/theme/tokens';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
-import { deleteTower, fetchTowers, upsertTower } from '@/lib/community-api';
+import { Brand, FontFamily } from '@/constants/theme';
+import { deleteTower, fetchFlats, fetchTowers, upsertTower } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
 import type { Tower } from '@/types/database';
+
+function RowActions({
+  onEdit,
+  onDelete,
+  deletePending,
+  editLabel,
+  deleteLabel,
+}: {
+  onEdit: () => void;
+  onDelete: () => void;
+  deletePending?: boolean;
+  editLabel: string;
+  deleteLabel: string;
+}) {
+  return (
+    <View className="flex-row items-center gap-1">
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={editLabel}
+        onPress={onEdit}
+        className="h-10 w-10 items-center justify-center rounded-full"
+        hitSlop={4}
+      >
+        <Pencil color={Brand.inkSoft} size={18} strokeWidth={1.5} />
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={deleteLabel}
+        onPress={onDelete}
+        disabled={deletePending}
+        className="h-10 w-10 items-center justify-center rounded-full"
+        hitSlop={4}
+      >
+        <Trash2 color={Brand.inkMuted} size={18} strokeWidth={1.5} />
+      </Pressable>
+    </View>
+  );
+}
 
 export default function AdminTowersScreen() {
   const societyId = useAuthStore((s) => s.profile?.society_id);
   const queryClient = useQueryClient();
   const towersKey = queryKeys.towers(societyId ?? 'none');
+  const flatsKey = queryKeys.flats(societyId ?? 'none');
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Tower | null>(null);
@@ -39,6 +77,20 @@ export default function AdminTowersScreen() {
     queryFn: () => fetchTowers(societyId!),
     enabled: Boolean(societyId),
   });
+
+  const flatsQuery = useQuery({
+    queryKey: flatsKey,
+    queryFn: () => fetchFlats(societyId!),
+    enabled: Boolean(societyId),
+  });
+
+  const unitCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const flat of flatsQuery.data ?? []) {
+      map.set(flat.tower_id, (map.get(flat.tower_id) ?? 0) + 1);
+    }
+    return map;
+  }, [flatsQuery.data]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -152,6 +204,9 @@ export default function AdminTowersScreen() {
     );
   }
 
+  const towers = listQuery.data ?? [];
+  const showAddLabel = towers.length === 0;
+
   return (
     <ScreenHeader
       title="Towers"
@@ -162,9 +217,17 @@ export default function AdminTowersScreen() {
           accessibilityRole="button"
           accessibilityLabel="Add tower"
           onPress={openCreate}
-          className="h-11 w-11 items-center justify-center rounded-full bg-charcoal"
+          className={`flex-row items-center justify-center rounded-pill ${
+            showAddLabel ? 'gap-1.5 px-3.5 py-2.5' : 'h-11 w-11'
+          }`}
+          style={{ backgroundColor: Brand.charcoal }}
         >
-          <Plus color="#fff" size={20} />
+          <Plus color="#fff" size={18} strokeWidth={2} />
+          {showAddLabel ? (
+            <Text className="text-sm font-semibold text-white" style={{ fontFamily: FontFamily.heading }}>
+              Add tower
+            </Text>
+          ) : null}
         </Pressable>
       }
     >
@@ -176,49 +239,76 @@ export default function AdminTowersScreen() {
         <SkeletonList count={3} />
       ) : (
         <FlatList
-          data={listQuery.data ?? []}
+          data={towers}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
-          ItemSeparatorComponent={() => <View className="h-3" />}
+          contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}
           refreshing={listQuery.isRefetching}
           onRefresh={() => void listQuery.refetch()}
           ListEmptyComponent={
-            <EmptyState
-              visual="towers"
-              title="No towers yet"
-              subtitle="Add Tower A, Tower B, etc. to structure your society."
-              actionLabel="+ Add tower"
-              onAction={openCreate}
-            />
+            <View className="px-4">
+              <EmptyState
+                visual="towers"
+                title="No towers yet"
+                subtitle="Add Tower A, Tower B, etc. to structure your society."
+                actionLabel="+ Add tower"
+                onAction={openCreate}
+              />
+            </View>
           }
-          renderItem={({ item }) => (
-            <Card style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <View>
-                <Text style={{ ...Tokens.typography.h3, color: Tokens.color.textPrimary }}>{item.name}</Text>
-                <Pressable onPress={() => openEdit(item)} style={{ marginTop: 4 }}>
-                  <Text style={{ ...Tokens.typography.label, color: Tokens.color.primary }}>Edit Tower</Text>
-                </Pressable>
-              </View>
-              <Pressable
-                onPress={() => confirmDelete(item)}
-                disabled={deleteMutation.isPending}
-                style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
-                accessibilityLabel={`Delete tower ${item.name}`}
-              >
-                <Trash2 color={Tokens.color.danger} size={20} />
-              </Pressable>
-            </Card>
+          ItemSeparatorComponent={() => (
+            <View className="mx-5 h-px bg-surface-border" />
           )}
+          renderItem={({ item }) => {
+            const units = unitCounts.get(item.id) ?? 0;
+            return (
+              <View className="flex-row items-center gap-3 px-5 py-3.5">
+                <View className="min-w-0 flex-1">
+                  <Text
+                    className="text-[16px] text-ink"
+                    style={{ fontFamily: FontFamily.heading }}
+                    numberOfLines={1}
+                  >
+                    {item.name}
+                  </Text>
+                  <View className="mt-1 flex-row items-center gap-1.5">
+                    <View
+                      className="h-1.5 w-1.5 rounded-full"
+                      style={{
+                        backgroundColor: units > 0 ? Brand.primary : Brand.inkMuted,
+                      }}
+                    />
+                    <Text className="text-xs text-ink-muted">
+                      {units === 0
+                        ? 'No units yet'
+                        : `${units} unit${units === 1 ? '' : 's'}`}
+                    </Text>
+                  </View>
+                </View>
+                <RowActions
+                  editLabel={`Edit tower ${item.name}`}
+                  deleteLabel={`Delete tower ${item.name}`}
+                  onEdit={() => openEdit(item)}
+                  onDelete={() => confirmDelete(item)}
+                  deletePending={deleteMutation.isPending}
+                />
+              </View>
+            );
+          }}
         />
       )}
 
       <Modal visible={modalOpen} animationType="slide" transparent>
         <KeyboardAvoidingView behavior="padding" className="flex-1 justify-end bg-black/40">
           <View className="rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
-            <Text style={{ ...Tokens.typography.h2, color: Tokens.color.textPrimary, marginBottom: 16 }}>
+            <Text
+              className="mb-4 text-xl text-ink"
+              style={{ fontFamily: FontFamily.display }}
+            >
               {editing ? 'Edit tower' : 'New tower'}
             </Text>
-            {formError ? <Text style={{ ...Tokens.typography.caption, color: Tokens.color.danger, marginBottom: 8 }}>{formError}</Text> : null}
+            {formError ? (
+              <Text className="mb-2 text-sm text-red-600">{formError}</Text>
+            ) : null}
             <TextInput
               className="mb-4 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
               placeholder="Tower name"
@@ -232,18 +322,18 @@ export default function AdminTowersScreen() {
                 onPress={() => setModalOpen(false)}
                 className="flex-1 items-center rounded-xl border border-surface-border py-3"
               >
-                <Text style={{ ...Tokens.typography.bodyMedium, color: Tokens.color.textSecondary }}>Cancel</Text>
+                <Text className="font-semibold text-ink-soft">Cancel</Text>
               </Pressable>
               <Pressable
                 onPress={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending}
                 className="flex-1 items-center rounded-bubbly py-3.5"
-                style={{ backgroundColor: Tokens.color.primary }}
+                style={{ backgroundColor: Brand.primary }}
               >
                 {saveMutation.isPending ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={{ ...Tokens.typography.bodyMedium, color: '#fff' }}>Save</Text>
+                  <Text className="font-semibold text-white">Save</Text>
                 )}
               </Pressable>
             </View>

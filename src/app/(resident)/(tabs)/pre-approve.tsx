@@ -1,8 +1,10 @@
-import { ArrowLeft, CheckCircle2 } from 'lucide-react-native';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, CheckCircle2, Zap } from 'lucide-react-native';
 import { useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
+  Switch,
   Text,
   TextInput,
   View,
@@ -16,6 +18,12 @@ import { ErrorBanner } from '@/components/visitors/error-banner';
 import { QRCodeModal } from '@/components/visitors/qr-code-modal';
 import { useAppBack } from '@/hooks/use-app-back';
 import { useThemePalette } from '@/hooks/use-theme';
+import {
+  fetchFrequentVisitors,
+  quickApproveFrequentVisitor,
+  upsertFrequentVisitor,
+} from '@/lib/ops-api';
+import { queryKeys } from '@/lib/query-client';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { VisitorType, VisitorWithFlat } from '@/types/database';
@@ -26,17 +34,37 @@ export default function PreApproveGuestScreen() {
   const palette = useThemePalette();
   const profile = useAuthStore((s) => s.profile);
   const user = useAuthStore((s) => s.user);
+  const queryClient = useQueryClient();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [purpose, setPurpose] = useState('');
   const [type, setType] = useState<VisitorType>('guest');
   const [validity, setValidity] = useState<'today' | '24h' | 'week'>('today');
+  const [saveAsFrequent, setSaveAsFrequent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [createdVisitor, setCreatedVisitor] = useState<VisitorWithFlat | null>(null);
   const [qrModalVisible, setQrModalVisible] = useState(false);
+
+  const frequentQuery = useQuery({
+    queryKey: queryKeys.frequentVisitors(profile?.flat_id ?? 'none'),
+    queryFn: () => fetchFrequentVisitors(profile!.flat_id!),
+    enabled: Boolean(profile?.flat_id),
+  });
+
+  const quickApproveMutation = useMutation({
+    mutationFn: (id: string) => quickApproveFrequentVisitor(id, 12),
+    onSuccess: async (visitor) => {
+      setCreatedVisitor(visitor as VisitorWithFlat);
+      setQrModalVisible(true);
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.frequentVisitors(profile!.flat_id!),
+      });
+    },
+    onError: (e: Error) => setError(e.message),
+  });
 
   const onSubmit = async () => {
     setError(null);
@@ -53,7 +81,7 @@ export default function PreApproveGuestScreen() {
 
     setSubmitting(true);
 
-    let expires_at = new Date();
+    const expires_at = new Date();
     if (validity === 'today') {
       expires_at.setHours(23, 59, 59, 999);
     } else if (validity === '24h') {
@@ -63,33 +91,52 @@ export default function PreApproveGuestScreen() {
     }
 
     try {
-      const { data, error: insertError } = await supabase.from('visitors').insert({
-        name: name.trim(),
-        phone: phone.trim() || null,
-        photo_url: null,
-        purpose: purpose.trim() || null,
-        type,
-        status: 'approved',
-        flat_id: profile.flat_id,
-        created_by: user.id,
-        society_id: profile.society_id,
-        expires_at: expires_at.toISOString(),
-      }).select('*, flats(*)').single();
+      const { data, error: insertError } = await supabase
+        .from('visitors')
+        .insert({
+          name: name.trim(),
+          phone: phone.trim() || null,
+          photo_url: null,
+          purpose: purpose.trim() || null,
+          type,
+          status: 'approved',
+          flat_id: profile.flat_id,
+          created_by: user.id,
+          society_id: profile.society_id,
+          expires_at: expires_at.toISOString(),
+        })
+        .select('*, flats(*)')
+        .single();
 
       if (insertError) {
         setError(insertError.message);
         return;
       }
 
+      if (saveAsFrequent) {
+        await upsertFrequentVisitor({
+          societyId: profile.society_id,
+          flatId: profile.flat_id,
+          name: name.trim(),
+          phone: phone.trim() || null,
+          type,
+          purpose: purpose.trim() || null,
+        });
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.frequentVisitors(profile.flat_id),
+        });
+      }
+
       if (data) {
         setCreatedVisitor(data as VisitorWithFlat);
         setQrModalVisible(true);
       }
-      
+
       setName('');
       setPhone('');
       setPurpose('');
       setType('guest');
+      setSaveAsFrequent(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to pre-approve guest');
     } finally {
@@ -114,9 +161,7 @@ export default function PreApproveGuestScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Go back"
-          onPress={() => {
-            goBack();
-          }}
+          onPress={() => goBack()}
           className="h-10 w-10 items-center justify-center rounded-full border border-surface-border bg-surface-card"
         >
           <ArrowLeft color={palette.inkMuted} size={18} />
@@ -132,94 +177,129 @@ export default function PreApproveGuestScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
       >
-          {error ? <ErrorBanner message={error} /> : null}
-          
-          {createdVisitor ? (
-            <Pressable 
-              onPress={() => setQrModalVisible(true)}
-              className="mb-6 flex-row items-center justify-between rounded-2xl border border-brand-100 bg-brand-50 p-4"
-            >
-              <View className="flex-row items-center gap-3">
-                <View className="h-10 w-10 items-center justify-center rounded-full bg-brand-100">
-                  <CheckCircle2 color="#2D6A5A" size={20} />
-                </View>
-                <View>
-                  <Text className="font-semibold text-ink">Guest Pre-approved!</Text>
-                  <Text className="text-sm text-ink-muted">Tap to view QR Pass</Text>
-                </View>
-              </View>
-            </Pressable>
-          ) : null}
+        {error ? <ErrorBanner message={error} /> : null}
 
-          <Text className="mb-2 text-sm font-medium text-ink-soft">Guest name</Text>
-          <TextInput
-            className="mb-4 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
-            placeholder="Alex Rivera"
-            placeholderTextColor="#94A3B8"
-            value={name}
-            onChangeText={setName}
-          />
-
-          <Text className="mb-2 text-sm font-medium text-ink-soft">Phone</Text>
-          <TextInput
-            className="mb-4 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
-            placeholder="Optional"
-            placeholderTextColor="#94A3B8"
-            keyboardType="phone-pad"
-            value={phone}
-            onChangeText={setPhone}
-          />
-
-          <Text className="mb-2 text-sm font-medium text-ink-soft">Purpose</Text>
-          <TextInput
-            className="mb-4 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
-            placeholder="Dinner, overnight stay…"
-            placeholderTextColor="#94A3B8"
-            value={purpose}
-            onChangeText={setPurpose}
-          />
-
-          <Text className="mb-2 text-sm font-medium text-ink-soft">Type</Text>
-          <ChipSelector
-            className="mb-6"
-            presentation="tiles"
-            options={VISITOR_TYPES.map((t) => ({ value: t.value, label: t.label }))}
-            value={type}
-            onChange={setType}
-          />
-
-          <Text className="mb-2 text-sm font-medium text-ink-soft">Validity</Text>
-          <ChipSelector
-            className="mb-6"
-            presentation="tiles"
-            options={[
-              { value: 'today', label: 'Today only' },
-              { value: '24h', label: 'Next 24h' },
-              { value: 'week', label: 'This week' }
-            ]}
-            value={validity}
-            onChange={(v) => setValidity(v as any)}
-          />
-
+        {createdVisitor ? (
           <Pressable
-            disabled={submitting}
-            onPress={onSubmit}
-            className={`items-center rounded-bubbly bg-charcoal py-3.5 ${
-              submitting ? 'opacity-70' : ''
-            }`}
+            onPress={() => setQrModalVisible(true)}
+            className="mb-6 flex-row items-center justify-between rounded-2xl border border-brand-100 bg-brand-50 p-4"
           >
-            {submitting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className="text-base font-semibold text-white">Pre-approve</Text>
-            )}
+            <View className="flex-row items-center gap-3">
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-brand-100">
+                <CheckCircle2 color="#2D6A5A" size={20} />
+              </View>
+              <View>
+                <Text className="font-semibold text-ink">Guest Pre-approved!</Text>
+                <Text className="text-sm text-ink-muted">Tap to view QR Pass</Text>
+              </View>
+            </View>
           </Pressable>
+        ) : null}
+
+        {(frequentQuery.data?.length ?? 0) > 0 ? (
+          <View className="mb-6">
+            <Text className="mb-2 text-sm font-medium text-ink-soft">Frequent visitors</Text>
+            <View className="gap-2">
+              {frequentQuery.data!.map((fv) => (
+                <Pressable
+                  key={fv.id}
+                  disabled={quickApproveMutation.isPending}
+                  onPress={() => quickApproveMutation.mutate(fv.id)}
+                  className="flex-row items-center justify-between rounded-xl border border-surface-border bg-surface-card px-4 py-3"
+                >
+                  <View className="min-w-0 flex-1 pr-3">
+                    <Text className="font-semibold text-ink">{fv.name}</Text>
+                    <Text className="text-xs text-ink-muted">
+                      {fv.type} · {fv.visit_count} visits
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center gap-1">
+                    <Zap color="#C4861A" size={14} />
+                    <Text className="text-sm font-semibold text-brand-700">Quick approve</Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        <Text className="mb-2 text-sm font-medium text-ink-soft">Guest name</Text>
+        <TextInput
+          className="mb-4 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+          placeholder="Alex Rivera"
+          placeholderTextColor="#94A3B8"
+          value={name}
+          onChangeText={setName}
+        />
+
+        <Text className="mb-2 text-sm font-medium text-ink-soft">Phone</Text>
+        <TextInput
+          className="mb-4 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+          placeholder="Optional"
+          placeholderTextColor="#94A3B8"
+          keyboardType="phone-pad"
+          value={phone}
+          onChangeText={setPhone}
+        />
+
+        <Text className="mb-2 text-sm font-medium text-ink-soft">Purpose</Text>
+        <TextInput
+          className="mb-4 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+          placeholder="Dinner, overnight stay…"
+          placeholderTextColor="#94A3B8"
+          value={purpose}
+          onChangeText={setPurpose}
+        />
+
+        <Text className="mb-2 text-sm font-medium text-ink-soft">Type</Text>
+        <ChipSelector
+          className="mb-6"
+          presentation="tiles"
+          options={VISITOR_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+          value={type}
+          onChange={setType}
+        />
+
+        <Text className="mb-2 text-sm font-medium text-ink-soft">Validity</Text>
+        <ChipSelector
+          className="mb-4"
+          presentation="tiles"
+          options={[
+            { value: 'today', label: 'Today only' },
+            { value: '24h', label: 'Next 24h' },
+            { value: 'week', label: 'This week' },
+          ]}
+          value={validity}
+          onChange={(v) => setValidity(v as 'today' | '24h' | 'week')}
+        />
+
+        <View className="mb-6 flex-row items-center justify-between">
+          <View className="flex-1 pr-3">
+            <Text className="text-sm font-medium text-ink">Save as frequent visitor</Text>
+            <Text className="text-xs text-ink-muted">Cook, driver, or regular help</Text>
+          </View>
+          <Switch value={saveAsFrequent} onValueChange={setSaveAsFrequent} />
+        </View>
+
+        <Pressable
+          disabled={submitting}
+          onPress={onSubmit}
+          className={`items-center rounded-bubbly bg-charcoal py-3.5 ${
+            submitting ? 'opacity-70' : ''
+          }`}
+        >
+          {submitting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text className="text-base font-semibold text-white">Pre-approve</Text>
+          )}
+        </Pressable>
       </KeyboardAwareScrollView>
 
-      <QRCodeModal 
-        visible={qrModalVisible} 
-        onClose={() => setQrModalVisible(false)} 
-        visitor={createdVisitor} 
+      <QRCodeModal
+        visible={qrModalVisible}
+        onClose={() => setQrModalVisible(false)}
+        visitor={createdVisitor}
       />
     </SafeAreaView>
   );

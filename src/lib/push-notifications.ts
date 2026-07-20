@@ -305,20 +305,20 @@ export async function getPushRegistrationHint(): Promise<{
     return {
       canRegister: true,
       permission: status,
-      hint: 'Allowed — tap to sync your device for alerts.',
+      hint: 'On — manage notification settings',
     };
   }
   if (status === 'denied' || canAskAgain === false) {
     return {
       canRegister: true,
       permission: status,
-      hint: 'Blocked — open system settings to allow notifications.',
+      hint: 'Off — open system settings to allow alerts',
     };
   }
   return {
     canRegister: true,
     permission: status,
-    hint: 'Tap to allow notifications for gate alerts and polls.',
+    hint: 'Manage notification settings for alerts and polls',
   };
 }
 

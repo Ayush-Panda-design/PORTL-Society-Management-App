@@ -235,6 +235,14 @@ export async function reviewJoinRequest(input: {
     societyName,
   });
 
+  const { logAudit } = await import('@/lib/ops-api');
+  void logAudit({
+    action: input.approve ? 'join_request.approve' : 'join_request.reject',
+    entityType: 'profile',
+    entityId: input.userId,
+    metadata: { status: result.status },
+  });
+
   return result;
 }
 

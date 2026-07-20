@@ -2,9 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter, type Href } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, Text, View } from 'react-native';
+import { Modal, SectionList, Text, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { FloatingActionBtn } from '@/components/ui/brand';
 import { PollCreateForm } from '@/components/polls/poll-create-form';
 import { PollListRow } from '@/components/polls/poll-card';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -12,27 +14,22 @@ import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
-import { FontFamily } from '@/constants/theme';
-import { isPollExpired } from '@/lib/community';
+import { Brand, FontFamily, TypeScale } from '@/constants/theme';
+import { canPublishPoll, isPollExpired } from '@/lib/community';
 import { createPoll, fetchPolls } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
 import type { Poll } from '@/types/database';
 
-function SectionLabel({ title }: { title: string }) {
-  return (
-    <Text
-      className="mb-2 mt-1 text-xs font-bold uppercase tracking-widest text-ink-muted"
-      style={{ fontFamily: FontFamily.heading }}
-    >
-      {title}
-    </Text>
-  );
-}
+type PollSection = {
+  title: string;
+  data: Poll[];
+};
 
 function pollMeta(poll: Poll): string {
   if (poll.results_published_at) return 'Results published';
-  if (isPollExpired(poll.expires_at)) return 'Ready to publish';
+  if (canPublishPoll(poll)) return 'Ready to publish';
+  if (isPollExpired(poll.expires_at)) return 'Ended';
   if (poll.expires_at) {
     return `Ends ${new Date(poll.expires_at).toLocaleDateString(undefined, {
       day: 'numeric',
@@ -44,6 +41,7 @@ function pollMeta(poll: Poll): string {
 
 export default function AdminPollsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const profile = useAuthStore((s) => s.profile);
   const societyId = profile?.society_id;
   const userId = profile?.id;
@@ -77,26 +75,26 @@ export default function AdminPollsScreen() {
     onError: (e: Error) => setFormError(e.message),
   });
 
-  const { active, ended } = useMemo(() => {
+  const sections = useMemo((): PollSection[] => {
     const list = pollsQuery.data ?? [];
-    return {
-      active: list.filter((p) => !isPollExpired(p.expires_at)),
-      ended: list.filter((p) => isPollExpired(p.expires_at)),
-    };
-  }, [pollsQuery.data]);
+    const needsPublish = list.filter((p) => canPublishPoll(p));
+    const active = list.filter((p) => !isPollExpired(p.expires_at));
+    const ended = list.filter(
+      (p) => isPollExpired(p.expires_at) && !canPublishPoll(p),
+    );
 
-  const rows = useMemo(() => {
-    const items: { type: 'header' | 'poll'; title?: string; poll?: Poll }[] = [];
+    const out: PollSection[] = [];
+    if (needsPublish.length > 0) {
+      out.push({ title: 'Needs action', data: needsPublish });
+    }
     if (active.length > 0) {
-      items.push({ type: 'header', title: 'Live' });
-      for (const poll of active) items.push({ type: 'poll', poll });
+      out.push({ title: 'Live', data: active });
     }
     if (ended.length > 0) {
-      items.push({ type: 'header', title: 'Ended' });
-      for (const poll of ended) items.push({ type: 'poll', poll });
+      out.push({ title: 'Ended', data: ended });
     }
-    return items;
-  }, [active, ended]);
+    return out;
+  }, [pollsQuery.data]);
 
   if (!societyId) {
     return (
@@ -111,22 +109,7 @@ export default function AdminPollsScreen() {
   }
 
   return (
-    <ScreenHeader
-      title="Polls"
-      subtitle="Create polls · review privately · publish tallies"
-      showBack
-      right={
-        <Pressable
-          onPress={() => {
-            setFormError(null);
-            setModalOpen(true);
-          }}
-          className="h-10 w-10 items-center justify-center rounded-full bg-brand-700"
-        >
-          <Plus color="#fff" size={20} />
-        </Pressable>
-      }
-    >
+    <ScreenHeader title="Polls" subtitle="Create polls · review privately · publish tallies" showBack>
       {pollsQuery.error ? (
         <ErrorBanner
           message={pollsQuery.error.message}
@@ -137,45 +120,70 @@ export default function AdminPollsScreen() {
       {pollsQuery.isLoading && !pollsQuery.data ? (
         <SkeletonList count={4} />
       ) : (
-        <FlatList
-          data={rows}
-          keyExtractor={(item, index) =>
-            item.type === 'header' ? `h-${item.title}-${index}` : item.poll!.id
-          }
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 28, flexGrow: 1 }}
-          ItemSeparatorComponent={() => <View className="h-2.5" />}
-          refreshControl={
-            <ThemedRefreshControl
-              refreshing={pollsQuery.isRefetching}
-              onRefresh={() => void pollsQuery.refetch()}
-            />
-          }
-          ListEmptyComponent={
-            <EmptyState
-              visual="polls"
-              title="No polls yet"
-              subtitle="Create a poll to collect community opinion privately."
-              actionLabel="+ Create poll"
-              onAction={() => {
-                setFormError(null);
-                setModalOpen(true);
-              }}
-            />
-          }
-          renderItem={({ item }) => {
-            if (item.type === 'header') {
-              return <SectionLabel title={item.title!} />;
-            }
-            const poll = item.poll!;
-            return (
-              <PollListRow
-                poll={poll}
-                subtitle={pollMeta(poll)}
-                onPress={() => router.push(`/(admin)/polls/${poll.id}` as Href)}
+        <View className="flex-1">
+          <SectionList
+            sections={sections}
+            keyExtractor={(item) => item.id}
+            stickySectionHeadersEnabled
+            contentContainerStyle={{
+              paddingHorizontal: 16,
+              paddingBottom: 96 + Math.max(insets.bottom, 8),
+              flexGrow: 1,
+            }}
+            ItemSeparatorComponent={() => <View className="h-2.5" />}
+            refreshControl={
+              <ThemedRefreshControl
+                refreshing={pollsQuery.isRefetching}
+                onRefresh={() => void pollsQuery.refetch()}
               />
-            );
-          }}
-        />
+            }
+            ListEmptyComponent={
+              <EmptyState
+                visual="polls"
+                title="No polls yet"
+                subtitle="Create a poll to collect community opinion privately."
+                actionLabel="+ Create poll"
+                onAction={() => {
+                  setFormError(null);
+                  setModalOpen(true);
+                }}
+              />
+            }
+            renderSectionHeader={({ section }) => (
+              <View className="mb-2 mt-1 bg-surface px-1 py-1.5">
+                <Text
+                  className="uppercase tracking-widest"
+                  style={{
+                    fontFamily: FontFamily.heading,
+                    fontSize: TypeScale.label,
+                    color:
+                      section.title === 'Needs action' ? Brand.accentDark : Brand.inkSoft,
+                  }}
+                >
+                  {section.title}
+                </Text>
+              </View>
+            )}
+            renderItem={({ item }) => (
+              <PollListRow
+                poll={item}
+                subtitle={pollMeta(item)}
+                needsAction={canPublishPoll(item)}
+                onPress={() => router.push(`/(admin)/polls/${item.id}` as Href)}
+              />
+            )}
+          />
+
+          <FloatingActionBtn
+            onPress={() => {
+              setFormError(null);
+              setModalOpen(true);
+            }}
+            icon={<Plus color="#fff" size={22} strokeWidth={2} />}
+            label="New poll"
+            tone="primary"
+          />
+        </View>
       )}
 
       <Modal

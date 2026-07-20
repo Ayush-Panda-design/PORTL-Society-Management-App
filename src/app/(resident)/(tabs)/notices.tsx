@@ -1,8 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { AlertCircle, Calendar, ChevronRight, Megaphone, Sparkles, Wrench } from 'lucide-react-native';
+import { AlertCircle, Calendar, CheckCircle2, ChevronRight, Megaphone, Sparkles } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { AppCard } from '@/components/ui/brand';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -14,41 +14,38 @@ import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { formatNoticeDate } from '@/lib/community';
 import { fetchNotices } from '@/lib/community-api';
+import { acknowledgeNotice, fetchMyNoticeAcks } from '@/lib/ops-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
 import { useReadStateStore } from '@/stores/readStateStore';
-import type { Notice } from '@/types/database';
-
-type NoticeCategory = 'Event' | 'Maintenance' | 'Alert' | 'General';
-
-function inferCategory(title: string): NoticeCategory {
-  const t = title.toLowerCase();
-  if (t.includes('event') || t.includes('fest') || t.includes('celebr')) return 'Event';
-  if (t.includes('maintenance') || t.includes('repair') || t.includes('water') || t.includes('power')) {
-    return 'Maintenance';
-  }
-  if (t.includes('alert') || t.includes('urgent') || t.includes('emergency')) return 'Alert';
-  return 'General';
-}
+import type { Notice, NoticeCategory } from '@/types/database';
 
 const CATEGORY_META: Record<
   NoticeCategory,
-  { color: string; bg: string; Icon: typeof Megaphone }
+  { label: string; color: string; bg: string; Icon: typeof Megaphone }
 > = {
-  Event: { color: '#6B5CC4', bg: Pastels.lilac, Icon: Calendar },
-  Maintenance: { color: '#C4861A', bg: Pastels.butter, Icon: Wrench },
-  Alert: { color: '#C0392B', bg: Pastels.rose, Icon: AlertCircle },
-  General: { color: Brand.primary, bg: Pastels.mint, Icon: Megaphone },
+  event: { label: 'Event', color: '#6B5CC4', bg: Pastels.lilac, Icon: Calendar },
+  urgent: { label: 'Urgent', color: '#C0392B', bg: Pastels.rose, Icon: AlertCircle },
+  general: { label: 'General', color: Brand.primary, bg: Pastels.mint, Icon: Megaphone },
 };
+
+function noticeCategory(notice: Notice): NoticeCategory {
+  if (notice.category === 'urgent' || notice.category === 'event' || notice.category === 'general') {
+    return notice.category;
+  }
+  return 'general';
+}
 
 function matchesNotice(notice: Notice, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
-  return [notice.title, notice.body].join(' ').toLowerCase().includes(q);
+  return [notice.title, notice.body, notice.category ?? ''].join(' ').toLowerCase().includes(q);
 }
 
 export default function ResidentNoticesScreen() {
   const societyId = useAuthStore((s) => s.profile?.society_id);
+  const userId = useAuthStore((s) => s.user?.id);
+  const queryClient = useQueryClient();
   const isNoticeUnread = useReadStateStore((s) => s.isNoticeUnread);
   const markNoticeSeen = useReadStateStore((s) => s.markNoticeSeen);
 
@@ -59,6 +56,28 @@ export default function ResidentNoticesScreen() {
     queryKey: queryKeys.notices(societyId ?? 'none'),
     queryFn: () => fetchNotices(societyId!),
     enabled: Boolean(societyId),
+  });
+
+  const noticeIds = useMemo(() => (data ?? []).map((n) => n.id), [data]);
+
+  const acksQuery = useQuery({
+    queryKey: queryKeys.noticeAcks(userId ?? 'none', noticeIds),
+    queryFn: () => fetchMyNoticeAcks(noticeIds),
+    enabled: Boolean(userId) && noticeIds.length > 0,
+  });
+
+  const ackedIds = useMemo(
+    () => new Set((acksQuery.data ?? []).map((a) => a.notice_id)),
+    [acksQuery.data],
+  );
+
+  const ackMutation = useMutation({
+    mutationFn: (noticeId: string) => acknowledgeNotice(noticeId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.noticeAcks(userId ?? 'none', noticeIds),
+      });
+    },
   });
 
   const notices = useMemo(
@@ -81,8 +100,11 @@ export default function ResidentNoticesScreen() {
   }
 
   if (selected) {
-    const cat = inferCategory(selected.title);
+    const cat = noticeCategory(selected);
     const meta = CATEGORY_META[cat];
+    const needsAck = Boolean(selected.requires_ack);
+    const acked = ackedIds.has(selected.id);
+
     return (
       <ScreenHeader title="Notice" subtitle={formatNoticeDate(selected.created_at)}>
         <ScrollView
@@ -118,7 +140,7 @@ export default function ResidentNoticesScreen() {
               className="text-[11px] font-semibold"
               style={{ color: meta.color, fontFamily: FontFamily.heading }}
             >
-              {cat}
+              {meta.label}
             </Text>
           </View>
 
@@ -131,7 +153,30 @@ export default function ResidentNoticesScreen() {
           <Text className="mb-5 text-xs text-ink-muted">
             {formatNoticeDate(selected.created_at)}
           </Text>
-          <Text className="text-[15px] leading-6 text-ink">{selected.body}</Text>
+          <Text className="mb-6 text-[15px] leading-6 text-ink">{selected.body}</Text>
+
+          {needsAck ? (
+            <Pressable
+              disabled={acked || ackMutation.isPending}
+              onPress={() => ackMutation.mutate(selected.id)}
+              className="flex-row items-center justify-center gap-2 rounded-card py-3.5"
+              style={{ backgroundColor: acked ? Pastels.mint : Brand.primary }}
+            >
+              {ackMutation.isPending ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <CheckCircle2 color={acked ? Brand.primary : '#fff'} size={18} />
+                  <Text
+                    className="font-semibold"
+                    style={{ color: acked ? Brand.primary : '#fff' }}
+                  >
+                    {acked ? 'Acknowledged' : 'I acknowledge this notice'}
+                  </Text>
+                </>
+              )}
+            </Pressable>
+          ) : null}
         </ScrollView>
       </ScreenHeader>
     );
@@ -188,8 +233,8 @@ export default function ResidentNoticesScreen() {
                       },
                       {
                         Icon: AlertCircle,
-                        title: 'Tap to read',
-                        body: 'Open any notice for the full message and cover photo.',
+                        title: 'Acknowledge critical notices',
+                        body: 'Water shutoffs and fire drills may ask you to confirm you read them.',
                         tint: '#C0392B',
                         wash: Pastels.rose,
                       },
@@ -206,8 +251,9 @@ export default function ResidentNoticesScreen() {
           }
           renderItem={({ item }) => {
             const unread = isNoticeUnread(item.id);
-            const cat = inferCategory(item.title);
+            const cat = noticeCategory(item);
             const meta = CATEGORY_META[cat];
+            const needsAck = Boolean(item.requires_ack) && !ackedIds.has(item.id);
 
             return (
               <Pressable
@@ -234,15 +280,16 @@ export default function ResidentNoticesScreen() {
                       >
                         {item.title}
                       </Text>
-                      {unread ? (
+                      {unread || needsAck ? (
                         <View
                           className="h-2 w-2 rounded-pill"
-                          style={{ backgroundColor: Brand.accent }}
+                          style={{ backgroundColor: needsAck ? '#C0392B' : Brand.accent }}
                         />
                       ) : null}
                     </View>
                     <Text className="mt-0.5 text-xs text-ink-muted" numberOfLines={1}>
-                      {cat} · {formatNoticeDate(item.created_at)}
+                      {meta.label}
+                      {needsAck ? ' · Ack required' : ''} · {formatNoticeDate(item.created_at)}
                     </Text>
                   </View>
                   <ChevronRight color={Brand.inkMuted} size={16} strokeWidth={1.5} />

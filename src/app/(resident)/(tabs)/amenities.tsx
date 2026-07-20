@@ -43,6 +43,7 @@ import {
   fetchBookingsForDate,
   fetchMyAmenityBookings,
 } from '@/lib/community-api';
+import { joinAmenityWaitlist } from '@/lib/ops-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
 import { useCommunityUiStore } from '@/stores/communityUiStore';
@@ -392,19 +393,46 @@ export default function ResidentAmenitiesScreen() {
                     flatId,
                     capacity,
                   );
-                  const disabled = mine || full || bookMutation.isPending;
+                  const disabled = mine || bookMutation.isPending;
                   let statusLabel = 'Book';
                   if (mine) statusLabel = 'Yours';
-                  else if (full) statusLabel = 'Full';
+                  else if (full) statusLabel = selected.allow_waitlist === false ? 'Full' : 'Join waitlist';
                   else if (capacity > 1) statusLabel = `${remaining} left`;
 
                   return (
                     <Pressable
                       key={item}
-                      disabled={disabled}
-                      onPress={() => setPendingSlot(item)}
+                      disabled={disabled || (full && selected.allow_waitlist === false)}
+                      onPress={() => {
+                        if (full && selected.allow_waitlist !== false) {
+                          Alert.alert(
+                            'Slot full',
+                            'Join the waitlist? You will be booked automatically if someone cancels.',
+                            [
+                              { text: 'Cancel', style: 'cancel' },
+                              {
+                                text: 'Join waitlist',
+                                onPress: () => {
+                                  void joinAmenityWaitlist({
+                                    amenityId: selected.id,
+                                    flatId: flatId!,
+                                    date,
+                                    slot: item,
+                                  })
+                                    .then(() =>
+                                      Alert.alert('Waitlisted', 'You’re in line for this slot.'),
+                                    )
+                                    .catch((e: Error) => Alert.alert('Could not join', e.message));
+                                },
+                              },
+                            ],
+                          );
+                          return;
+                        }
+                        setPendingSlot(item);
+                      }}
                       className={`flex-row items-center justify-between rounded-xl border px-4 py-3.5 ${
-                        mine || full
+                        mine || (full && selected.allow_waitlist === false)
                           ? 'border-surface-border bg-surface-muted opacity-70'
                           : 'border-surface-border bg-surface-card'
                       }`}

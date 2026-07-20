@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Bell, Home, MoreHorizontal, Users } from 'lucide-react-native';
+import { Bell, DoorOpen, Home, MoreHorizontal } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getResidentTabOptions, TAB_ICON_SIZE } from '@/constants/navigation';
@@ -51,7 +51,8 @@ export default function ResidentLayout() {
         name="visitors"
         options={{
           title: 'Visitors',
-          tabBarIcon: ({ color, focused }) => tabIcon(Users, color, focused),
+          tabBarAccessibilityLabel: 'Visitors and gate activity',
+          tabBarIcon: ({ color, focused }) => tabIcon(DoorOpen, color, focused),
         }}
       />
       <Tabs.Screen
@@ -90,6 +91,7 @@ export default function ResidentLayout() {
       <Tabs.Screen name="helpdesk" options={{ href: null }} />
       <Tabs.Screen name="amenities" options={{ href: null }} />
       <Tabs.Screen name="directory" options={{ href: null }} />
+      <Tabs.Screen name="payments" options={{ href: null }} />
     </Tabs>
   );
 }

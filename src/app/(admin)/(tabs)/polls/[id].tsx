@@ -129,7 +129,7 @@ export default function AdminPollDetailScreen() {
       ) : (
         <ScrollView
           className="flex-1"
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}
           refreshControl={
             <ThemedRefreshControl
               refreshing={

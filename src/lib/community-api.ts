@@ -53,7 +53,12 @@ export async function upsertNotice(input: {
   isPinned?: boolean;
   publishAt?: string | null;
   expiresAt?: string | null;
+  category?: 'urgent' | 'general' | 'event';
+  requiresAck?: boolean;
 }): Promise<void> {
+  const category = input.category ?? 'general';
+  const requiresAck = input.requiresAck ?? category === 'urgent';
+
   if (input.id) {
     const { error } = await supabase
       .from('notices')
@@ -66,6 +71,8 @@ export async function upsertNotice(input: {
         is_pinned: input.isPinned ?? false,
         publish_at: input.publishAt ?? null,
         expires_at: input.expiresAt ?? null,
+        category,
+        requires_ack: requiresAck,
       })
       .eq('id', input.id);
     if (error) throw new Error(error.message);
@@ -85,6 +92,8 @@ export async function upsertNotice(input: {
       is_pinned: input.isPinned ?? false,
       publish_at: input.publishAt ?? null,
       expires_at: input.expiresAt ?? null,
+      category,
+      requires_ack: requiresAck,
     })
     .select('id')
     .single();
@@ -540,6 +549,10 @@ export async function upsertAmenity(input: {
   bookingHorizonDays?: number | null;
   maxActiveBookingsPerFlat?: number | null;
   feePaise?: number | null;
+  allowWaitlist?: boolean;
+  cancelPenaltyPaise?: number | null;
+  cancelPenaltyHours?: number | null;
+  allowRecurring?: boolean;
 }): Promise<void> {
   const horizon = input.bookingHorizonDays ?? 7;
   const payload = {
@@ -554,6 +567,10 @@ export async function upsertAmenity(input: {
     booking_horizon_days: Math.max(1, Math.min(14, horizon)),
     max_active_bookings_per_flat: input.maxActiveBookingsPerFlat ?? 2,
     fee_paise: Math.max(0, input.feePaise ?? 0),
+    allow_waitlist: input.allowWaitlist ?? true,
+    cancel_penalty_paise: Math.max(0, input.cancelPenaltyPaise ?? 0),
+    cancel_penalty_hours: Math.max(0, Math.min(168, input.cancelPenaltyHours ?? 24)),
+    allow_recurring: Boolean(input.allowRecurring),
   };
 
   if (input.isFeatured) {

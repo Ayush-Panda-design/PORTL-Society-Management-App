@@ -4,9 +4,12 @@ import { Check, ChevronRight, Lock, Megaphone, Users } from 'lucide-react-native
 
 import { AnimatedPressable } from '@/components/ui/animated-pressable';
 import { AppCard, InitialsAvatar } from '@/components/ui/brand';
-import { Brand, FontFamily, Pastels } from '@/constants/theme';
+import { Brand, Elevation, FontFamily, Pastels, TypeScale } from '@/constants/theme';
 import { pollRespondentLabel, pollStatusKind, type PollStatusKind } from '@/lib/community';
 import type { Poll, PollVoteWithProfile } from '@/types/database';
+
+const TRACK_BG = '#E5E8E4';
+const PCT_COL_WIDTH = 44;
 
 export function PollProgressBar({
   pct,
@@ -33,15 +36,16 @@ export function PollProgressBar({
   return (
     <View
       className="mt-2.5 h-2 overflow-hidden rounded-pill"
-      style={{ backgroundColor: active ? `${Brand.primary}22` : Pastels.sage }}
+      style={{ backgroundColor: TRACK_BG }}
     >
       <Animated.View
         style={{
           height: '100%',
           width,
+          minWidth: pct > 0 ? 2 : 0,
           backgroundColor: active ? Brand.primary : Brand.primaryMid,
           borderRadius: 999,
-          opacity: active ? 1 : 0.55,
+          opacity: active ? 1 : 0.7,
         }}
       />
     </View>
@@ -57,7 +61,13 @@ export function PollStatusChip({ kind }: { kind: PollStatusKind }) {
 
   return (
     <View className="rounded-pill px-2.5 py-1" style={{ backgroundColor: bg }}>
-      <Text className="text-[11px]" style={{ color, fontFamily: FontFamily.heading }}>
+      <Text
+        style={{
+          color,
+          fontFamily: FontFamily.heading,
+          fontSize: TypeScale.label,
+        }}
+      >
         {label}
       </Text>
     </View>
@@ -68,61 +78,92 @@ export function PollListRow({
   poll,
   subtitle,
   voted = false,
+  needsAction = false,
   onPress,
 }: {
   poll: Poll;
   subtitle?: string;
   /** Resident has already cast a vote on this poll. */
   voted?: boolean;
+  /** Admin needs to publish — stronger visual cue. */
+  needsAction?: boolean;
   onPress: () => void;
 }) {
   const kind = pollStatusKind(poll);
-  const accent =
-    kind === 'live' ? Pastels.mint : kind === 'results' ? Brand.primarySoft : Pastels.peach;
+  const accent = needsAction
+    ? Brand.accent
+    : kind === 'live'
+      ? Pastels.mint
+      : kind === 'results'
+        ? Brand.primarySoft
+        : Pastels.peach;
 
   return (
-    <AnimatedPressable onPress={onPress} scaleTo={0.98}>
+    <AnimatedPressable onPress={onPress} scaleTo={0.98} accessibilityRole="button">
       <View
-        className="overflow-hidden rounded-panel border border-surface-border bg-surface-card"
+        className="overflow-hidden rounded-panel bg-surface-card"
         style={{
           shadowColor: '#101512',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.05,
-          shadowRadius: 8,
-          elevation: 1,
+          shadowOffset: Elevation.sm.shadowOffset,
+          shadowOpacity: Elevation.sm.shadowOpacity,
+          shadowRadius: Elevation.sm.shadowRadius,
+          elevation: 2,
         }}
       >
         <View className="h-1 w-full" style={{ backgroundColor: accent }} />
         <View className="flex-row items-center gap-3 px-4 py-3.5">
           <View className="min-w-0 flex-1">
-            <View className="mb-1.5 flex-row flex-wrap items-center gap-2">
+            <View className="mb-1.5 flex-row items-center gap-1">
+              {needsAction ? (
+                <View
+                  className="mr-1 h-2 w-2 rounded-full"
+                  style={{ backgroundColor: Brand.accent }}
+                />
+              ) : null}
               <PollStatusChip kind={kind} />
               {voted ? (
                 <View
-                  className="flex-row items-center gap-1 rounded-pill px-2.5 py-1"
+                  className="ml-1 flex-row items-center gap-1 rounded-pill px-2.5 py-1"
                   style={{ backgroundColor: Pastels.mint }}
                 >
                   <Check color={Brand.primaryDark} size={11} strokeWidth={2.5} />
                   <Text
-                    className="text-[11px]"
-                    style={{ color: Brand.primaryDark, fontFamily: FontFamily.heading }}
+                    style={{
+                      color: Brand.primaryDark,
+                      fontFamily: FontFamily.heading,
+                      fontSize: TypeScale.label,
+                    }}
                   >
                     Voted
                   </Text>
                 </View>
               ) : null}
               {subtitle ? (
-                <Text className="text-[11px] text-ink-faint" numberOfLines={1}>
+                <Text
+                  className="ml-1 flex-1"
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={{
+                    color: needsAction ? Brand.accentDark : Brand.inkMuted,
+                    fontFamily: needsAction ? FontFamily.heading : FontFamily.body,
+                    fontSize: TypeScale.label,
+                  }}
+                >
                   {subtitle}
                 </Text>
               ) : null}
             </View>
             <Text
-              className="text-[16px] leading-5 text-ink"
-              style={{ fontFamily: FontFamily.heading }}
+              className="text-ink"
+              style={{
+                fontFamily: FontFamily.heading,
+                fontSize: TypeScale.h3,
+                lineHeight: 22,
+              }}
               numberOfLines={2}
+              ellipsizeMode="tail"
             >
-              {poll.question}
+              {poll.question.trim()}
             </Text>
           </View>
           <ChevronRight color={Brand.inkMuted} size={18} strokeWidth={1.5} />
@@ -145,28 +186,36 @@ export function PollDetailHeader({
       <View className="mb-3 flex-row items-start justify-between gap-3">
         <PollStatusChip kind={kind} />
         {meta ? (
-          <Text className="max-w-[55%] text-right text-xs text-ink-faint" numberOfLines={2}>
+          <Text
+            className="max-w-[55%] text-right"
+            numberOfLines={2}
+            style={{ color: Brand.inkMuted, fontSize: TypeScale.label }}
+          >
             {meta}
           </Text>
         ) : null}
       </View>
       <Text
-        className="text-[28px] leading-8 tracking-tight text-ink"
-        style={{ fontFamily: FontFamily.display }}
+        className="tracking-tight text-ink"
+        style={{
+          fontFamily: FontFamily.display,
+          fontSize: TypeScale.display,
+          lineHeight: 34,
+        }}
       >
-        {poll.question}
+        {poll.question.trim()}
       </Text>
     </View>
   );
 }
 
 export function PollVoterStack({ votes }: { votes: PollVoteWithProfile[] }) {
-  const shown = votes.slice(0, 4);
+  const shown = votes.slice(0, 3);
   const extra = votes.length - shown.length;
   if (shown.length === 0) return null;
 
   return (
-    <View className="flex-row items-center">
+    <View className="h-6 flex-row items-center justify-end" style={{ minWidth: 56 }}>
       {shown.map((v, i) => {
         const name = v.profile?.full_name?.trim() || 'Resident';
         return (
@@ -206,6 +255,7 @@ export function PollOptionRow({
   pct,
   selected = false,
   disabled = false,
+  interactive = false,
   votes = [],
   onPress,
   showTallies = false,
@@ -216,6 +266,8 @@ export function PollOptionRow({
   pct: number;
   selected?: boolean;
   disabled?: boolean;
+  /** True when the option can still be voted on (outlined, pressable). */
+  interactive?: boolean;
   votes?: PollVoteWithProfile[];
   onPress?: () => void;
   showTallies?: boolean;
@@ -223,7 +275,7 @@ export function PollOptionRow({
 }) {
   const content = (
     <>
-      <View className="flex-row items-center justify-between gap-2">
+      <View className="flex-row items-center gap-3">
         <View className="min-w-0 flex-1 flex-row items-center gap-2">
           {selected ? (
             <View
@@ -232,46 +284,73 @@ export function PollOptionRow({
             >
               <Check color="#fff" size={12} strokeWidth={3} />
             </View>
+          ) : interactive && !disabled ? (
+            <View
+              className="h-5 w-5 rounded-pill border-2"
+              style={{ borderColor: '#D1D5DB' }}
+            />
           ) : null}
           <Text
-            className="min-w-0 flex-1 text-[15px] text-ink"
-            style={{ fontFamily: selected ? FontFamily.heading : FontFamily.body }}
+            className="min-w-0 flex-1 text-ink"
+            style={{
+              fontFamily: selected ? FontFamily.heading : FontFamily.body,
+              fontSize: TypeScale.body,
+            }}
             numberOfLines={2}
+            ellipsizeMode="tail"
           >
             {label}
           </Text>
         </View>
-        <View className="flex-row items-center gap-2">
-          {showVoters ? <PollVoterStack votes={votes} /> : null}
-          {showTallies ? (
+
+        {showTallies ? (
+          <View className="flex-row items-center gap-2">
+            {showVoters ? (
+              <View style={{ width: 64, alignItems: 'flex-end' }}>
+                <PollVoterStack votes={votes} />
+              </View>
+            ) : null}
             <Text
-              className="text-sm tabular-nums"
+              className="text-right tabular-nums"
               style={{
-                color: selected ? Brand.primary : Brand.inkMuted,
+                width: PCT_COL_WIDTH,
+                color: selected ? Brand.primary : Brand.inkSoft,
                 fontFamily: FontFamily.heading,
+                fontSize: TypeScale.body,
               }}
             >
               {pct}%
             </Text>
-          ) : null}
-        </View>
+          </View>
+        ) : interactive && !disabled ? (
+          <Text
+            style={{
+              color: Brand.primary,
+              fontFamily: FontFamily.heading,
+              fontSize: TypeScale.label,
+            }}
+          >
+            Tap
+          </Text>
+        ) : null}
       </View>
-      {showTallies ? <PollProgressBar pct={pct} active={selected} /> : null}
-      {showTallies && count > 0 ? (
-        <Text className="mt-1.5 text-[11px] text-ink-faint">
+
+      {showTallies ? <PollProgressBar pct={pct} active={selected || pct > 0} /> : null}
+      {showTallies ? (
+        <Text className="mt-1.5" style={{ color: Brand.inkMuted, fontSize: TypeScale.label }}>
           {count} vote{count === 1 ? '' : 's'}
         </Text>
       ) : null}
     </>
   );
 
-  if (!onPress) {
+  if (!interactive || !onPress) {
     return (
       <View
         className="mb-2.5 rounded-card px-3.5 py-3"
         style={{
-          backgroundColor: selected ? `${Brand.primary}10` : Pastels.sage,
-          borderWidth: selected ? 1.5 : 0,
+          backgroundColor: selected ? `${Brand.primary}12` : Pastels.sage,
+          borderWidth: 1,
           borderColor: selected ? Brand.primary : 'transparent',
         }}
       >
@@ -284,11 +363,12 @@ export function PollOptionRow({
     <Pressable
       disabled={disabled}
       onPress={onPress}
+      android_ripple={{ color: `${Brand.primary}18` }}
       className="mb-2.5 rounded-card px-3.5 py-3"
       style={{
-        backgroundColor: selected ? `${Brand.primary}10` : 'transparent',
+        backgroundColor: selected ? `${Brand.primary}10` : Brand.card,
         borderWidth: 1.5,
-        borderColor: selected ? Brand.primary : '#E5E8E4',
+        borderColor: selected ? Brand.primary : '#D1D5DB',
         opacity: disabled && !selected ? 0.72 : 1,
       }}
     >
@@ -320,6 +400,8 @@ export function PollOptionsPanel({
   showVoters?: boolean;
   onVote?: (option: string) => void;
 }) {
+  const interactive = Boolean(onVote) && !locked;
+
   return (
     <View>
       {options.map((option) => {
@@ -333,15 +415,12 @@ export function PollOptionsPanel({
             count={showTallies ? count : 0}
             pct={showTallies ? pct : 0}
             selected={selected}
-            disabled={locked || voting}
+            disabled={locked || Boolean(voting)}
+            interactive={interactive}
             votes={optionVotes?.[option] ?? []}
             showTallies={showTallies}
             showVoters={showVoters && showTallies}
-            onPress={
-              locked || !onVote
-                ? undefined
-                : () => onVote(option)
-            }
+            onPress={interactive ? () => onVote?.(option) : undefined}
           />
         );
       })}
@@ -363,14 +442,24 @@ export function PollRespondentsList({
 }) {
   return (
     <View
-      className="mt-3 overflow-hidden rounded-card"
-      style={{ backgroundColor: Pastels.mint }}
+      className="mt-3 overflow-hidden rounded-panel bg-surface-card"
+      style={{
+        shadowColor: '#101512',
+        shadowOffset: Elevation.sm.shadowOffset,
+        shadowOpacity: Elevation.sm.shadowOpacity,
+        shadowRadius: Elevation.sm.shadowRadius,
+        elevation: 2,
+      }}
     >
-      <View className="flex-row items-center gap-2 px-3.5 py-2.5">
+      <View className="flex-row items-center gap-2 border-b border-surface-border px-4 py-3">
         <Users color={Brand.primary} size={14} strokeWidth={1.5} />
         <Text
-          className="text-xs font-semibold uppercase tracking-wide"
-          style={{ color: Brand.primary, fontFamily: FontFamily.heading }}
+          className="uppercase tracking-wide"
+          style={{
+            color: Brand.primary,
+            fontFamily: FontFamily.heading,
+            fontSize: TypeScale.label,
+          }}
         >
           Who responded · {votes.length}
         </Text>
@@ -381,7 +470,7 @@ export function PollRespondentsList({
           <ActivityIndicator color={Brand.primary} />
         </View>
       ) : votes.length === 0 ? (
-        <Text className="px-3.5 pb-3.5 text-sm text-ink-muted">No responses yet.</Text>
+        <Text className="px-4 py-3.5 text-sm text-ink-muted">No responses yet.</Text>
       ) : (
         votes.map((vote, index) => {
           const name = vote.profile?.full_name?.trim() || 'Unnamed resident';
@@ -392,10 +481,10 @@ export function PollRespondentsList({
           return (
             <View
               key={vote.id}
-              className="flex-row items-center gap-3 px-3.5 py-2.5"
+              className="flex-row items-center gap-3 px-4 py-3"
               style={{
-                borderTopWidth: index === 0 ? 0 : 1,
-                borderTopColor: `${Brand.primary}18`,
+                borderTopWidth: index === 0 ? 0 : StyleSheetHairline,
+                borderTopColor: '#E5E7EB',
               }}
             >
               <InitialsAvatar
@@ -406,13 +495,19 @@ export function PollRespondentsList({
               />
               <View className="min-w-0 flex-1">
                 <Text
-                  className="text-sm text-ink"
-                  style={{ fontFamily: FontFamily.heading }}
+                  className="text-ink"
+                  style={{ fontFamily: FontFamily.heading, fontSize: TypeScale.body }}
                   numberOfLines={1}
+                  ellipsizeMode="tail"
                 >
                   {name}
                 </Text>
-                <Text className="mt-0.5 text-[11px] text-ink-muted" numberOfLines={1}>
+                <Text
+                  className="mt-0.5"
+                  style={{ color: Brand.inkMuted, fontSize: TypeScale.label }}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
                   {meta}
                 </Text>
               </View>
@@ -421,9 +516,13 @@ export function PollRespondentsList({
                 style={{ backgroundColor: Brand.primarySoft }}
               >
                 <Text
-                  className="text-[11px]"
-                  style={{ color: Brand.primaryDark, fontFamily: FontFamily.heading }}
+                  style={{
+                    color: Brand.primaryDark,
+                    fontFamily: FontFamily.heading,
+                    fontSize: TypeScale.label,
+                  }}
                   numberOfLines={1}
+                  ellipsizeMode="tail"
                 >
                   {vote.option}
                 </Text>
@@ -435,6 +534,9 @@ export function PollRespondentsList({
     </View>
   );
 }
+
+/** 1px hairline without importing StyleSheet just for this. */
+const StyleSheetHairline = 1;
 
 export function PollAdminBreakdown({
   total,
@@ -455,7 +557,7 @@ export function PollAdminBreakdown({
   return (
     <View className="mt-5">
       <View className="mb-3 flex-row items-end gap-2">
-        <Text className="text-3xl text-ink" style={{ fontFamily: FontFamily.display }}>
+        <Text className="text-ink" style={{ fontFamily: FontFamily.display, fontSize: 32 }}>
           {total}
         </Text>
         <Text className="mb-1 text-sm text-ink-muted">
@@ -490,10 +592,10 @@ export function PollPublishCard({
       >
         <Megaphone color={Brand.primary} size={18} strokeWidth={1.5} />
         <View className="min-w-0 flex-1">
-          <Text className="text-[15px] text-ink" style={{ fontFamily: FontFamily.heading }}>
+          <Text className="text-ink" style={{ fontFamily: FontFamily.heading, fontSize: TypeScale.body }}>
             Results published
           </Text>
-          <Text className="mt-0.5 text-xs text-ink-muted">
+          <Text className="mt-0.5" style={{ color: Brand.inkMuted, fontSize: TypeScale.label }}>
             Members can see option percentages — not who voted.
           </Text>
         </View>
@@ -509,10 +611,10 @@ export function PollPublishCard({
       >
         <Lock color={Brand.inkMuted} size={18} strokeWidth={1.5} />
         <View className="min-w-0 flex-1">
-          <Text className="text-[15px] text-ink" style={{ fontFamily: FontFamily.heading }}>
+          <Text className="text-ink" style={{ fontFamily: FontFamily.heading, fontSize: TypeScale.body }}>
             Results stay private
           </Text>
-          <Text className="mt-0.5 text-xs text-ink-muted">
+          <Text className="mt-0.5" style={{ color: Brand.inkMuted, fontSize: TypeScale.label }}>
             After the poll ends, you can publish tallies without names.
           </Text>
         </View>
@@ -522,7 +624,7 @@ export function PollPublishCard({
 
   return (
     <View className="mt-5 rounded-panel border border-surface-border bg-surface-card px-4 py-4">
-      <Text className="text-[15px] text-ink" style={{ fontFamily: FontFamily.heading }}>
+      <Text className="text-ink" style={{ fontFamily: FontFamily.heading, fontSize: TypeScale.body }}>
         Publish results?
       </Text>
       <Text className="mt-1 text-sm leading-5 text-ink-muted">
@@ -538,7 +640,7 @@ export function PollPublishCard({
         {publishing ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text className="text-[15px] text-white" style={{ fontFamily: FontFamily.heading }}>
+          <Text className="text-white" style={{ fontFamily: FontFamily.heading, fontSize: TypeScale.body }}>
             Publish results
           </Text>
         )}

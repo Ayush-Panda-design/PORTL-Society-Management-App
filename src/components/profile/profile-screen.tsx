@@ -1,22 +1,26 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera, Lock, Trash2 } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { Camera, ChevronDown, Lock, Trash2 } from 'lucide-react-native';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  LayoutAnimation,
+  Platform,
   Pressable,
   Text,
   TextInput,
+  UIManager,
   View,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 import { InitialsAvatar } from '@/components/ui/brand';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
-import { Brand, FontFamily, Pastels } from '@/constants/theme';
+import { Brand, Elevation, FontFamily, Pastels, TypeScale } from '@/constants/theme';
 import {
   addProfileNote,
   deleteProfileNote,
@@ -29,6 +33,10 @@ import {
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
 
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 function formatNoteStamp(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleString(undefined, {
@@ -40,33 +48,74 @@ function formatNoteStamp(iso: string): string {
   });
 }
 
+function isValidEmail(value: string): boolean {
+  if (!value.trim()) return true;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function isValidDob(value: string): boolean {
+  if (!value.trim()) return true;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return false;
+  const d = new Date(value.trim());
+  return !Number.isNaN(d.getTime());
+}
+
+function isValidPhone(value: string): boolean {
+  if (!value.trim()) return true;
+  const digits = value.replace(/\D/g, '');
+  return digits.length >= 8 && digits.length <= 15;
+}
+
 function Field({
   label,
   value,
   onChangeText,
   placeholder,
   multiline,
-  secureHint,
   keyboardType,
+  important,
+  error,
+  helper,
 }: {
   label: string;
   value: string;
   onChangeText: (v: string) => void;
   placeholder?: string;
   multiline?: boolean;
-  secureHint?: boolean;
   keyboardType?: 'default' | 'email-address' | 'phone-pad';
+  important?: boolean;
+  error?: string | null;
+  helper?: string;
 }) {
   return (
     <View className="mb-3">
-      <View className="mb-1.5 flex-row items-center gap-1.5">
+      <View className="mb-1.5 flex-row items-center gap-2">
         <Text
-          className="text-xs font-bold uppercase tracking-widest text-ink-muted"
-          style={{ fontFamily: FontFamily.heading }}
+          className="uppercase tracking-widest"
+          style={{
+            fontFamily: FontFamily.heading,
+            fontSize: TypeScale.label,
+            color: Brand.inkSoft,
+          }}
         >
           {label}
         </Text>
-        {secureHint ? <Lock color={Brand.inkMuted} size={11} strokeWidth={1.5} /> : null}
+        {important ? (
+          <View
+            className="rounded-pill px-1.5 py-0.5"
+            style={{ backgroundColor: Pastels.butter }}
+          >
+            <Text
+              style={{
+                fontFamily: FontFamily.heading,
+                fontSize: 9,
+                color: Brand.accentDark,
+              }}
+            >
+              Important
+            </Text>
+          </View>
+        ) : null}
       </View>
       <TextInput
         value={value}
@@ -76,62 +125,100 @@ function Field({
         multiline={multiline}
         keyboardType={keyboardType}
         autoCapitalize={keyboardType === 'email-address' ? 'none' : 'sentences'}
-        className="rounded-card bg-surface-card px-4 py-3 text-[15px] text-ink"
+        className="rounded-card bg-surface px-4 py-3 text-[15px] text-ink"
         style={{
           fontFamily: FontFamily.body,
-          minHeight: multiline ? 88 : undefined,
+          minHeight: multiline ? 104 : 48,
           textAlignVertical: multiline ? 'top' : 'center',
-          shadowColor: '#101512',
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.04,
-          shadowRadius: 4,
-          elevation: 1,
+          borderWidth: 1.5,
+          borderColor: error ? '#DC2626' : multiline ? '#E5E7EB' : 'transparent',
+          backgroundColor: error ? '#FEF2F2' : Pastels.sage,
         }}
       />
+      {error ? (
+        <Text className="mt-1 text-xs" style={{ color: '#DC2626' }}>
+          {error}
+        </Text>
+      ) : helper ? (
+        <Text className="mt-1 text-xs text-ink-muted">{helper}</Text>
+      ) : null}
     </View>
   );
 }
 
-function SectionLabel({
+function ProfileCard({
   title,
   subtitle,
   privateSection,
+  open,
+  onToggle,
+  children,
 }: {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   privateSection?: boolean;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
 }) {
   return (
-    <View className="mb-3 mt-2">
-      <View className="flex-row items-center gap-2">
-        <Text
-          className="text-xs font-bold uppercase tracking-widest text-ink-muted"
-          style={{ fontFamily: FontFamily.heading }}
-        >
-          {title}
-        </Text>
-        {privateSection ? (
-          <View
-            className="flex-row items-center gap-1 rounded-pill px-2 py-0.5"
-            style={{ backgroundColor: Pastels.rose }}
-          >
-            <Lock color="#C0392B" size={10} strokeWidth={1.5} />
-            <Text className="text-[10px] font-semibold" style={{ color: '#C0392B' }}>
-              Only you
+    <View
+      className="mb-4 overflow-hidden rounded-panel bg-surface-card"
+      style={{
+        shadowColor: '#101512',
+        shadowOffset: Elevation.sm.shadowOffset,
+        shadowOpacity: Elevation.sm.shadowOpacity,
+        shadowRadius: Elevation.sm.shadowRadius,
+        elevation: 2,
+      }}
+    >
+      <Pressable
+        onPress={onToggle}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        className="flex-row items-start gap-3 px-4 py-3.5"
+      >
+        <View className="min-w-0 flex-1">
+          <View className="flex-row flex-wrap items-center gap-2">
+            <Text
+              className="text-ink"
+              style={{ fontFamily: FontFamily.heading, fontSize: TypeScale.h3 }}
+            >
+              {title}
             </Text>
+            {privateSection ? (
+              <View
+                className="flex-row items-center gap-1 rounded-pill px-2 py-0.5"
+                style={{ backgroundColor: Pastels.rose }}
+              >
+                <Lock color="#C0392B" size={10} strokeWidth={1.5} />
+                <Text className="text-[10px] font-semibold" style={{ color: '#C0392B' }}>
+                  Only you
+                </Text>
+              </View>
+            ) : (
+              <View
+                className="rounded-pill px-2 py-0.5"
+                style={{ backgroundColor: Pastels.mint }}
+              >
+                <Text className="text-[10px] font-semibold" style={{ color: Brand.primary }}>
+                  Visible to admin
+                </Text>
+              </View>
+            )}
           </View>
-        ) : (
-          <View
-            className="rounded-pill px-2 py-0.5"
-            style={{ backgroundColor: Pastels.mint }}
-          >
-            <Text className="text-[10px] font-semibold" style={{ color: Brand.primary }}>
-              Visible to admin
-            </Text>
-          </View>
-        )}
-      </View>
-      <Text className="mt-1 text-xs leading-4 text-ink-muted">{subtitle}</Text>
+          {subtitle && open ? (
+            <Text className="mt-1 text-xs leading-4 text-ink-muted">{subtitle}</Text>
+          ) : null}
+        </View>
+        <ChevronDown
+          color={Brand.inkMuted}
+          size={20}
+          strokeWidth={1.5}
+          style={{ transform: [{ rotate: open ? '180deg' : '0deg' }], marginTop: 2 }}
+        />
+      </Pressable>
+      {open ? <View className="border-t border-surface-border px-4 pb-4 pt-3">{children}</View> : null}
     </View>
   );
 }
@@ -141,6 +228,7 @@ export function ProfileScreen() {
   const setProfile = useAuthStore((s) => s.setProfile);
   const queryClient = useQueryClient();
   const userId = profile?.id;
+  const insets = useSafeAreaInsets();
 
   const [fullName, setFullName] = useState(profile?.full_name ?? '');
   const [phone, setPhone] = useState(profile?.phone ?? '');
@@ -158,6 +246,12 @@ export function ProfileScreen() {
   const [noteDraft, setNoteDraft] = useState('');
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url ?? '');
   const [avatarBusy, setAvatarBusy] = useState(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  const [openBasic, setOpenBasic] = useState(true);
+  const [openEmergency, setOpenEmergency] = useState(true);
+  const [openPrivate, setOpenPrivate] = useState(false);
+  const [openNotes, setOpenNotes] = useState(false);
 
   const privateQuery = useQuery({
     queryKey: queryKeys.profilePrivate(userId ?? 'none'),
@@ -193,9 +287,39 @@ export function ProfileScreen() {
     setAddress(row.permanent_address ?? '');
   }, [privateQuery.data]);
 
+  const emailError =
+    touched.email && !isValidEmail(personalEmail) ? 'Enter a valid email address' : null;
+  const dobError =
+    touched.dob && !isValidDob(dob) ? 'Use YYYY-MM-DD format' : null;
+  const phoneError =
+    touched.phone && !isValidPhone(phone) ? 'Enter a valid phone number' : null;
+  const emergencyPhoneError =
+    touched.emergencyPhone && !isValidPhone(emergencyPhone)
+      ? 'Enter a valid phone number'
+      : null;
+
+  const canSave = useMemo(
+    () =>
+      isValidEmail(personalEmail) &&
+      isValidDob(dob) &&
+      isValidPhone(phone) &&
+      isValidPhone(emergencyPhone) &&
+      Boolean(fullName.trim()),
+    [personalEmail, dob, phone, emergencyPhone, fullName],
+  );
+
+  const toggle = (key: 'basic' | 'emergency' | 'private' | 'notes') => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    if (key === 'basic') setOpenBasic((v) => !v);
+    if (key === 'emergency') setOpenEmergency((v) => !v);
+    if (key === 'private') setOpenPrivate((v) => !v);
+    if (key === 'notes') setOpenNotes((v) => !v);
+  };
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!userId) throw new Error('Not signed in.');
+      if (!canSave) throw new Error('Fix the highlighted fields before saving.');
       const updated = await updatePublicProfile(userId, {
         full_name: fullName,
         phone,
@@ -281,8 +405,7 @@ export function ProfileScreen() {
   };
 
   const pickAvatar = async () => {
-    if (!userId) return;
-    if (avatarBusy) return;
+    if (!userId || avatarBusy) return;
 
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
@@ -353,36 +476,23 @@ export function ProfileScreen() {
         ? 'Security'
         : 'Resident';
 
+  const notes = notesQuery.data ?? [];
+
   return (
     <ScreenHeader
       title="My profile"
       subtitle={`${roleLabel} · your details & private notes`}
       showBack
-      right={
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Save profile"
-          disabled={saveMutation.isPending}
-          onPress={() => saveMutation.mutate()}
-          className="mt-0.5 items-center justify-center rounded-card px-3.5 py-2.5"
-          style={{ backgroundColor: Brand.primary }}
-        >
-          {saveMutation.isPending ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text className="text-sm text-white" style={{ fontFamily: FontFamily.heading }}>
-              Save
-            </Text>
-          )}
-        </Pressable>
-      }
     >
       <KeyboardAwareScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 48 }}
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingBottom: 100 + Math.max(insets.bottom, 8),
+        }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        bottomOffset={24}
+        bottomOffset={100}
       >
         <View className="mb-5 items-center pt-1">
           <Pressable
@@ -413,16 +523,10 @@ export function ProfileScreen() {
               </View>
             </View>
           </Pressable>
-          <Text
-            className="mt-3 text-xl text-ink"
-            style={{ fontFamily: FontFamily.display }}
-          >
+          <Text className="mt-3 text-xl text-ink" style={{ fontFamily: FontFamily.display }}>
             {fullName.trim() || 'Your name'}
           </Text>
           <Text className="mt-0.5 text-sm text-ink-muted">{roleLabel}</Text>
-          <Text className="mt-2 text-xs text-ink-muted">
-            Photo is visible to society admins
-          </Text>
           <View className="mt-3 flex-row items-center gap-3">
             <Pressable
               accessibilityRole="button"
@@ -447,9 +551,7 @@ export function ProfileScreen() {
                 className="rounded-card px-3.5 py-2"
                 style={{ backgroundColor: Pastels.rose }}
               >
-                <Text style={{ fontFamily: FontFamily.heading, color: '#C0392B' }}>
-                  Remove
-                </Text>
+                <Text style={{ fontFamily: FontFamily.heading, color: '#C0392B' }}>Remove</Text>
               </Pressable>
             ) : null}
           </View>
@@ -462,174 +564,289 @@ export function ProfileScreen() {
           />
         ) : null}
 
-        <SectionLabel
-          title="Public details"
-          subtitle="Photo, name, phone, bio, and emergency contacts can be seen by society admins."
-        />
-        <Field label="Full name" value={fullName} onChangeText={setFullName} placeholder="Your name" />
-        <Field
-          label="Phone"
-          value={phone}
-          onChangeText={setPhone}
-          placeholder="+91 …"
-          keyboardType="phone-pad"
-        />
-        <Field
-          label="Bio"
-          value={bio}
-          onChangeText={setBio}
-          placeholder="A short intro about yourself"
-          multiline
-        />
-        <Field
-          label="Occupation"
-          value={occupation}
-          onChangeText={setOccupation}
-          placeholder="e.g. Software engineer"
-        />
-        <Field
-          label="Emergency contact"
-          value={emergencyName}
-          onChangeText={setEmergencyName}
-          placeholder="Contact name"
-        />
-        <Field
-          label="Emergency phone"
-          value={emergencyPhone}
-          onChangeText={setEmergencyPhone}
-          placeholder="Contact number"
-          keyboardType="phone-pad"
-        />
-        <Field
-          label="Vehicle number"
-          value={vehicle}
-          onChangeText={setVehicle}
-          placeholder="Optional"
-        />
+        <ProfileCard
+          title="Basic info"
+          subtitle="Name, phone, bio, and occupation — visible to society admins."
+          open={openBasic}
+          onToggle={() => toggle('basic')}
+        >
+          <Field
+            label="Full name"
+            value={fullName}
+            onChangeText={setFullName}
+            placeholder="Your name"
+            important
+          />
+          <Field
+            label="Phone"
+            value={phone}
+            onChangeText={(v) => {
+              setPhone(v);
+              setTouched((t) => ({ ...t, phone: true }));
+            }}
+            placeholder="+91 …"
+            keyboardType="phone-pad"
+            error={phoneError}
+          />
+          <Field
+            label="Bio"
+            value={bio}
+            onChangeText={setBio}
+            placeholder="A short intro about yourself"
+            multiline
+          />
+          <Field
+            label="Occupation"
+            value={occupation}
+            onChangeText={setOccupation}
+            placeholder="e.g. Software engineer"
+          />
+          <Field
+            label="Vehicle number"
+            value={vehicle}
+            onChangeText={setVehicle}
+            placeholder="Optional"
+            helper="Optional — used for parking and gate verification."
+          />
+        </ProfileCard>
 
-        <SectionLabel
+        <ProfileCard
+          title="Emergency contact"
+          subtitle="Who to call in an urgent situation."
+          open={openEmergency}
+          onToggle={() => toggle('emergency')}
+        >
+          <View
+            className="rounded-card px-3 py-3"
+            style={{ backgroundColor: Pastels.butter, borderLeftWidth: 3, borderLeftColor: Brand.accent }}
+          >
+            <Text
+              className="mb-3 text-xs uppercase tracking-widest"
+              style={{ fontFamily: FontFamily.heading, color: Brand.accentDark }}
+            >
+              Contact person
+            </Text>
+            <Field
+              label="Name"
+              value={emergencyName}
+              onChangeText={setEmergencyName}
+              placeholder="Contact name"
+              important
+            />
+            <Field
+              label="Phone"
+              value={emergencyPhone}
+              onChangeText={(v) => {
+                setEmergencyPhone(v);
+                setTouched((t) => ({ ...t, emergencyPhone: true }));
+              }}
+              placeholder="Contact number"
+              keyboardType="phone-pad"
+              important
+              error={emergencyPhoneError}
+            />
+          </View>
+        </ProfileCard>
+
+        <ProfileCard
           title="Private details"
-          subtitle="Only you can see these. Admins and other members cannot access them."
+          subtitle="Medical and personal data — only you can see these."
           privateSection
-        />
-        <Field
-          label="Personal email"
-          value={personalEmail}
-          onChangeText={setPersonalEmail}
-          placeholder="you@email.com"
-          keyboardType="email-address"
-          secureHint
-        />
-        <Field
-          label="Date of birth"
-          value={dob}
-          onChangeText={setDob}
-          placeholder="YYYY-MM-DD"
-          secureHint
-        />
-        <Field
-          label="Blood group"
-          value={bloodGroup}
-          onChangeText={setBloodGroup}
-          placeholder="e.g. O+"
-          secureHint
-        />
-        <Field
-          label="Allergies / medical"
-          value={allergies}
-          onChangeText={setAllergies}
-          placeholder="Optional medical notes"
-          multiline
-          secureHint
-        />
-        <Field
-          label="Permanent address"
-          value={address}
-          onChangeText={setAddress}
-          placeholder="Home / permanent address"
-          multiline
-          secureHint
-        />
+          open={openPrivate}
+          onToggle={() => toggle('private')}
+        >
+          <Field
+            label="Blood group"
+            value={bloodGroup}
+            onChangeText={setBloodGroup}
+            placeholder="e.g. O+"
+            important
+            helper="Useful for medical emergencies."
+          />
+          <Field
+            label="Allergies / medical"
+            value={allergies}
+            onChangeText={setAllergies}
+            placeholder="Optional medical notes"
+            multiline
+            important
+          />
+          <Field
+            label="Personal email"
+            value={personalEmail}
+            onChangeText={(v) => {
+              setPersonalEmail(v);
+              setTouched((t) => ({ ...t, email: true }));
+            }}
+            placeholder="you@email.com"
+            keyboardType="email-address"
+            error={emailError}
+          />
+          <Field
+            label="Date of birth"
+            value={dob}
+            onChangeText={(v) => {
+              setDob(v);
+              setTouched((t) => ({ ...t, dob: true }));
+            }}
+            placeholder="YYYY-MM-DD"
+            helper="Format: YYYY-MM-DD"
+            error={dobError}
+          />
+          <Field
+            label="Permanent address"
+            value={address}
+            onChangeText={setAddress}
+            placeholder="Home / permanent address"
+            multiline
+          />
+        </ProfileCard>
 
-        <SectionLabel
-          title="Notes"
-          subtitle="Personal notes with date and time stamped automatically. Only you can see them."
+        <ProfileCard
+          title="Personal notes"
+          subtitle="A private timeline — stamped when you add each note."
           privateSection
-        />
-        <TextInput
-          value={noteDraft}
-          onChangeText={setNoteDraft}
-          placeholder="Write a note…"
-          placeholderTextColor={Brand.inkMuted}
-          multiline
-          className="mb-2 rounded-card bg-surface-card px-4 py-3 text-[15px] text-ink"
-          style={{
-            fontFamily: FontFamily.body,
-            minHeight: 72,
-            textAlignVertical: 'top',
-          }}
-        />
+          open={openNotes}
+          onToggle={() => toggle('notes')}
+        >
+          <TextInput
+            value={noteDraft}
+            onChangeText={setNoteDraft}
+            placeholder="Write a new note…"
+            placeholderTextColor={Brand.inkMuted}
+            multiline
+            className="mb-2 rounded-card px-4 py-3 text-[15px] text-ink"
+            style={{
+              fontFamily: FontFamily.body,
+              minHeight: 88,
+              textAlignVertical: 'top',
+              backgroundColor: Pastels.sage,
+              borderWidth: 1.5,
+              borderColor: '#E5E7EB',
+            }}
+          />
+          <Pressable
+            accessibilityRole="button"
+            disabled={addNoteMutation.isPending || !noteDraft.trim()}
+            onPress={() => addNoteMutation.mutate()}
+            className="mb-4 items-center rounded-card py-3"
+            style={{
+              backgroundColor: noteDraft.trim() ? Brand.primary : Pastels.sage,
+              opacity: noteDraft.trim() ? 1 : 0.7,
+            }}
+          >
+            {addNoteMutation.isPending ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text
+                style={{
+                  fontFamily: FontFamily.heading,
+                  color: noteDraft.trim() ? '#fff' : Brand.inkMuted,
+                }}
+              >
+                Add to timeline
+              </Text>
+            )}
+          </Pressable>
+
+          {notesQuery.error ? (
+            <ErrorBanner
+              message={notesQuery.error.message}
+              onRetry={() => void notesQuery.refetch()}
+            />
+          ) : null}
+
+          {notes.length === 0 && !notesQuery.isLoading ? (
+            <Text className="text-sm text-ink-muted">No notes yet — add your first one above.</Text>
+          ) : (
+            <View>
+              <Text
+                className="mb-2 uppercase tracking-widest"
+                style={{
+                  fontFamily: FontFamily.heading,
+                  fontSize: TypeScale.label,
+                  color: Brand.inkSoft,
+                }}
+              >
+                Timeline · {notes.length}
+              </Text>
+              {notes.map((note, index) => (
+                <View
+                  key={note.id}
+                  className="flex-row gap-3"
+                  style={{ marginBottom: index === notes.length - 1 ? 0 : 12 }}
+                >
+                  <View className="items-center pt-1">
+                    <View
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: Brand.primary }}
+                    />
+                    {index < notes.length - 1 ? (
+                      <View
+                        className="mt-1 w-0.5 flex-1"
+                        style={{ backgroundColor: Brand.primarySoft, minHeight: 24 }}
+                      />
+                    ) : null}
+                  </View>
+                  <View
+                    className="min-w-0 flex-1 rounded-card px-3.5 py-3"
+                    style={{ backgroundColor: Pastels.sage }}
+                  >
+                    <View className="mb-1 flex-row items-center justify-between gap-2">
+                      <Text className="text-xs text-ink-muted">
+                        {formatNoteStamp(note.created_at)}
+                      </Text>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Delete note"
+                        onPress={() => deleteNoteMutation.mutate(note.id)}
+                        hitSlop={8}
+                      >
+                        <Trash2 color={Brand.inkMuted} size={14} strokeWidth={1.5} />
+                      </Pressable>
+                    </View>
+                    <Text className="text-[15px] leading-5 text-ink">{note.body}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </ProfileCard>
+      </KeyboardAwareScrollView>
+
+      <View
+        className="border-t border-surface-border bg-surface-card px-5 pt-3"
+        style={{
+          paddingBottom: Math.max(insets.bottom, 12),
+          shadowColor: '#101512',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 8,
+          elevation: 8,
+        }}
+      >
         <Pressable
           accessibilityRole="button"
-          disabled={addNoteMutation.isPending || !noteDraft.trim()}
-          onPress={() => addNoteMutation.mutate()}
-          className="mb-4 items-center rounded-card py-3"
+          accessibilityLabel="Save profile"
+          disabled={saveMutation.isPending || !canSave}
+          onPress={() => {
+            setTouched({ email: true, dob: true, phone: true, emergencyPhone: true });
+            saveMutation.mutate();
+          }}
+          className="items-center rounded-card py-3.5"
           style={{
-            backgroundColor: noteDraft.trim() ? Pastels.butter : Pastels.sage,
-            opacity: noteDraft.trim() ? 1 : 0.6,
+            backgroundColor: canSave ? Brand.primary : '#D1D5DB',
           }}
         >
-          {addNoteMutation.isPending ? (
-            <ActivityIndicator color={Brand.primary} />
+          {saveMutation.isPending ? (
+            <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={{ fontFamily: FontFamily.heading, color: Brand.primary }}>
-              Add note
+            <Text className="text-white" style={{ fontFamily: FontFamily.heading }}>
+              Save profile
             </Text>
           )}
         </Pressable>
-
-        {notesQuery.error ? (
-          <ErrorBanner
-            message={notesQuery.error.message}
-            onRetry={() => void notesQuery.refetch()}
-          />
-        ) : null}
-
-        {(notesQuery.data ?? []).length === 0 && !notesQuery.isLoading ? (
-          <Text className="mb-4 text-sm text-ink-muted">No notes yet.</Text>
-        ) : (
-          <View className="gap-2">
-            {(notesQuery.data ?? []).map((note) => (
-              <View
-                key={note.id}
-                className="rounded-card bg-surface-card px-4 py-3"
-                style={{
-                  shadowColor: '#101512',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 4,
-                  elevation: 1,
-                }}
-              >
-                <View className="mb-1.5 flex-row items-center justify-between gap-2">
-                  <Text className="text-xs text-ink-muted">
-                    {formatNoteStamp(note.created_at)}
-                  </Text>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Delete note"
-                    onPress={() => deleteNoteMutation.mutate(note.id)}
-                    hitSlop={8}
-                  >
-                    <Trash2 color={Brand.inkMuted} size={14} strokeWidth={1.5} />
-                  </Pressable>
-                </View>
-                <Text className="text-[15px] leading-5 text-ink">{note.body}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-      </KeyboardAwareScrollView>
+      </View>
     </ScreenHeader>
   );
 }
