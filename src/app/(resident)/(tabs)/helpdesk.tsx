@@ -169,22 +169,10 @@ export default function ResidentHelpdeskScreen() {
     },
   });
 
-  if (!flatId) {
-    return (
-      <ScreenHeader title="Helpdesk" showBack>
-        <EmptyState
-          visual="disconnected"
-          title="No flat linked"
-          subtitle="Ask an admin to link your flat before filing complaints."
-        />
-      </ScreenHeader>
-    );
-  }
-
   const commentsQuery = useQuery({
     queryKey: queryKeys.complaintComments(selectedId || ''),
     queryFn: () => fetchComplaintComments(selectedId!),
-    enabled: Boolean(selectedId),
+    enabled: Boolean(flatId && selectedId),
   });
 
   const commentMutation = useMutation({
@@ -197,6 +185,18 @@ export default function ResidentHelpdeskScreen() {
       queryClient.invalidateQueries({ queryKey: queryKeys.complaintComments(selectedId!) });
     },
   });
+
+  if (!flatId) {
+    return (
+      <ScreenHeader title="Helpdesk" showBack>
+        <EmptyState
+          visual="disconnected"
+          title="No flat linked"
+          subtitle="Ask an admin to link your flat before filing complaints."
+        />
+      </ScreenHeader>
+    );
+  }
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({

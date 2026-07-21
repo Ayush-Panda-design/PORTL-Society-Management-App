@@ -544,7 +544,9 @@ export default function RegisterVisitorScreen() {
                       />
                     </View>
                   ) : flatQuery.trim().length > 0 && !searchingFlats ? (
-                    <Text style={{ fontSize: 13, color: Tokens.color.textMuted }}>No flats match "{flatQuery}".</Text>
+                    <Text style={{ fontSize: 13, color: Tokens.color.textMuted }}>
+                      No flats match &ldquo;{flatQuery}&rdquo;.
+                    </Text>
                   ) : null}
                 </View>
               )}
