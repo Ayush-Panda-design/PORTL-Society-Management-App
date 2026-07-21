@@ -10,6 +10,7 @@ import {
   UserCog,
   UserPlus,
   Users,
+  Wallet,
 } from 'lucide-react-native';
 import { type Href } from 'expo-router';
 
@@ -94,6 +95,12 @@ const SECTIONS = [
         title: 'Amenities',
         subtitle: 'Manage facilities and booking slots',
         Icon: Building2,
+      },
+      {
+        href: '/(admin)/payout-setup' as Href,
+        title: 'Payout setup',
+        subtitle: 'Razorpay Route onboarding & settlements',
+        Icon: Wallet,
       },
       {
         href: '/(admin)/staff',

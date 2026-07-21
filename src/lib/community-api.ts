@@ -10,10 +10,13 @@ import {
 import { uploadLocalImage } from '@/lib/storage-upload';
 import { supabase } from '@/lib/supabase';
 import type {
+  AdminAmenityBookingView,
+  AdminAmenityRevenueRow,
   AdminDashboardStats,
   Amenity,
   AmenityBooking,
   AmenityBookingWithDetails,
+  AmenityWaitlistWithDetails,
   Complaint,
   ComplaintReporter,
   ComplaintStatus,
@@ -672,11 +675,38 @@ export async function fetchMyAmenityBookings(flatId: string): Promise<AmenityBoo
   return ((data as AmenityBookingJoinRow[]) ?? []).map(normalizeBookingDetails);
 }
 
-/** Society-wide upcoming bookings for admin oversight. */
+/** Society-wide upcoming bookings for admin oversight (joined view). */
 export async function fetchSocietyAmenityBookings(
   societyId: string,
-): Promise<AmenityBookingWithDetails[]> {
+  options?: { paymentFilter?: 'action_needed' },
+): Promise<AdminAmenityBookingView[]> {
   const today = todayISODate();
+  let query = supabase
+    .from('admin_amenity_bookings_view')
+    .select('*')
+    .eq('society_id', societyId)
+    .eq('status', 'booked')
+    .gte('date', today)
+    .order('date', { ascending: true })
+    .order('slot', { ascending: true });
+
+  if (options?.paymentFilter === 'action_needed') {
+    query = query.in('payment_status', [
+      'pending_payment',
+      'failed',
+      'expired',
+      'partially_paid',
+    ]);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data as AdminAmenityBookingView[]) ?? [];
+}
+
+export async function fetchSocietyAmenityWaitlist(
+  societyId: string,
+): Promise<AmenityWaitlistWithDetails[]> {
   const { data: amenities, error: amenitiesError } = await supabase
     .from('amenities')
     .select('id')
@@ -685,8 +715,14 @@ export async function fetchSocietyAmenityBookings(
   const amenityIds = ((amenities as { id: string }[]) ?? []).map((a) => a.id);
   if (amenityIds.length === 0) return [];
 
+  type WaitlistRow = AmenityWaitlistWithDetails & {
+    amenities: { id: string; name: string } | { id: string; name: string }[] | null;
+    flats: FlatTowerJoin | FlatTowerJoin[] | null;
+    profiles: { full_name: string | null; phone: string | null } | null;
+  };
+
   const { data, error } = await supabase
-    .from('amenity_bookings')
+    .from('amenity_waitlist')
     .select(
       `
       *,
@@ -694,16 +730,45 @@ export async function fetchSocietyAmenityBookings(
       flats (
         number,
         towers ( name )
-      )
+      ),
+      profiles!requested_by ( full_name, phone )
     `,
     )
     .in('amenity_id', amenityIds)
-    .eq('status', 'booked')
-    .gte('date', today)
+    .eq('status', 'waiting')
     .order('date', { ascending: true })
-    .order('slot', { ascending: true });
+    .order('position', { ascending: true });
   if (error) throw new Error(error.message);
-  return ((data as AmenityBookingJoinRow[]) ?? []).map(normalizeBookingDetails);
+
+  return ((data as WaitlistRow[]) ?? []).map((row) => {
+    const amenityRaw = row.amenities;
+    const amenity = Array.isArray(amenityRaw) ? amenityRaw[0] ?? null : amenityRaw;
+    const flatRaw = row.flats;
+    const flat = Array.isArray(flatRaw) ? flatRaw[0] ?? null : flatRaw;
+    const towerRaw = flat?.towers ?? null;
+    const tower = Array.isArray(towerRaw) ? towerRaw[0] ?? null : towerRaw;
+    const { amenities: _a, flats: _f, profiles, ...entry } = row;
+    return {
+      ...entry,
+      amenity: amenity ? { id: amenity.id, name: amenity.name } : null,
+      flat: flat
+        ? { number: flat.number, towers: tower ? { name: tower.name } : null }
+        : null,
+      requester: profiles
+        ? { full_name: profiles.full_name, phone: profiles.phone }
+        : null,
+    };
+  });
+}
+
+export async function fetchAdminAmenityRevenue(
+  societyId: string,
+): Promise<AdminAmenityRevenueRow[]> {
+  const { data, error } = await supabase.rpc('fetch_admin_amenity_revenue', {
+    p_society_id: societyId,
+  });
+  if (error) throw new Error(error.message);
+  return (data as AdminAmenityRevenueRow[]) ?? [];
 }
 
 export async function bookAmenitySlot(input: {

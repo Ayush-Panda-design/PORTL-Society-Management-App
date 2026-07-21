@@ -5,6 +5,7 @@ import type {
   FrequentVisitor,
   NoticeAcknowledgment,
   PaymentLedgerEntry,
+  SocietyPaymentAccount,
   SocietyPermission,
   Visitor,
   VisitorType,
@@ -285,4 +286,68 @@ export async function initiatePartialPayment(
 
 export function formatPaise(paise: number): string {
   return `₹${(paise / 100).toFixed(2)}`;
+}
+
+export function paymentStatusLabel(status: string | null | undefined): string {
+  switch (status) {
+    case 'confirmed':
+      return 'Paid';
+    case 'partially_paid':
+      return 'Partial';
+    case 'pending_payment':
+      return 'Pending';
+    case 'failed':
+      return 'Failed';
+    case 'expired':
+      return 'Expired';
+    case 'refunded':
+      return 'Refunded';
+    default:
+      return status ? String(status) : '—';
+  }
+}
+
+export async function fetchSocietyPaymentAccount(
+  societyId: string,
+): Promise<SocietyPaymentAccount | null> {
+  const { data, error } = await supabase
+    .from('society_payment_accounts')
+    .select('*')
+    .eq('society_id', societyId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as SocietyPaymentAccount | null) ?? null;
+}
+
+export async function fetchSocietyPaymentStatement(options?: {
+  purpose?: string;
+}): Promise<PaymentLedgerEntry[]> {
+  const { data, error } = await supabase.rpc('fetch_society_payment_statement', {
+    p_from: null,
+    p_to: null,
+    p_purpose: options?.purpose ?? null,
+  });
+  if (error) throw new Error(error.message);
+  return (data as PaymentLedgerEntry[]) ?? [];
+}
+
+export async function adminRecordOfflinePayment(
+  paymentId: string,
+  method: string,
+  note?: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_record_offline_payment', {
+    p_payment_id: paymentId,
+    p_method: method,
+    p_note: note ?? null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function adminRefundPayment(paymentId: string, note?: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_refund_payment', {
+    p_payment_id: paymentId,
+    p_note: note ?? null,
+  });
+  if (error) throw new Error(error.message);
 }

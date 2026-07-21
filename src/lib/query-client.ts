@@ -28,6 +28,12 @@ export const queryKeys = {
   myAmenityBookings: (flatId: string) => ['my-amenity-bookings', flatId] as const,
   societyAmenityBookings: (societyId: string) =>
     ['society-amenity-bookings', societyId] as const,
+  societyAmenityWaitlist: (societyId: string) =>
+    ['society-amenity-waitlist', societyId] as const,
+  adminAmenityRevenue: (societyId: string) =>
+    ['admin-amenity-revenue', societyId] as const,
+  societyPaymentAccount: (societyId: string) =>
+    ['society-payment-account', societyId] as const,
   staff: (societyId: string) => ['staff', societyId] as const,
   directoryMembers: (societyId: string) => ['directory-members', societyId] as const,
   societyProfiles: (societyId: string) => ['society-profiles', societyId] as const,

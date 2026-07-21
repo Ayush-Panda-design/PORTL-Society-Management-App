@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { BottomSheetModal as GorhomBottomSheetModal } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { ImagePlus, MapPin, Plus, Star, Trash2, Edit2, Users } from 'lucide-react-native';
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,6 +19,8 @@ import {
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
 import { FloatingActionBtn } from '@/components/ui/brand';
+import { AdminBookingDetailSheet } from '@/components/amenities/admin-booking-detail-sheet';
+import { AdminAmenityRevenueSnapshot } from '@/components/amenities/admin-revenue-snapshot';
 import { Card } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SegmentedControl } from '@/components/ui/segmented-control';
@@ -25,19 +28,30 @@ import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand, FontFamily, Pastels, amenityCoverUri } from '@/constants/theme';
+import {
+  adminBookingFlatLabel,
+  paymentStatusPillStyle,
+} from '@/lib/admin-amenity-labels';
 import { amenitySlotCapacity, formatAmenityBookingDate } from '@/lib/community';
 import {
-  amenityBookingFlatLabel,
   cancelAmenityBooking,
   deleteAmenity,
+  fetchAdminAmenityRevenue,
   fetchAmenities,
   fetchSocietyAmenityBookings,
+  fetchSocietyAmenityWaitlist,
   uploadAmenityCover,
   upsertAmenity,
 } from '@/lib/community-api';
+import {
+  adminRecordOfflinePayment,
+  adminRefundPayment,
+  formatPaise,
+  paymentStatusLabel,
+} from '@/lib/ops-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
-import type { Amenity } from '@/types/database';
+import type { AdminAmenityBookingView, Amenity } from '@/types/database';
 import { DEFAULT_AMENITY_SLOTS } from '@/types/database';
 import { Tokens } from '@/theme/tokens';
 
@@ -62,6 +76,14 @@ export default function AdminAmenitiesScreen() {
   const [slotsText, setSlotsText] = useState(DEFAULT_AMENITY_SLOTS.join('\n'));
   const [coverUri, setCoverUri] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [paymentFilter, setPaymentFilter] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<AdminAmenityBookingView | null>(null);
+  const detailSheetRef = useRef<GorhomBottomSheetModal>(null);
+
+  const openBookingDetail = useCallback((item: AdminAmenityBookingView) => {
+    setSelectedBooking(item);
+    requestAnimationFrame(() => detailSheetRef.current?.present());
+  }, []);
 
   const listQuery = useQuery({
     queryKey: queryKeys.amenities(societyId ?? 'none'),
@@ -70,8 +92,23 @@ export default function AdminAmenitiesScreen() {
   });
 
   const bookingsQuery = useQuery({
-    queryKey: queryKeys.societyAmenityBookings(societyId ?? 'none'),
-    queryFn: () => fetchSocietyAmenityBookings(societyId!),
+    queryKey: [...queryKeys.societyAmenityBookings(societyId ?? 'none'), paymentFilter],
+    queryFn: () =>
+      fetchSocietyAmenityBookings(societyId!, {
+        paymentFilter: paymentFilter ? 'action_needed' : undefined,
+      }),
+    enabled: Boolean(societyId) && tab === 'bookings',
+  });
+
+  const revenueQuery = useQuery({
+    queryKey: queryKeys.adminAmenityRevenue(societyId ?? 'none'),
+    queryFn: () => fetchAdminAmenityRevenue(societyId!),
+    enabled: Boolean(societyId) && tab === 'bookings',
+  });
+
+  const waitlistQuery = useQuery({
+    queryKey: queryKeys.societyAmenityWaitlist(societyId ?? 'none'),
+    queryFn: () => fetchSocietyAmenityWaitlist(societyId!),
     enabled: Boolean(societyId) && tab === 'bookings',
   });
 
@@ -151,15 +188,43 @@ export default function AdminAmenitiesScreen() {
   const cancelMutation = useMutation({
     mutationFn: cancelAmenityBooking,
     onSuccess: async () => {
+      detailSheetRef.current?.dismiss();
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: queryKeys.societyAmenityBookings(societyId!),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.adminAmenityRevenue(societyId!),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.societyAmenityWaitlist(societyId!),
         }),
         queryClient.invalidateQueries({ queryKey: ['amenity-bookings'] }),
         queryClient.invalidateQueries({ queryKey: ['my-amenity-bookings'] }),
       ]);
     },
     onError: (e: Error) => Alert.alert('Could not cancel', e.message),
+  });
+
+  const paymentActionMutation = useMutation({
+    mutationFn: async (input: { type: 'offline' | 'refund'; paymentId: string }) => {
+      if (input.type === 'offline') {
+        await adminRecordOfflinePayment(input.paymentId, 'cash');
+      } else {
+        await adminRefundPayment(input.paymentId);
+      }
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.societyAmenityBookings(societyId!),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.adminAmenityRevenue(societyId!),
+        }),
+      ]);
+    },
+    onError: (e: Error) => Alert.alert('Payment action failed', e.message),
   });
 
   const confirmDelete = (item: Amenity) => {
@@ -182,6 +247,35 @@ export default function AdminAmenitiesScreen() {
         onPress: () => cancelMutation.mutate(id),
       },
     ]);
+  };
+
+  const confirmMarkOffline = (paymentId: string) => {
+    Alert.alert(
+      'Mark paid offline?',
+      'Use for cash or UPI received outside the app. This confirms the booking charge.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Mark paid',
+          onPress: () => paymentActionMutation.mutate({ type: 'offline', paymentId }),
+        },
+      ],
+    );
+  };
+
+  const confirmRefund = (paymentId: string) => {
+    Alert.alert(
+      'Refund payment?',
+      'Marks the in-app payment as refunded. Process the actual refund in Razorpay if applicable.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Refund',
+          style: 'destructive',
+          onPress: () => paymentActionMutation.mutate({ type: 'refund', paymentId }),
+        },
+      ],
+    );
   };
 
   const resetForm = () => {
@@ -253,6 +347,12 @@ export default function AdminAmenitiesScreen() {
 
   const amenities = listQuery.data ?? [];
   const featured = amenities.find((a) => a.is_featured) ?? null;
+  const revenueRows = revenueQuery.data ?? [];
+  const actionNeededCount = revenueRows.reduce(
+    (sum, row) => sum + Number(row.failed_or_pending_count ?? 0),
+    0,
+  );
+  const waitlistEntries = waitlistQuery.data ?? [];
 
   return (
     <ScreenHeader title="Amenities" subtitle="Facilities & bookings" showBack>
@@ -287,51 +387,132 @@ export default function AdminAmenitiesScreen() {
                 flexGrow: 1,
               }}
               ItemSeparatorComponent={() => <View className="h-2.5" />}
-              refreshing={bookingsQuery.isRefetching}
-              onRefresh={() => void bookingsQuery.refetch()}
+              refreshing={
+                bookingsQuery.isRefetching ||
+                revenueQuery.isRefetching ||
+                waitlistQuery.isRefetching
+              }
+              onRefresh={() => {
+                void bookingsQuery.refetch();
+                void revenueQuery.refetch();
+                void waitlistQuery.refetch();
+              }}
+              ListHeaderComponent={
+                <>
+                  <AdminAmenityRevenueSnapshot
+                    rows={revenueRows}
+                    actionNeededCount={actionNeededCount}
+                    filterActive={paymentFilter}
+                    onFilterActionNeeded={() => setPaymentFilter((v) => !v)}
+                  />
+                  {waitlistEntries.length > 0 ? (
+                    <View className="mb-3">
+                      <Text
+                        className="mb-2 text-xs font-bold uppercase tracking-widest text-ink-muted"
+                        style={{ fontFamily: FontFamily.heading }}
+                      >
+                        Waitlist ({waitlistEntries.length})
+                      </Text>
+                      {waitlistEntries.map((w) => (
+                        <Card key={w.id} className="mb-2">
+                          <Text
+                            className="text-sm text-ink"
+                            style={{ fontFamily: FontFamily.heading }}
+                          >
+                            {w.amenity?.name ?? 'Amenity'} · #{w.position}
+                          </Text>
+                          <Text className="mt-0.5 text-xs text-ink-muted">
+                            {formatAmenityBookingDate(w.date)} · {w.slot}
+                          </Text>
+                          <Text className="mt-0.5 text-xs text-ink">
+                            {w.flat
+                              ? w.flat.towers?.name
+                                ? `${w.flat.towers.name} · Flat ${w.flat.number}`
+                                : `Flat ${w.flat.number}`
+                              : 'Flat'}
+                            {w.requester?.full_name ? ` · ${w.requester.full_name}` : ''}
+                          </Text>
+                        </Card>
+                      ))}
+                    </View>
+                  ) : null}
+                  <Text
+                    className="mb-2 text-xs font-bold uppercase tracking-widest text-ink-muted"
+                    style={{ fontFamily: FontFamily.heading }}
+                  >
+                    Upcoming bookings
+                  </Text>
+                </>
+              }
               ListEmptyComponent={
                 <EmptyState
                   visual="amenities"
-                  title="No upcoming bookings"
-                  subtitle="Resident reservations for today and ahead will appear here."
+                  title={paymentFilter ? 'No bookings need payment action' : 'No upcoming bookings'}
+                  subtitle={
+                    paymentFilter
+                      ? 'All visible bookings are paid or free.'
+                      : 'Resident reservations for today and ahead will appear here.'
+                  }
                 />
               }
-              renderItem={({ item }) => (
-                <Card>
-                  <Text
-                    className="text-base text-ink"
-                    style={{ fontFamily: FontFamily.heading }}
-                  >
-                    {item.amenity?.name ?? 'Amenity'}
-                  </Text>
-                  <Text className="mt-1 text-sm text-ink-muted">
-                    {formatAmenityBookingDate(item.date)} · {item.slot}
-                  </Text>
-                  <Text className="mt-1 text-sm text-ink">
-                    {amenityBookingFlatLabel(item)}
-                  </Text>
-                  <Pressable
-                    disabled={cancelMutation.isPending}
-                    onPress={() =>
-                      confirmCancelBooking(
-                        item.id,
-                        `${item.amenity?.name ?? 'slot'} · ${item.slot}`,
-                      )
-                    }
-                    className="mt-3 self-start rounded-pill px-3 py-1.5"
-                    style={{ backgroundColor: Pastels.peach }}
-                  >
-                    <Text
-                      className="text-[12px]"
-                      style={{ fontFamily: FontFamily.heading, color: Brand.accentDark }}
-                    >
-                      Cancel booking
-                    </Text>
+              renderItem={({ item }) => {
+                const pill = paymentStatusPillStyle(item.payment_status);
+                const showPay =
+                  (item.amount_paise ?? 0) > 0 || (item.amenity_fee_paise ?? 0) > 0;
+                return (
+                  <Pressable onPress={() => openBookingDetail(item)}>
+                    <Card>
+                      <View className="flex-row items-start justify-between gap-2">
+                        <Text
+                          className="flex-1 text-base text-ink"
+                          style={{ fontFamily: FontFamily.heading }}
+                        >
+                          {item.amenity_name ?? 'Amenity'}
+                        </Text>
+                        {item.payment_status ? (
+                          <View
+                            className="rounded-pill px-2 py-0.5"
+                            style={{ backgroundColor: pill.bg }}
+                          >
+                            <Text className="text-[10px] font-semibold" style={{ color: pill.text }}>
+                              {paymentStatusLabel(String(item.payment_status))}
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      <Text className="mt-1 text-sm text-ink-muted">
+                        {formatAmenityBookingDate(item.date)} · {item.slot}
+                      </Text>
+                      <Text className="mt-1 text-sm text-ink">
+                        {item.resident_name ?? 'Resident'} · {adminBookingFlatLabel(item)}
+                      </Text>
+                      {showPay && item.amount_paise != null ? (
+                        <Text className="mt-1 text-xs text-ink-muted">
+                          {formatPaise(item.amount_paise)}
+                        </Text>
+                      ) : null}
+                      <View className="mt-2 flex-row flex-wrap gap-2">
+                        {item.from_waitlist ? (
+                          <Text className="text-[10px] text-brand-700">Waitlist</Text>
+                        ) : null}
+                        {item.recurring_series_id ? (
+                          <Text className="text-[10px] text-brand-700">Recurring</Text>
+                        ) : null}
+                      </View>
+                    </Card>
                   </Pressable>
-                </Card>
-              )}
+                );
+              }}
             />
           )}
+          <AdminBookingDetailSheet
+            ref={detailSheetRef}
+            booking={selectedBooking}
+            onCancel={confirmCancelBooking}
+            onMarkOfflinePaid={confirmMarkOffline}
+            onRefund={confirmRefund}
+            actionsPending={cancelMutation.isPending || paymentActionMutation.isPending}
+          />
         </>
       ) : (
         <>

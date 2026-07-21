@@ -431,7 +431,8 @@ export type PaymentStatus =
   | 'confirmed'
   | 'expired'
   | 'failed'
-  | 'partially_paid';
+  | 'partially_paid'
+  | 'refunded';
 
 export type Payment = {
   id: string;
@@ -464,6 +465,54 @@ export type AmenityBookingWithDetails = AmenityBooking & {
     number: string;
     towers: { name: string } | null;
   } | null;
+};
+
+/** Row from `admin_amenity_bookings_view` (admin bookings + payment join). */
+export type AdminAmenityBookingView = AmenityBooking & {
+  society_id: string;
+  amenity_name: string | null;
+  amenity_fee_paise: number | null;
+  cancel_penalty_paise: number | null;
+  cancel_penalty_hours: number | null;
+  flat_number: string | null;
+  tower_name: string | null;
+  resident_name: string | null;
+  resident_phone: string | null;
+  payment_id: string | null;
+  amount_paise: number | null;
+  paid_paise: number | null;
+  payment_status: PaymentStatus | string | null;
+  razorpay_order_id: string | null;
+  razorpay_payment_id: string | null;
+  payment_created_at: string | null;
+  cancel_penalty_charged_paise: number | null;
+  cancel_penalty_payment_status: PaymentStatus | string | null;
+};
+
+export type AdminAmenityRevenueRow = {
+  amenity_id: string;
+  amenity_name: string;
+  booking_count: number;
+  collected_paise: number;
+  pending_paise: number;
+  failed_or_pending_count: number;
+};
+
+export type SocietyPaymentAccount = {
+  society_id: string;
+  razorpay_account_id: string | null;
+  status: 'pending' | 'verified' | 'rejected' | string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AmenityWaitlistWithDetails = AmenityWaitlistEntry & {
+  amenity: { id: string; name: string } | null;
+  flat: {
+    number: string;
+    towers: { name: string } | null;
+  } | null;
+  requester: { full_name: string | null; phone: string | null } | null;
 };
 
 export type StaffMember = {
