@@ -1,5 +1,4 @@
 import { Image } from 'expo-image';
-import * as Haptics from 'expo-haptics';
 import { Check, X } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { Dimensions, Text, View } from 'react-native';
@@ -16,6 +15,7 @@ import Animated, {
 
 import { VisitorSilhouette } from '@/components/illustrations';
 import { FontFamily, StatusColors } from '@/constants/theme';
+import { hapticConfirm, hapticLight, hapticWarning } from '@/lib/haptics';
 import { flatLabel, formatRelativeTime, typeLabel } from '@/lib/visitors';
 import type { VisitorWithFlat } from '@/types/database';
 
@@ -35,15 +35,12 @@ type Props = {
 };
 
 function triggerDecisionHaptic(decision: SwipeDecision) {
-  void Haptics.notificationAsync(
-    decision === 'approved'
-      ? Haptics.NotificationFeedbackType.Success
-      : Haptics.NotificationFeedbackType.Warning,
-  );
+  if (decision === 'approved') hapticConfirm();
+  else hapticWarning();
 }
 
 function triggerThresholdHaptic() {
-  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  hapticLight();
 }
 
 export function SwipeableVisitorCard({

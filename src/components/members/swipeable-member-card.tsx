@@ -15,6 +15,7 @@ import Animated, {
 
 import { InitialsAvatar } from '@/components/ui/brand';
 import { FontFamily, StatusColors } from '@/constants/theme';
+import { hapticConfirm, hapticWarning } from '@/lib/haptics';
 import { flatTowerName } from '@/lib/visitors';
 import type { ProfileWithFlat } from '@/types/database';
 import type { SwipeDecision } from '@/components/visitors/swipeable-visitor-card';
@@ -32,11 +33,8 @@ type Props = {
 };
 
 function triggerDecisionHaptic(decision: SwipeDecision) {
-  void Haptics.notificationAsync(
-    decision === 'approved'
-      ? Haptics.NotificationFeedbackType.Success
-      : Haptics.NotificationFeedbackType.Warning,
-  );
+  if (decision === 'approved') hapticConfirm();
+  else hapticWarning();
 }
 
 function triggerThresholdHaptic() {

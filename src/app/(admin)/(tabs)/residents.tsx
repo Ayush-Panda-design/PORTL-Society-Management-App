@@ -1,28 +1,38 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
+import { ChevronRight } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Linking,
   Modal,
   Pressable,
   Text,
   View,
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import Toast from 'react-native-toast-message';
 
-import { AppCard, InitialsAvatar } from '@/components/ui/brand';
+import { InitialsAvatar } from '@/components/ui/brand';
 import { ChipSelector } from '@/components/ui/chip-selector';
+import { ListRow } from '@/components/ui/list-row';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SearchField } from '@/components/ui/search-field';
+import { StaggeredListItem } from '@/components/ui/staggered-list-item';
+import { SwipeActionRow, type SwipeAction } from '@/components/ui/swipe-action-row';
+import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
+import { Brand } from '@/constants/theme';
 import {
   assignResidentFlat,
   fetchFlats,
   fetchResidents,
 } from '@/lib/community-api';
+import { hapticConfirm, hapticLight, hapticWarning } from '@/lib/haptics';
 import { queryKeys } from '@/lib/query-client';
 import { href } from '@/lib/href';
 import { flatTowerName } from '@/lib/visitors';
@@ -141,6 +151,8 @@ export default function AdminResidentsScreen() {
       setFormError(e.message);
     },
     onSuccess: () => {
+      hapticConfirm();
+      Toast.show({ type: 'success', text1: 'Flat assignment saved' });
       setAssignOpen(false);
       setFormError(null);
       setSelected(null);
@@ -157,6 +169,53 @@ export default function AdminResidentsScreen() {
       }
     },
   });
+
+  const removeMutation = useMutation({
+    mutationFn: (profile: ProfileWithFlat) =>
+      assignResidentFlat({ profileId: profile.id, flatId: null }),
+    onMutate: async (profile) => {
+      await queryClient.cancelQueries({ queryKey: residentsKey });
+      const previous = queryClient.getQueryData<ProfileWithFlat[]>(residentsKey);
+      queryClient.setQueryData<ProfileWithFlat[]>(residentsKey, (old = []) =>
+        old.map((p) => (p.id === profile.id ? { ...p, flat_id: null, flats: null } : p)),
+      );
+      return { previous };
+    },
+    onError: (e: Error, _profile, context) => {
+      if (context?.previous) queryClient.setQueryData(residentsKey, context.previous);
+      Toast.show({ type: 'error', text1: 'Could not remove flat', text2: e.message });
+    },
+    onSuccess: () => {
+      hapticWarning();
+      Toast.show({ type: 'success', text1: 'Removed from flat' });
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: residentsKey });
+      if (societyId) {
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.adminDashboard(societyId),
+        });
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.societyProfiles(societyId),
+        });
+      }
+    },
+  });
+
+  const confirmRemove = (item: ProfileWithFlat) => {
+    Alert.alert(
+      'Remove from flat?',
+      `“${item.full_name ?? 'This resident'}” will be unassigned from ${flatLabel(item)}.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => removeMutation.mutate(item),
+        },
+      ],
+    );
+  };
 
   const openDetail = (item: ProfileWithFlat) => {
     setSelected(item);
@@ -203,11 +262,18 @@ export default function AdminResidentsScreen() {
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
-          ItemSeparatorComponent={() => <View className="h-3" />}
-          refreshing={listQuery.isRefetching}
-          onRefresh={() => void listQuery.refetch()}
+          contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
+          initialNumToRender={12}
+          windowSize={8}
+          maxToRenderPerBatch={10}
+          removeClippedSubviews
+          refreshControl={
+            <ThemedRefreshControl
+              refreshing={listQuery.isRefetching}
+              onRefresh={() => void listQuery.refetch()}
+            />
+          }
           ListEmptyComponent={
             <EmptyState
               visual="residents"
@@ -221,50 +287,66 @@ export default function AdminResidentsScreen() {
               onAction={!search.trim() ? () => router.push(href('/(admin)/invites')) : undefined}
             />
           }
-          renderItem={({ item }) => (
-            <AppCard>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`View ${item.full_name ?? 'resident'} profile`}
-                onPress={() => openDetail(item)}
-                className="flex-row items-center gap-3"
-              >
-                <InitialsAvatar
-                  name={item.full_name ?? 'Resident'}
-                  seed={item.id}
-                  size={44}
-                  imageUrl={item.avatar_url}
-                  hasUnread={!item.flat_id}
-                  status={item.flat_id ? 'online' : 'pending'}
-                />
-                <View className="min-w-0 flex-1">
-                  <Text className="text-base font-semibold text-ink" numberOfLines={1}>
-                    {item.full_name ?? 'Unnamed resident'}
-                  </Text>
-                  <Text className="text-sm text-ink-muted" numberOfLines={1}>
-                    {flatLabel(item)}
-                  </Text>
-                  {item.phone ? (
-                    <Text className="mt-0.5 text-xs text-ink-faint">{item.phone}</Text>
-                  ) : null}
-                </View>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={
-                  item.flat_id
-                    ? `Reassign flat for ${item.full_name ?? 'resident'}`
-                    : `Assign flat for ${item.full_name ?? 'resident'}`
-                }
-                onPress={() => openAssign(item)}
-                className="mt-3 items-center rounded-xl border border-surface-border py-2.5"
-              >
-                <Text className="text-sm font-semibold text-ink-soft">
-                  {item.flat_id ? 'Reassign flat' : 'Assign flat'}
-                </Text>
-              </Pressable>
-            </AppCard>
-          )}
+          renderItem={({ item, index }) => {
+            const name = item.full_name ?? 'Unnamed resident';
+            const actions: SwipeAction[] = [
+              ...(item.phone
+                ? [
+                    {
+                      key: 'call',
+                      label: 'Call',
+                      color: Brand.primary,
+                      onPress: () => {
+                        hapticLight();
+                        void Linking.openURL(`tel:${item.phone}`);
+                      },
+                    },
+                  ]
+                : []),
+              {
+                key: 'reassign',
+                label: item.flat_id ? 'Reassign' : 'Assign',
+                color: Brand.accent,
+                onPress: () => openAssign(item),
+              },
+              ...(item.flat_id
+                ? [
+                    {
+                      key: 'remove',
+                      label: 'Remove',
+                      color: '#DC2626',
+                      onPress: () => confirmRemove(item),
+                    },
+                  ]
+                : []),
+            ];
+
+            return (
+              <StaggeredListItem index={index} disabled={listQuery.isRefetching}>
+                <SwipeActionRow actions={actions}>
+                  <ListRow
+                    title={name}
+                    subtitle={flatLabel(item)}
+                    meta={item.phone ?? undefined}
+                    last={index === filtered.length - 1}
+                    accessibilityLabel={`View ${name} profile`}
+                    onPress={() => openDetail(item)}
+                    leading={
+                      <InitialsAvatar
+                        name={name}
+                        seed={item.id}
+                        size={44}
+                        imageUrl={item.avatar_url}
+                        hasUnread={!item.flat_id}
+                        status={item.flat_id ? 'online' : 'pending'}
+                      />
+                    }
+                    trailing={<ChevronRight color={Brand.inkMuted} size={16} strokeWidth={1.5} />}
+                  />
+                </SwipeActionRow>
+              </StaggeredListItem>
+            );
+          }}
         />
       )}
 

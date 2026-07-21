@@ -16,9 +16,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MotiView, AnimatePresence } from 'moti';
 
 import { ChipSelector } from '@/components/ui/chip-selector';
+import { SuccessOverlay } from '@/components/ui/success-overlay';
 import { VisitorSilhouette } from '@/components/illustrations';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
+import { hapticConfirm } from '@/lib/haptics';
 import { flatTowerName, notifyResidentOfVisitor } from '@/lib/visitors';
 import { uploadLocalImage } from '@/lib/storage-upload';
 import { supabase } from '@/lib/supabase';
@@ -92,7 +94,8 @@ export default function RegisterVisitorScreen() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [successVisible, setSuccessVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const searchFlats = useCallback(
     async (query: string) => {
@@ -221,7 +224,6 @@ export default function RegisterVisitorScreen() {
 
   const onSubmit = async () => {
     setError(null);
-    setSuccess(null);
 
     if (!profile?.society_id || !user) {
       setError('Your guard profile must be linked to a society.');
@@ -283,7 +285,9 @@ export default function RegisterVisitorScreen() {
         flatLabel: `${flatTowerName(selectedFlat.towers) ? `${flatTowerName(selectedFlat.towers)} · ` : ''}${selectedFlat.number}`,
       });
 
-      setSuccess(`Request sent for ${name.trim()}. Waiting for resident approval.`);
+      hapticConfirm();
+      setSuccessMessage(`Request sent for ${name.trim()}`);
+      setSuccessVisible(true);
       resetForm();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to register visitor');
@@ -323,11 +327,6 @@ export default function RegisterVisitorScreen() {
         contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
       >
         {error ? <ErrorBanner message={error} onRetry={() => setError(null)} /> : null}
-        {success ? (
-          <View style={{ marginBottom: 12, borderRadius: 12, borderWidth: 1, borderColor: '#BBF7D0', backgroundColor: '#F0FDF4', padding: 12 }}>
-            <Text style={{ fontSize: 14, color: '#15803D' }}>{success}</Text>
-          </View>
-        ) : null}
 
         {/* ── STEP 0: Photo ── */}
         <AnimatePresence exitBeforeEnter>
@@ -576,6 +575,15 @@ export default function RegisterVisitorScreen() {
           )}
         </AnimatePresence>
       </KeyboardAwareScrollView>
+
+      <SuccessOverlay
+        visible={successVisible}
+        message={successMessage ?? undefined}
+        onDone={() => {
+          setSuccessVisible(false);
+          setSuccessMessage(null);
+        }}
+      />
     </SafeAreaView>
   );
 }

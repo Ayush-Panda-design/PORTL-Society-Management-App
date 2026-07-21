@@ -22,6 +22,7 @@ import { FloatingActionBtn } from '@/components/ui/brand';
 import { AdminBookingDetailSheet } from '@/components/amenities/admin-booking-detail-sheet';
 import { AdminAmenityRevenueSnapshot } from '@/components/amenities/admin-revenue-snapshot';
 import { Card } from '@/components/ui/card';
+import { GlassCard } from '@/components/ui/glass-card';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { EmptyState } from '@/components/visitors/empty-state';
@@ -356,7 +357,7 @@ export default function AdminAmenitiesScreen() {
 
   return (
     <ScreenHeader title="Amenities" subtitle="Facilities & bookings" showBack>
-      <View className="mb-3 px-4">
+      <View className="z-10 border-b border-surface-border bg-surface px-4 pb-3">
         <SegmentedControl
           options={[
             { value: 'facilities', label: 'Facilities' },
@@ -547,52 +548,50 @@ export default function AdminAmenitiesScreen() {
                       Featured
                     </Text>
                     <Pressable onPress={() => openEdit(featured)}>
-                      <Card style={{ padding: 0, overflow: 'hidden' }}>
-                        <View className="relative">
-                          <Image
-                            source={{ uri: amenityCoverUri(featured) }}
-                            style={{ width: '100%', height: 168 }}
-                            contentFit="cover"
-                            transition={200}
-                          />
-                          <View
-                            className="absolute left-3 top-3 flex-row items-center gap-1 rounded-pill px-2.5 py-1"
-                            style={{ backgroundColor: 'rgba(16,21,18,0.72)' }}
-                          >
-                            <Star color="#FBBF24" size={12} fill="#FBBF24" strokeWidth={1.5} />
-                            <Text className="text-[11px] font-semibold text-white">Special</Text>
-                          </View>
+                      <View className="mb-2 overflow-hidden rounded-[20px]">
+                        <Image
+                          source={{ uri: amenityCoverUri(featured) }}
+                          style={{ width: '100%', height: 148 }}
+                          contentFit="cover"
+                          transition={200}
+                        />
+                        <View
+                          className="absolute left-3 top-3 flex-row items-center gap-1 rounded-pill px-2.5 py-1"
+                          style={{ backgroundColor: 'rgba(16,21,18,0.72)' }}
+                        >
+                          <Star color="#FBBF24" size={12} fill="#FBBF24" strokeWidth={1.5} />
+                          <Text className="text-[11px] font-semibold text-white">Special</Text>
                         </View>
-                        <View className="p-4">
-                          <Text
-                            className="text-lg text-ink"
-                            style={{ fontFamily: FontFamily.display }}
-                          >
-                            {featured.name}
-                          </Text>
-                          <Text className="mt-1 text-sm text-ink-muted" numberOfLines={2}>
-                            {featured.description || 'No description'}
-                          </Text>
-                          <View className="mt-3 flex-row flex-wrap gap-3">
-                            {featured.location ? (
-                              <View className="flex-row items-center gap-1">
-                                <MapPin color={Brand.inkMuted} size={13} strokeWidth={1.5} />
-                                <Text className="text-xs text-ink-muted">{featured.location}</Text>
-                              </View>
-                            ) : null}
+                      </View>
+                      <GlassCard accentColor="#F59E0B">
+                        <Text
+                          className="text-lg text-ink"
+                          style={{ fontFamily: FontFamily.display }}
+                        >
+                          {featured.name}
+                        </Text>
+                        <Text className="mt-1 text-sm text-ink-muted" numberOfLines={2}>
+                          {featured.description || 'No description'}
+                        </Text>
+                        <View className="mt-3 flex-row flex-wrap gap-3">
+                          {featured.location ? (
                             <View className="flex-row items-center gap-1">
-                              <Users color={Brand.inkMuted} size={13} strokeWidth={1.5} />
-                              <Text className="text-xs text-ink-muted">
-                                {amenitySlotCapacity(featured.capacity)} / slot ·{' '}
-                                {featured.booking_horizon_days ?? 7}d window
-                              </Text>
+                              <MapPin color={Brand.inkMuted} size={13} strokeWidth={1.5} />
+                              <Text className="text-xs text-ink-muted">{featured.location}</Text>
                             </View>
+                          ) : null}
+                          <View className="flex-row items-center gap-1">
+                            <Users color={Brand.inkMuted} size={13} strokeWidth={1.5} />
                             <Text className="text-xs text-ink-muted">
-                              {featured.slots.length} slots
+                              {amenitySlotCapacity(featured.capacity)} / slot ·{' '}
+                              {featured.booking_horizon_days ?? 7}d window
                             </Text>
                           </View>
+                          <Text className="text-xs text-ink-muted">
+                            {featured.slots.length} slots
+                          </Text>
                         </View>
-                      </Card>
+                      </GlassCard>
                     </Pressable>
                     <Text
                       className="mb-2 mt-5 text-xs font-bold uppercase tracking-widest text-ink-muted"

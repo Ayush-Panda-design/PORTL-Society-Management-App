@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import {
+  AlertCircle,
+  CalendarDays,
   ChevronRight,
   ImagePlus,
   Megaphone,
@@ -9,6 +11,7 @@ import {
   Trash2,
   Users,
   X,
+  type LucideIcon,
 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import {
@@ -24,23 +27,43 @@ import {
   View,
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import Toast from 'react-native-toast-message';
 
-import { AppCard, FloatingActionBtn } from '@/components/ui/brand';
+import { FloatingActionBtn } from '@/components/ui/brand';
 import { ChipSelector } from '@/components/ui/chip-selector';
+import { ListRow } from '@/components/ui/list-row';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SearchField } from '@/components/ui/search-field';
+import { StaggeredListItem } from '@/components/ui/staggered-list-item';
+import { SuccessOverlay } from '@/components/ui/success-overlay';
+import { SwipeActionRow } from '@/components/ui/swipe-action-row';
+import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { formatNoticeDate } from '@/lib/community';
 import { deleteNotice, fetchNotices, fetchTowers, uploadNoticeCover, upsertNotice } from '@/lib/community-api';
+import { hapticConfirm } from '@/lib/haptics';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
 import { useCommunityUiStore } from '@/stores/communityUiStore';
 import { useReadStateStore } from '@/stores/readStateStore';
-import type { Notice } from '@/types/database';
+import type { Notice, NoticeCategory } from '@/types/database';
 import { NOTICE_CATEGORIES } from '@/types/database';
+
+const NOTICE_CATEGORY_META: Record<
+  NoticeCategory,
+  { label: string; accent: string; bg: string; Icon: LucideIcon }
+> = {
+  urgent: { label: 'Urgent', accent: '#C0392B', bg: Pastels.rose, Icon: AlertCircle },
+  event: { label: 'Event', accent: '#2563EB', bg: Pastels.sky, Icon: CalendarDays },
+  general: { label: 'General', accent: Brand.primaryMid, bg: Pastels.mint, Icon: Megaphone },
+};
+
+function noticeCategoryMeta(category: Notice['category']) {
+  return NOTICE_CATEGORY_META[category ?? 'general'] ?? NOTICE_CATEGORY_META.general;
+}
 
 function matchesNotice(notice: Notice, query: string): boolean {
   const q = query.trim().toLowerCase();
@@ -71,6 +94,7 @@ export default function AdminNoticesScreen() {
   const [category, setCategory] = useState<'urgent' | 'general' | 'event'>('general');
   const [requiresAck, setRequiresAck] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [successVisible, setSuccessVisible] = useState(false);
 
   const noticesKey = queryKeys.notices(societyId ?? 'none');
 
@@ -151,8 +175,12 @@ export default function AdminNoticesScreen() {
       setFormError(e.message);
     },
     onSuccess: async () => {
+      const wasCreate = !editingNoticeId;
       await queryClient.invalidateQueries({ queryKey: noticesKey });
       closeModal();
+      hapticConfirm();
+      Toast.show({ type: 'success', text1: wasCreate ? 'Notice posted' : 'Notice updated' });
+      if (wasCreate) setSuccessVisible(true);
     },
   });
 
@@ -171,6 +199,8 @@ export default function AdminNoticesScreen() {
     },
     onSuccess: (_d, id) => {
       if (selectedId === id) setSelectedId(null);
+      hapticConfirm();
+      Toast.show({ type: 'success', text1: 'Notice deleted' });
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: noticesKey });
@@ -495,10 +525,13 @@ export default function AdminNoticesScreen() {
         <FlatList
           data={notices}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100, flexGrow: 1 }}
-          ItemSeparatorComponent={() => <View className="h-2" />}
-          refreshing={isRefetching}
-          onRefresh={() => void refetch()}
+          contentContainerStyle={{ paddingBottom: 100, flexGrow: 1 }}
+          refreshControl={
+            <ThemedRefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
+          }
+          initialNumToRender={15}
+          windowSize={8}
+          removeClippedSubviews
           ListEmptyComponent={
             <EmptyState
               visual="notices"
@@ -539,53 +572,67 @@ export default function AdminNoticesScreen() {
               }
             />
           }
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const unread = isNoticeUnread(item.id);
+            const meta = noticeCategoryMeta(item.category);
+            const CatIcon = meta.Icon;
             return (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`${item.title}${unread ? ', unread' : ''}`}
-                onPress={() => {
-                  markNoticeSeen(item.id);
-                  setSelectedId(item.id);
-                }}
-              >
-                <AppCard className="flex-row items-center gap-3 p-3.5">
-                  <View
-                    className="h-10 w-10 items-center justify-center rounded-card"
-                    style={{ backgroundColor: Pastels.mint }}
-                  >
-                    <Megaphone color={Brand.primary} size={16} strokeWidth={1.5} />
-                  </View>
-                  <View className="min-w-0 flex-1">
-                    <View className="flex-row items-center gap-2">
-                      <Text
-                        className="flex-1 text-[15px] text-ink"
-                        numberOfLines={1}
-                        style={{ fontFamily: FontFamily.heading }}
-                      >
-                        {item.title}
-                      </Text>
-                      {item.is_pinned && (
-                        <View className="rounded bg-brand-50 px-1 py-0.5">
-                          <Text className="text-[10px] font-bold text-brand-800">PINNED</Text>
+              <StaggeredListItem index={index} disabled={isRefetching}>
+                <SwipeActionRow
+                  actions={[
+                    { key: 'edit', label: 'Edit', color: Brand.primary, onPress: () => openEdit(item) },
+                    { key: 'delete', label: 'Delete', color: '#C0392B', onPress: () => confirmDelete(item) },
+                  ]}
+                >
+                  <ListRow
+                    title={item.title}
+                    subtitle={`${meta.label} · ${formatNoticeDate(item.created_at)}${item.cover_url ? ' · Cover' : ''}`}
+                    accentColor={meta.accent}
+                    last={index === notices.length - 1}
+                    accessibilityLabel={`${item.title}${unread ? ', unread' : ''}`}
+                    onPress={() => {
+                      markNoticeSeen(item.id);
+                      setSelectedId(item.id);
+                    }}
+                    leading={
+                      item.cover_url ? (
+                        <View className="h-14 w-14 overflow-hidden rounded-card">
+                          <Image
+                            source={{ uri: item.cover_url }}
+                            style={{ width: 56, height: 56 }}
+                            contentFit="cover"
+                          />
                         </View>
-                      )}
-                      {unread ? (
+                      ) : (
                         <View
-                          className="h-2 w-2 rounded-pill"
-                          style={{ backgroundColor: Brand.accent }}
-                        />
-                      ) : null}
-                    </View>
-                    <Text className="mt-0.5 text-xs text-ink-muted">
-                      {formatNoticeDate(item.created_at)}
-                      {item.cover_url ? ' · Cover' : ''}
-                    </Text>
-                  </View>
-                  <ChevronRight color={Brand.inkMuted} size={16} strokeWidth={1.5} />
-                </AppCard>
-              </Pressable>
+                          className="h-10 w-10 items-center justify-center rounded-full"
+                          style={{ backgroundColor: meta.bg }}
+                        >
+                          <CatIcon color={meta.accent} size={18} strokeWidth={1.5} />
+                        </View>
+                      )
+                    }
+                    trailing={
+                      <View className="items-end gap-1">
+                        {item.is_pinned ? (
+                          <View className="rounded bg-brand-50 px-1 py-0.5">
+                            <Text className="text-[10px] font-bold text-brand-800">PINNED</Text>
+                          </View>
+                        ) : null}
+                        <View className="flex-row items-center gap-1.5">
+                          {unread ? (
+                            <View
+                              className="h-2 w-2 rounded-pill"
+                              style={{ backgroundColor: Brand.accent }}
+                            />
+                          ) : null}
+                          <ChevronRight color={Brand.inkMuted} size={16} strokeWidth={1.5} />
+                        </View>
+                      </View>
+                    }
+                  />
+                </SwipeActionRow>
+              </StaggeredListItem>
             );
           }}
         />
@@ -596,6 +643,11 @@ export default function AdminNoticesScreen() {
         onPress={openCreate}
         icon={<Plus color="#fff" size={24} />}
         label="Post"
+      />
+      <SuccessOverlay
+        visible={successVisible}
+        message="Notice posted"
+        onDone={() => setSuccessVisible(false)}
       />
     </ScreenHeader>
   );

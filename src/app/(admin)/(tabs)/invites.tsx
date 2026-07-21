@@ -12,12 +12,14 @@ import {
 import Toast from 'react-native-toast-message';
 
 import { AnimatedPressable } from '@/components/ui/animated-pressable';
-import { AppCard } from '@/components/ui/brand';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { SuccessOverlay } from '@/components/ui/success-overlay';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
+import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand, FontFamily } from '@/constants/theme';
+import { hapticConfirm } from '@/lib/haptics';
 import { queryKeys } from '@/lib/query-client';
 import { listSocietyInviteCodes, regenerateInviteCode } from '@/lib/society-api';
 import { useAuthStore } from '@/stores/authStore';
@@ -133,11 +135,15 @@ export default function AdminInvitesScreen() {
     enabled: Boolean(societyId),
   });
 
+  const [successRole, setSuccessRole] = useState<InviteRole | null>(null);
+
   const regenMutation = useMutation({
     mutationFn: (role: InviteRole) => regenerateInviteCode(role),
-    onSuccess: async () => {
+    onSuccess: async (_data, role) => {
       await queryClient.invalidateQueries({ queryKey: invitesKey });
+      hapticConfirm();
       Toast.show({ type: 'success', text1: 'Invite code updated' });
+      setSuccessRole(role);
     },
     onError: (e: Error) => {
       Toast.show({ type: 'error', text1: 'Could not regenerate', text2: e.message });
@@ -188,9 +194,7 @@ export default function AdminInvitesScreen() {
         ) : null}
 
         {listQuery.isLoading ? (
-          <View className="mt-10 items-center">
-            <ActivityIndicator color={Brand.primary} />
-          </View>
+          <SkeletonList count={2} />
         ) : (
           <>
             {byRole.resident ? (
@@ -221,6 +225,12 @@ export default function AdminInvitesScreen() {
           Admin access is not joinable via code. Promote co-admins from the residents panel later.
         </Text>
       </ScrollView>
+
+      <SuccessOverlay
+        visible={successRole !== null}
+        message={successRole ? `${roleLabel(successRole)} code regenerated` : undefined}
+        onDone={() => setSuccessRole(null)}
+      />
     </ScreenHeader>
   );
 }

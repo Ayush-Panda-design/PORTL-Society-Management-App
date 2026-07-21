@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronLeft, ChevronRight, Plus, Send, UserRound } from 'lucide-react-native';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -11,18 +11,31 @@ import {
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
-import { AppCard, InitialsAvatar } from '@/components/ui/brand';
+import { AvatarStack } from '@/components/ui/avatar-stack';
+import { InitialsAvatar } from '@/components/ui/brand';
 import { ChipSelector } from '@/components/ui/chip-selector';
+import { GlassCard } from '@/components/ui/glass-card';
+import { ListRow } from '@/components/ui/list-row';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SearchField } from '@/components/ui/search-field';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { StaggeredListItem } from '@/components/ui/staggered-list-item';
+import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand, Elevation, FontFamily, Pastels } from '@/constants/theme';
+import { complaintCategoryMeta } from '@/lib/complaint-category';
 import { complaintStatusTone } from '@/lib/community';
 import {
   addComplaintComment,
@@ -31,6 +44,7 @@ import {
   fetchSocietyProfiles,
   updateComplaint,
 } from '@/lib/community-api';
+import { hapticConfirm } from '@/lib/haptics';
 import { queryKeys } from '@/lib/query-client';
 import { flatTowerName } from '@/lib/visitors';
 import { useAuthStore } from '@/stores/authStore';
@@ -51,19 +65,44 @@ type ComplaintSection = {
 
 const STATUS_FLOW: ComplaintStatus[] = ['open', 'in_progress', 'resolved'];
 
-const STATUS_DOT: Record<ComplaintStatus, string> = {
-  open: '#D97706',
-  in_progress: '#2563EB',
-  resolved: Brand.primary,
-  reopened: '#EA580C',
+const STATUS_STYLE: Record<
+  ComplaintStatus,
+  { accent: string; bg: string; text: string; label: string }
+> = {
+  open: { accent: '#D97706', bg: '#FFFBEB', text: '#B45309', label: 'Open' },
+  in_progress: { accent: '#2563EB', bg: '#EFF6FF', text: '#1D4ED8', label: 'In progress' },
+  resolved: { accent: '#059669', bg: '#ECFDF5', text: '#047857', label: 'Resolved' },
+  reopened: { accent: '#EA580C', bg: '#FFF7ED', text: '#C2410C', label: 'Reopened' },
 };
 
-const PRIORITY_MARK: Record<ComplaintPriority, { color: string; label: string }> = {
-  low: { color: Brand.inkMuted, label: 'Low priority' },
-  medium: { color: '#CA8A04', label: 'Medium priority' },
-  high: { color: Brand.accent, label: 'High priority' },
-  critical: { color: '#DC2626', label: 'Critical priority' },
+const STEP_ACCENT = ['#D97706', '#2563EB', '#059669'] as const;
+
+const PRIORITY_MARK: Record<
+  ComplaintPriority,
+  { accent: string; bg: string; label: string }
+> = {
+  low: { accent: '#6B7280', bg: '#F3F4F6', label: 'Low priority' },
+  medium: { accent: '#CA8A04', bg: '#FEF9C3', label: 'Medium priority' },
+  high: { accent: '#EA580C', bg: '#FFEDD5', label: 'High priority' },
+  critical: { accent: '#DC2626', bg: '#FEE2E2', label: 'Critical priority' },
 };
+
+const TOWER_ACCENTS = [
+  { bg: Pastels.sky, text: '#1E40AF' },
+  { bg: Pastels.lilac, text: '#5B21B6' },
+  { bg: Pastels.peach, text: '#C2410C' },
+  { bg: Pastels.rose, text: '#BE123C' },
+  { bg: Pastels.butter, text: '#A16207' },
+  { bg: Pastels.coral, text: '#9A3412' },
+] as const;
+
+function towerAccent(towerName: string | null) {
+  if (!towerName?.trim()) return { bg: '#F3F4F6', text: Brand.inkSoft };
+  const index =
+    towerName.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) %
+    TOWER_ACCENTS.length;
+  return TOWER_ACCENTS[index];
+}
 
 function flatLabel(item: ComplaintWithFlat): string {
   if (!item.flats) return 'Unknown flat';
@@ -91,37 +130,113 @@ function matchesComplaint(item: ComplaintWithFlat, query: string): boolean {
     .includes(q);
 }
 
+type SectionVariant = 'elevated' | 'bordered' | 'plain';
+
 function SectionCard({
   title,
   right,
   children,
+  variant = 'bordered',
 }: {
   title: string;
   right?: ReactNode;
   children: ReactNode;
+  variant?: SectionVariant;
 }) {
+  const shellStyle =
+    variant === 'elevated'
+      ? {
+          shadowColor: '#0F172A',
+          shadowOffset: Elevation.md.shadowOffset,
+          shadowOpacity: Elevation.md.shadowOpacity,
+          shadowRadius: Elevation.md.shadowRadius,
+          elevation: Elevation.md.elevation,
+        }
+      : variant === 'bordered'
+        ? { borderWidth: 1, borderColor: Brand.border }
+        : undefined;
+
   return (
-    <View
-      className="rounded-panel bg-surface-card p-4"
-      style={{
-        shadowColor: '#0F172A',
-        shadowOffset: Elevation.sm.shadowOffset,
-        shadowOpacity: Elevation.sm.shadowOpacity,
-        shadowRadius: Elevation.sm.shadowRadius,
-        elevation: Elevation.sm.elevation,
-      }}
-    >
-      <View className="mb-3 flex-row items-center justify-between">
-        <Text
-          className="text-[13px] font-semibold text-ink"
-          style={{ fontFamily: FontFamily.heading }}
-        >
-          {title}
-        </Text>
-        {right}
-      </View>
+    <View className="rounded-panel bg-surface-card p-4" style={shellStyle}>
+      {title ? (
+        <View className="mb-3 flex-row items-center justify-between">
+          <Text
+            className="text-xs font-bold uppercase tracking-wider text-ink-muted"
+            style={{ fontFamily: FontFamily.heading }}
+          >
+            {title}
+          </Text>
+          {right}
+        </View>
+      ) : null}
       {children}
     </View>
+  );
+}
+
+function StepNode({
+  done,
+  current,
+  index,
+  stepAccent,
+  disabled,
+  label,
+  onPress,
+}: {
+  done: boolean;
+  current: boolean;
+  index: number;
+  stepAccent: string;
+  disabled?: boolean;
+  label: string;
+  onPress: () => void;
+}) {
+  const scale = useSharedValue(current ? 1.06 : 1);
+  const fill = done || current ? stepAccent : '#E5E7EB';
+
+  useEffect(() => {
+    scale.value = withSpring(current ? 1.06 : 1, { damping: 14, stiffness: 320 });
+  }, [current, scale]);
+
+  const nodeStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Pressable
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={`Set status to ${label}`}
+      onPress={onPress}
+      className="items-center"
+      style={{ width: 82 }}
+    >
+      <Animated.View
+        className="h-9 w-9 items-center justify-center rounded-full"
+        style={[{ backgroundColor: fill }, nodeStyle]}
+      >
+        {done && !current ? (
+          <Check color="#fff" size={16} strokeWidth={2.5} />
+        ) : (
+          <Text
+            className="text-[12px] font-bold"
+            style={{ color: done || current ? '#fff' : Brand.inkMuted }}
+          >
+            {index + 1}
+          </Text>
+        )}
+      </Animated.View>
+      <Text
+        className="mt-2 text-center text-[11px] font-semibold"
+        numberOfLines={1}
+        style={{
+          fontFamily: FontFamily.heading,
+          color: current ? Brand.ink : done ? Brand.inkSoft : Brand.inkMuted,
+        }}
+      >
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -137,78 +252,67 @@ function StatusStepper({
   const activeIndex =
     value === 'reopened' ? 0 : Math.max(0, STATUS_FLOW.indexOf(value));
 
+  const reopened = value === 'reopened';
+
   return (
     <View>
-      <View className="flex-row items-center">
-        {STATUS_FLOW.map((step, index) => {
-          const done = index < activeIndex || value === 'resolved';
-          const current =
-            value === 'resolved'
-              ? index === STATUS_FLOW.length - 1
-              : index === activeIndex;
-          const connectorDone = index < activeIndex || value === 'resolved';
+      <View
+        className="rounded-card px-2 py-4"
+        style={{ backgroundColor: '#F4F6F8' }}
+      >
+        <View className="flex-row items-center">
+          {STATUS_FLOW.map((step, index) => {
+            const done = index < activeIndex || value === 'resolved';
+            const current =
+              value === 'resolved'
+                ? index === STATUS_FLOW.length - 1
+                : index === activeIndex;
+            const connectorDone = index < activeIndex || value === 'resolved';
+            const stepAccent = STEP_ACCENT[index] ?? Brand.primary;
 
-          return (
-            <View key={step} className="flex-1 flex-row items-center">
-              <Pressable
-                disabled={disabled}
-                accessibilityRole="button"
-                accessibilityLabel={`Set status to ${complaintStatusTone(step).label}`}
-                onPress={() => onChange(step)}
-                className="items-center"
-                style={{ width: 76 }}
-              >
-                <View
-                  className="h-7 w-7 items-center justify-center rounded-full"
-                  style={{
-                    backgroundColor: done || current ? Brand.primary : '#F3F4F6',
-                  }}
-                >
-                  {done && !current ? (
-                    <Check color="#fff" size={14} strokeWidth={2.5} />
-                  ) : (
-                    <Text
-                      className="text-[11px] font-bold"
-                      style={{ color: done || current ? '#fff' : Brand.inkMuted }}
-                    >
-                      {index + 1}
-                    </Text>
-                  )}
-                </View>
-                <Text
-                  className="mt-1.5 text-center text-[11px]"
-                  numberOfLines={1}
-                  style={{
-                    fontFamily: FontFamily.heading,
-                    color: current || done ? Brand.ink : Brand.inkMuted,
-                  }}
-                >
-                  {complaintStatusTone(step).label}
-                </Text>
-              </Pressable>
-              {index < STATUS_FLOW.length - 1 ? (
-                <View
-                  className="mb-5 h-0.5 flex-1"
-                  style={{ backgroundColor: connectorDone ? Brand.primary : '#E5E7EB' }}
+            return (
+              <View key={step} className="flex-1 flex-row items-center">
+                <StepNode
+                  done={done}
+                  current={current}
+                  index={index}
+                  stepAccent={stepAccent}
+                  disabled={disabled}
+                  label={complaintStatusTone(step).label}
+                  onPress={() => onChange(step)}
                 />
-              ) : null}
-            </View>
-          );
-        })}
+                {index < STATUS_FLOW.length - 1 ? (
+                  <View className="mb-6 h-1.5 flex-1 overflow-hidden rounded-full bg-gray-200">
+                    {connectorDone ? (
+                      <LinearGradient
+                        colors={[STEP_ACCENT[index], Brand.accent]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={{ flex: 1, borderRadius: 999 }}
+                      />
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
+            );
+          })}
+        </View>
       </View>
 
       <Pressable
         disabled={disabled}
-        onPress={() =>
-          onChange(value === 'reopened' ? 'in_progress' : 'reopened')
-        }
-        className="mt-3 self-start"
+        onPress={() => onChange(reopened ? 'in_progress' : 'reopened')}
+        className="mt-3 self-start rounded-pill px-2 py-1"
+        style={{ backgroundColor: reopened ? STATUS_STYLE.reopened.bg : 'transparent' }}
       >
         <Text
           className="text-sm font-semibold"
-          style={{ color: value === 'reopened' ? Brand.primary : Brand.inkSoft }}
+          style={{
+            color: reopened ? STATUS_STYLE.reopened.text : Brand.inkSoft,
+            fontFamily: FontFamily.heading,
+          }}
         >
-          {value === 'reopened' ? 'Move to In progress' : 'Mark as reopened'}
+          {reopened ? 'Move to In progress' : 'Mark as reopened'}
         </Text>
       </Pressable>
     </View>
@@ -281,6 +385,8 @@ export default function AdminComplaintsScreen() {
     },
     onSuccess: () => {
       setCommentText('');
+      hapticConfirm();
+      Toast.show({ type: 'success', text1: 'Comment added' });
       queryClient.invalidateQueries({ queryKey: queryKeys.complaintComments(selectedId!) });
     },
   });
@@ -334,17 +440,25 @@ export default function AdminComplaintsScreen() {
 
   if (selected) {
     const name = reporterName(selected);
+    const statusMeta = STATUS_STYLE[selected.status] ?? STATUS_STYLE.open;
     const statusLabel = complaintStatusTone(selected.status).label;
-    const statusColor = STATUS_DOT[selected.status] ?? Brand.inkMuted;
     const priority = selected.priority ?? 'medium';
     const priorityMeta = PRIORITY_MARK[priority];
+    const towerName = selected.flats ? flatTowerName(selected.flats.towers) : null;
+    const towerTone = towerAccent(towerName ?? null);
     const assigneeName =
       assignees.find((p) => p.id === selected.assigned_to)?.full_name ?? null;
     const commentCount = commentsQuery.data?.length ?? 0;
+    const filedAt = new Date(selected.created_at).toLocaleString(undefined, {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
 
     return (
       <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
-        <View className="flex-row items-start gap-3 px-5 pb-3 pt-4">
+        <View className="flex-row items-start gap-3 px-5 pb-2 pt-4">
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Back to all complaints"
@@ -352,14 +466,7 @@ export default function AdminComplaintsScreen() {
               setSelectedId(null);
               setCommentText('');
             }}
-            className="mt-0.5 h-11 w-11 items-center justify-center rounded-full bg-surface-card"
-            style={{
-              shadowColor: '#0F172A',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.06,
-              shadowRadius: 10,
-              elevation: 2,
-            }}
+            className="mt-0.5 h-11 w-11 items-center justify-center rounded-full border border-surface-border bg-surface-card"
           >
             <ChevronLeft color={Brand.ink} size={22} />
           </Pressable>
@@ -371,9 +478,24 @@ export default function AdminComplaintsScreen() {
             >
               {name}
             </Text>
-            <Text className="mt-0.5 text-sm text-ink-soft" numberOfLines={1}>
-              {flatLabel(selected)}
-            </Text>
+            <View className="mt-1.5 flex-row flex-wrap items-center gap-2">
+              {towerName ? (
+                <View
+                  className="rounded-pill px-2.5 py-0.5"
+                  style={{ backgroundColor: towerTone.bg }}
+                >
+                  <Text
+                    className="text-xs font-semibold"
+                    style={{ color: towerTone.text, fontFamily: FontFamily.heading }}
+                  >
+                    {towerName}
+                  </Text>
+                </View>
+              ) : null}
+              <Text className="text-sm font-medium text-ink-soft" numberOfLines={1}>
+                {selected.flats ? `Flat ${selected.flats.number}` : flatLabel(selected)}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -381,74 +503,88 @@ export default function AdminComplaintsScreen() {
           <ScrollView
             className="flex-1"
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 28, gap: 24 }}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 28, gap: 14 }}
             showsVerticalScrollIndicator={false}
           >
-            <View
-              className="rounded-panel bg-surface-card p-4"
-              style={{
-                shadowColor: '#0F172A',
-                shadowOffset: Elevation.md.shadowOffset,
-                shadowOpacity: Elevation.md.shadowOpacity,
-                shadowRadius: Elevation.md.shadowRadius,
-                elevation: Elevation.md.elevation,
-              }}
-            >
+            <GlassCard accentColor={statusMeta.accent}>
               <View className="flex-row items-start gap-3">
                 <InitialsAvatar
                   name={name}
                   seed={selected.reporter?.id ?? selected.id}
-                  size={56}
+                  size={52}
                   imageUrl={selected.reporter?.avatar_url}
                 />
-                <View className="min-w-0 flex-1 pt-0.5">
-                  <View className="flex-row items-center gap-2">
+                <View className="min-w-0 flex-1">
+                  <View
+                    className="self-start flex-row items-center gap-1.5 rounded-pill px-2.5 py-1"
+                    style={{ backgroundColor: statusMeta.bg }}
+                  >
                     <View
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: statusColor }}
+                      className="h-2 w-2 rounded-full"
+                      style={{ backgroundColor: statusMeta.accent }}
                     />
                     <Text
-                      className="text-sm font-semibold"
-                      style={{ color: statusColor, fontFamily: FontFamily.heading }}
+                      className="text-[13px] font-bold"
+                      style={{ color: statusMeta.text, fontFamily: FontFamily.heading }}
                     >
                       {statusLabel}
                     </Text>
                   </View>
                   {selected.reporter?.phone ? (
-                    <Text className="mt-1 text-sm text-ink-soft">{selected.reporter.phone}</Text>
+                    <Text className="mt-2 text-sm text-ink-soft">{selected.reporter.phone}</Text>
                   ) : null}
-                  <Text className="mt-1 text-xs text-ink-muted">
-                    Filed {new Date(selected.created_at).toLocaleString()}
-                  </Text>
+                  <Text className="mt-1 text-xs text-ink-muted">Filed {filedAt}</Text>
                 </View>
               </View>
 
               <View className="mt-4 flex-row flex-wrap items-center gap-2">
+                {(() => {
+                  const cat = complaintCategoryMeta(selected.category);
+                  const CatIcon = cat.Icon;
+                  return (
+                    <View
+                      className="flex-row items-center gap-1.5 rounded-pill px-2.5 py-1"
+                      style={{ backgroundColor: cat.bg }}
+                    >
+                      <CatIcon color={cat.color} size={12} strokeWidth={1.5} />
+                      <Text
+                        className="text-xs font-semibold"
+                        style={{ color: cat.color, fontFamily: FontFamily.heading }}
+                      >
+                        {selected.category}
+                      </Text>
+                    </View>
+                  );
+                })()}
                 <View
-                  className="rounded-pill px-3 py-1"
-                  style={{ backgroundColor: Pastels.mint }}
+                  className="rounded-pill px-2.5 py-1"
+                  style={{
+                    backgroundColor: priorityMeta.bg,
+                    borderWidth: priority === 'high' || priority === 'critical' ? 1.5 : 0,
+                    borderColor: priorityMeta.accent,
+                  }}
                 >
                   <Text
                     className="text-xs font-semibold"
-                    style={{ color: Brand.primary, fontFamily: FontFamily.heading }}
+                    style={{
+                      color: priorityMeta.accent,
+                      fontFamily: FontFamily.heading,
+                      fontWeight: priority === 'high' || priority === 'critical' ? '700' : '600',
+                    }}
                   >
-                    {selected.category}
+                    {priorityMeta.label}
                   </Text>
                 </View>
               </View>
+            </GlassCard>
 
-              <View
-                className="mt-3 flex-row items-center rounded-card bg-surface px-3 py-2.5"
-                style={{ borderLeftWidth: 3, borderLeftColor: priorityMeta.color }}
+            <SectionCard title="Description" variant="plain">
+              <Text
+                className="text-[17px] leading-7 text-ink"
+                style={{ fontFamily: FontFamily.heading }}
               >
-                <Text className="text-sm text-ink" style={{ fontFamily: FontFamily.heading }}>
-                  {priorityMeta.label}
-                </Text>
-              </View>
-            </View>
-
-            <SectionCard title="Description">
-              <Text className="text-[15px] leading-6 text-ink">{selected.description}</Text>
+                {selected.description}
+              </Text>
               {selected.photo_urls && selected.photo_urls.length > 0 ? (
                 <ScrollView
                   horizontal
@@ -467,13 +603,13 @@ export default function AdminComplaintsScreen() {
               ) : null}
             </SectionCard>
 
-            <SectionCard title="Workflow">
-              <Text className="mb-3 text-xs text-ink-muted">Progress</Text>
+            <SectionCard title="Workflow" variant="elevated">
               <StatusStepper
                 value={selected.status}
                 disabled={updateMutation.isPending}
                 onChange={(status) => {
                   markComplaintSeen(selected.id);
+                  hapticConfirm();
                   updateMutation.mutate({
                     id: selected.id,
                     status,
@@ -483,24 +619,34 @@ export default function AdminComplaintsScreen() {
               />
 
               <View className="mt-5 border-t border-surface-border pt-4">
-                <Text className="mb-2 text-xs text-ink-muted">Assignee</Text>
-                <View
-                  className="overflow-hidden rounded-card"
-                  style={{
-                    backgroundColor: Pastels.sage,
-                    borderWidth: 1.5,
-                    borderColor: Brand.primarySoft,
-                  }}
-                >
-                  <View className="flex-row items-center gap-3 px-3 py-1">
+                <Text className="mb-2 text-xs font-bold uppercase tracking-wider text-ink-muted">
+                  Assignee
+                </Text>
+                <View className="mb-2">
+                  {assignees.length > 0 ? (
+                    <AvatarStack
+                      people={assignees.map((p) => ({
+                        id: p.id,
+                        name: p.full_name ?? p.role,
+                        imageUrl: p.avatar_url,
+                      }))}
+                      max={4}
+                      size={28}
+                    />
+                  ) : null}
+                </View>
+                <View className="overflow-hidden rounded-card border border-surface-border bg-surface">
+                  <View className="flex-row items-center gap-3 px-3 py-2">
                     <View
                       className="h-9 w-9 items-center justify-center rounded-full"
-                      style={{ backgroundColor: Brand.primarySoft }}
+                      style={{
+                        backgroundColor: selected.assigned_to ? Brand.primarySoft : '#F3F4F6',
+                      }}
                     >
                       {selected.assigned_to ? (
                         <UserRound color={Brand.primary} size={16} strokeWidth={1.5} />
                       ) : (
-                        <Plus color={Brand.primary} size={16} strokeWidth={1.5} />
+                        <Plus color={Brand.inkMuted} size={16} strokeWidth={1.5} />
                       )}
                     </View>
                     <View className="min-w-0 flex-1">
@@ -517,6 +663,11 @@ export default function AdminComplaintsScreen() {
                         value={selected.assigned_to ?? ''}
                         onChange={(assignedTo) => {
                           markComplaintSeen(selected.id);
+                          hapticConfirm();
+                          Toast.show({
+                            type: 'success',
+                            text1: assignedTo ? 'Staff assigned' : 'Unassigned',
+                          });
                           updateMutation.mutate({
                             id: selected.id,
                             status: selected.status as ComplaintStatus,
@@ -537,6 +688,7 @@ export default function AdminComplaintsScreen() {
 
             <SectionCard
               title="Comments"
+              variant="bordered"
               right={
                 <Text className="text-xs font-semibold" style={{ color: Brand.primary }}>
                   {commentCount} {commentCount === 1 ? 'comment' : 'comments'}
@@ -666,10 +818,18 @@ export default function AdminComplaintsScreen() {
         <SectionList
           sections={sections}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
+          contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}
           stickySectionHeadersEnabled
-          refreshing={listQuery.isRefetching}
-          onRefresh={() => void listQuery.refetch()}
+          refreshControl={
+            <ThemedRefreshControl
+              refreshing={listQuery.isRefetching}
+              onRefresh={() => void listQuery.refetch()}
+            />
+          }
+          initialNumToRender={12}
+          windowSize={8}
+          maxToRenderPerBatch={10}
+          removeClippedSubviews
           ListEmptyComponent={
             <EmptyState
               visual="helpdesk"
@@ -687,73 +847,79 @@ export default function AdminComplaintsScreen() {
               }}
             />
           }
-          renderSectionHeader={({ section }) => (
-            <View
-              className="mb-2 mt-3 flex-row items-center justify-between rounded-card px-3 py-2"
-              style={{ backgroundColor: Pastels.sage }}
-            >
-              <Text
-                className="text-xs font-bold uppercase tracking-widest text-ink"
-                style={{ fontFamily: FontFamily.heading }}
+          renderSectionHeader={({ section }) => {
+            const cat = complaintCategoryMeta(section.title);
+            const CatIcon = cat.Icon;
+            return (
+              <View
+                className="mx-4 mb-1 mt-3 flex-row items-center justify-between px-1 py-2"
+                style={{ backgroundColor: Brand.surface }}
               >
-                {section.title}
-              </Text>
-              <Text className="text-xs text-ink-muted">
-                {section.data.length} ticket{section.data.length === 1 ? '' : 's'}
-              </Text>
-            </View>
-          )}
-          renderItem={({ item }) => {
+                <View className="flex-row items-center gap-2">
+                  <View
+                    className="h-7 w-7 items-center justify-center rounded-full"
+                    style={{ backgroundColor: cat.bg }}
+                  >
+                    <CatIcon color={cat.color} size={14} strokeWidth={1.5} />
+                  </View>
+                  <Text
+                    className="text-xs font-bold uppercase tracking-widest text-ink"
+                    style={{ fontFamily: FontFamily.heading }}
+                  >
+                    {section.title}
+                  </Text>
+                </View>
+                <Text className="text-xs text-ink-muted">
+                  {section.data.length} ticket{section.data.length === 1 ? '' : 's'}
+                </Text>
+              </View>
+            );
+          }}
+          renderItem={({ item, index }) => {
             const unread = isComplaintUnread(item.id);
             const name = reporterName(item);
-            const statusColor = STATUS_DOT[item.status] ?? Brand.inkMuted;
+            const statusMeta = STATUS_STYLE[item.status] ?? STATUS_STYLE.open;
+            const cat = complaintCategoryMeta(item.category);
+            const CatIcon = cat.Icon;
             return (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`${item.category} from ${name}`}
-                onPress={() => {
-                  markComplaintSeen(item.id);
-                  setSelectedId(item.id);
-                }}
-                className="mb-2"
-              >
-                <AppCard className="flex-row items-center gap-3 p-3.5">
-                  <InitialsAvatar
-                    name={name}
-                    seed={item.reporter?.id ?? item.id}
-                    size={40}
-                    hasUnread={unread}
-                    imageUrl={item.reporter?.avatar_url}
-                  />
-                  <View className="min-w-0 flex-1">
-                    <View className="flex-row items-center justify-between gap-2">
-                      <Text
-                        className="flex-1 text-[15px] text-ink"
-                        numberOfLines={1}
-                        style={{ fontFamily: FontFamily.heading }}
-                      >
-                        {name}
-                      </Text>
-                      <View className="flex-row items-center gap-1.5">
+              <StaggeredListItem index={index} disabled={listQuery.isRefetching}>
+                <ListRow
+                  title={name}
+                  subtitle={`${flatLabel(item)} · ${new Date(item.created_at).toLocaleDateString()}`}
+                  meta={item.description}
+                  accentColor={statusMeta.accent}
+                  accessibilityLabel={`${item.category} from ${name}`}
+                  onPress={() => {
+                    markComplaintSeen(item.id);
+                    setSelectedId(item.id);
+                  }}
+                  leading={
+                    <View
+                      className="h-10 w-10 items-center justify-center rounded-full"
+                      style={{ backgroundColor: cat.bg }}
+                    >
+                      <CatIcon color={cat.color} size={18} strokeWidth={1.5} />
+                      {unread ? (
                         <View
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: statusColor }}
+                          className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full"
+                          style={{ backgroundColor: Brand.primary }}
                         />
-                        <Text className="text-[11px] font-medium text-ink-soft">
-                          {complaintStatusTone(item.status).label}
-                        </Text>
-                      </View>
+                      ) : null}
                     </View>
-                    <Text className="mt-0.5 text-xs text-ink-muted" numberOfLines={1}>
-                      {flatLabel(item)} · {new Date(item.created_at).toLocaleDateString()}
-                    </Text>
-                    <Text className="mt-0.5 text-xs text-ink-soft" numberOfLines={1}>
-                      {item.description}
-                    </Text>
-                  </View>
-                  <ChevronRight color={Brand.inkMuted} size={16} strokeWidth={1.5} />
-                </AppCard>
-              </Pressable>
+                  }
+                  trailing={
+                    <View className="items-end gap-1">
+                      <Text
+                        className="text-[11px] font-semibold"
+                        style={{ color: statusMeta.text }}
+                      >
+                        {complaintStatusTone(item.status).label}
+                      </Text>
+                      <ChevronRight color={Brand.inkMuted} size={14} strokeWidth={1.5} />
+                    </View>
+                  }
+                />
+              </StaggeredListItem>
             );
           }}
         />

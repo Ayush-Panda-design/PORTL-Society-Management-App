@@ -2,8 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Receipt } from 'lucide-react-native';
 import { FlatList, Text, View } from 'react-native';
 
-import { AppCard } from '@/components/ui/brand';
+import { GlassCard } from '@/components/ui/glass-card';
+import { ListRow } from '@/components/ui/list-row';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { StaggeredListItem } from '@/components/ui/staggered-list-item';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
@@ -46,38 +48,46 @@ function purposeLabel(purpose: string): string {
   }
 }
 
-function LedgerRow({ item }: { item: PaymentLedgerEntry }) {
+function statusAccent(status: string): string {
+  switch (status) {
+    case 'confirmed':
+      return Brand.primary;
+    case 'partially_paid':
+    case 'pending_payment':
+      return '#D97706';
+    case 'failed':
+    case 'expired':
+      return '#DC2626';
+    default:
+      return Brand.inkMuted;
+  }
+}
+
+function LedgerRow({ item, index }: { item: PaymentLedgerEntry; index: number }) {
   const outstanding = item.outstanding_paise ?? 0;
   return (
-    <AppCard className="p-4">
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="min-w-0 flex-1">
-          <Text className="text-[15px] text-ink" style={{ fontFamily: FontFamily.heading }}>
-            {purposeLabel(String(item.purpose))}
-          </Text>
-          <Text className="mt-0.5 text-xs text-ink-muted">
-            {new Date(item.created_at).toLocaleString()} · {statusLabel(String(item.status))}
-          </Text>
-          {item.notes ? (
-            <Text className="mt-1 text-xs text-ink-soft" numberOfLines={2}>
-              {item.notes}
+    <StaggeredListItem index={index}>
+      <ListRow
+        title={purposeLabel(String(item.purpose))}
+        subtitle={`${new Date(item.created_at).toLocaleString()} · ${statusLabel(String(item.status))}`}
+        meta={item.notes ?? undefined}
+        accentColor={statusAccent(String(item.status))}
+        trailing={
+          <View className="items-end">
+            <Text className="text-base text-ink" style={{ fontFamily: FontFamily.heading }}>
+              {formatPaise(item.amount_paise)}
             </Text>
-          ) : null}
-        </View>
-        <View className="items-end">
-          <Text className="text-base text-ink" style={{ fontFamily: FontFamily.heading }}>
-            {formatPaise(item.amount_paise)}
-          </Text>
-          {outstanding > 0 ? (
-            <Text className="mt-0.5 text-xs" style={{ color: '#C0392B' }}>
-              Due {formatPaise(outstanding)}
-            </Text>
-          ) : (
-            <Text className="mt-0.5 text-xs text-brand-700">Settled</Text>
-          )}
-        </View>
-      </View>
-    </AppCard>
+            {outstanding > 0 ? (
+              <Text className="mt-0.5 text-xs" style={{ color: '#C0392B' }}>
+                Due {formatPaise(outstanding)}
+              </Text>
+            ) : (
+              <Text className="mt-0.5 text-xs text-brand-700">Settled</Text>
+            )}
+          </View>
+        }
+      />
+    </StaggeredListItem>
   );
 }
 
@@ -101,11 +111,15 @@ export default function PaymentStatementScreen() {
         <ErrorBanner message={error.message} onRetry={() => void refetch()} />
       ) : null}
 
-      <View className="mx-4 mb-3 rounded-panel px-4 py-3" style={{ backgroundColor: Pastels.mint }}>
-        <Text className="text-xs text-ink-muted">Outstanding balance</Text>
-        <Text className="mt-1 text-2xl text-ink" style={{ fontFamily: FontFamily.display }}>
-          {formatPaise(outstandingTotal)}
-        </Text>
+      <View className="mx-4 mb-3">
+        <GlassCard accentColor={outstandingTotal > 0 ? '#D97706' : Brand.primary}>
+          <Text className="text-xs font-bold uppercase tracking-wider text-ink-muted">
+            Outstanding balance
+          </Text>
+          <Text className="mt-1 text-2xl text-ink" style={{ fontFamily: FontFamily.display }}>
+            {formatPaise(outstandingTotal)}
+          </Text>
+        </GlassCard>
       </View>
 
       {isLoading && !data ? (
@@ -114,11 +128,13 @@ export default function PaymentStatementScreen() {
         <FlatList
           data={data ?? []}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, flexGrow: 1 }}
-          ItemSeparatorComponent={() => <View className="h-2" />}
+          contentContainerStyle={{ paddingBottom: 40, flexGrow: 1 }}
           refreshControl={
             <ThemedRefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
           }
+          initialNumToRender={12}
+          windowSize={8}
+          removeClippedSubviews
           ListEmptyComponent={
             <EmptyState
               title="No payments yet"
@@ -134,7 +150,7 @@ export default function PaymentStatementScreen() {
               ]}
             />
           }
-          renderItem={({ item }) => <LedgerRow item={item} />}
+          renderItem={({ item, index }) => <LedgerRow item={item} index={index} />}
         />
       )}
     </ScreenHeader>

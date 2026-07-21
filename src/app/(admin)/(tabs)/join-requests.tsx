@@ -1,15 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 
 import { MemberSwipeDeck } from '@/components/members/member-swipe-deck';
-import { AppCard, InitialsAvatar } from '@/components/ui/brand';
+import { InitialsAvatar } from '@/components/ui/brand';
+import { ListRow } from '@/components/ui/list-row';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { StaggeredListItem } from '@/components/ui/staggered-list-item';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
+import { SkeletonList } from '@/components/visitors/loading-state';
 import type { SwipeDecision } from '@/components/visitors/swipeable-visitor-card';
-import { Brand, FontFamily } from '@/constants/theme';
+import { FontFamily } from '@/constants/theme';
 import { fetchResidents } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
 import { fetchPendingMembers, reviewJoinRequest } from '@/lib/society-api';
@@ -124,8 +127,8 @@ export default function AdminJoinRequestsScreen() {
         ) : null}
 
         {pendingQuery.isLoading ? (
-          <View className="mb-6 h-40 items-center justify-center">
-            <ActivityIndicator color={Brand.primary} />
+          <View className="mb-6">
+            <SkeletonList count={2} />
           </View>
         ) : pending.length > 0 ? (
           <View className="mb-8">
@@ -152,28 +155,33 @@ export default function AdminJoinRequestsScreen() {
         </Text>
 
         {activeQuery.isLoading ? (
-          <ActivityIndicator color={Brand.primary} />
+          <SkeletonList count={3} />
         ) : active.length === 0 ? (
-          <Text className="text-sm text-ink-muted">
-            Approved residents will show here. Assign flats from the Residents tab if needed.
-          </Text>
+          <EmptyState
+            visual="residents"
+            title="No active residents yet"
+            subtitle="Approved residents will show here. Assign flats from the Residents tab if needed."
+          />
         ) : (
-          active.map((member) => (
-            <AppCard key={member.id} className="mb-2 flex-row items-center gap-3">
-              <InitialsAvatar
-                name={member.full_name ?? 'R'}
-                size={44}
-                seed={member.id}
-                imageUrl={member.avatar_url}
-              />
-              <View className="min-w-0 flex-1">
-                <Text className="text-base text-ink" style={{ fontFamily: FontFamily.heading }}>
-                  {member.full_name ?? 'Unnamed'}
-                </Text>
-                <Text className="text-sm text-ink-muted">{flatLabel(member)}</Text>
-              </View>
-            </AppCard>
-          ))
+          <View className="overflow-hidden rounded-card border border-surface-border">
+            {active.map((member, index) => (
+              <StaggeredListItem key={member.id} index={index}>
+                <ListRow
+                  title={member.full_name ?? 'Unnamed'}
+                  subtitle={flatLabel(member)}
+                  last={index === active.length - 1}
+                  leading={
+                    <InitialsAvatar
+                      name={member.full_name ?? 'R'}
+                      size={44}
+                      seed={member.id}
+                      imageUrl={member.avatar_url}
+                    />
+                  }
+                />
+              </StaggeredListItem>
+            ))}
+          </View>
         )}
       </ScrollView>
     </ScreenHeader>

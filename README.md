@@ -5,9 +5,9 @@ Portl brings the everyday life of an apartment community — the security gate, 
 ## Features
 
 ### For Residents
-- Approve, reject, or pre-approve visitors, guests, and delivery/service staff
+- Approve, reject (with reasoning), or pre-approve visitors (with expiry windows)
 - View real-time visitor history
-- Raise and track helpdesk complaints
+- Raise and track helpdesk complaints (with photo attachments, priority levels, and comment threads)
 - Browse the society notice board
 - Vote in community polls
 - Book amenities (with live slot availability)
@@ -16,18 +16,18 @@ Portl brings the everyday life of an apartment community — the security gate, 
 ### For Security Guards
 - Register new visitors at the gate
 - Search residents and raise approval requests
-- Scan QR passes for pre-approved visitors
+- Scan QR passes for pre-approved visitors (with strict expiry enforcement)
 - Verify approval status in real time
 - Mark visitor entry and exit
-- View the full visitor log
+- View the full visitor log (with flagging, guard notes, and CSV exports)
 
 ### For Society Admins
 - Manage towers, flats, and residents
 - Approve join requests and generate invite codes
-- Manage staff and service providers
-- Publish notices and cover images
+- Manage staff and service providers (including shift timings and service categories)
+- Publish notices (with audience targeting, pinning, and cover images)
 - Create and manage community polls
-- Track and resolve complaints
+- Track and resolve complaints (with full photo and comment thread visibility)
 - Configure amenities and booking slots
 - Oversee all society operations from a central dashboard
 
@@ -37,6 +37,7 @@ Portl brings the everyday life of an apartment community — the security gate, 
 - Push notifications for approvals, notices, and status updates
 - Society onboarding flow — create a new society or join an existing one via invite code
 - Dark mode support
+- **Production-Ready Observability:** Global React error boundaries and crash reporting integration ready
 
 ## Tech Stack
 
@@ -50,12 +51,13 @@ Portl brings the everyday life of an apartment community — the security gate, 
 | Server state / data fetching | TanStack Query |
 | Backend | [Supabase](https://supabase.com) (Postgres, Auth, Realtime, Storage, Edge Functions) |
 | Push notifications | Expo Notifications + Supabase Edge Function |
-| QR codes | `react-native-qrcode-svg`, `expo-camera` |
+| Quality Assurance | **Jest** (Unit/Integration), **Maestro** (E2E), **pgTAP** (Database/RLS) |
+| CI/CD | GitHub Actions |
 | Animations | Moti, Lottie, React Native Reanimated |
 
 ## Project Structure
 
-```
+```text
 src/
 ├── app/                  # Expo Router routes (file-based)
 │   ├── (auth)/           # Login, signup, auth callback
@@ -71,10 +73,15 @@ src/
 ├── theme/                   # Design tokens
 └── types/                   # Shared TypeScript types
 
+__tests__/                 # Jest Unit & Integration tests
+.maestro/                  # Maestro E2E test flows
+.github/workflows/         # CI/CD pipelines (Lint, Typecheck, Test)
+
 supabase/
 ├── migrations/            # Database schema, RLS policies, storage buckets
-├── functions/              # Edge Functions (e.g. send-push)
-└── seed_demo.sql            # Optional demo data seed script
+├── tests/                 # pgTAP tests for Row Level Security verification
+├── functions/             # Edge Functions (e.g. send-push)
+└── seed_demo.sql          # Optional demo data seed script
 ```
 
 ## Prerequisites
@@ -83,7 +90,7 @@ supabase/
 - npm
 - A [Supabase](https://supabase.com) project (free tier is sufficient)
 - [Expo Go](https://expo.dev/go) app on your phone, or an Android/iOS simulator
-- (Optional) [Supabase CLI](https://supabase.com/docs/guides/cli) if you want to deploy the push notification Edge Function or run migrations locally
+- (Optional) [Supabase CLI](https://supabase.com/docs/guides/cli) if you want to deploy the push notification Edge Function or run migrations/tests locally
 
 ## Getting Started
 
@@ -115,49 +122,52 @@ Copy the example env file and fill in your Supabase credentials:
 cp .env.example .env
 ```
 
-```
+```env
 EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
 ```
 
-Optional variables (only needed for email confirmation redirects in Expo Go, or custom EAS push project IDs) are documented inline in `.env.example`.
-
 ### 4. Run the app
 
 ```bash
-npx expo start
+npx expo start --dev-client
 ```
 
-Scan the QR code with Expo Go (Android) or the Camera app (iOS), or press `a` / `i` in the terminal to launch an Android/iOS simulator.
+Scan the QR code with a development build or press `a` / `i` in the terminal to launch an Android/iOS simulator.
 
-### 5. (Optional) Enable push notifications
+### 5. (Optional) Run Automated Tests
 
-Push notifications are sent via a Supabase Edge Function:
+This project includes a comprehensive suite of tests to ensure production readiness.
 
+**Run Frontend Unit Tests (Jest):**
 ```bash
-supabase functions deploy send-push
-supabase secrets set EXPO_ACCESS_TOKEN=your-expo-access-token
+npm test
 ```
 
-### 6. (Optional) Seed demo data
+**Run Database RLS Tests (pgTAP):**
+```bash
+supabase test db
+```
 
-`supabase/seed_demo.sql` creates a sample society, tower, and flat, and links them to two auth users (a demo guard and a demo resident). Sign up in the app first to create those auth users, then run the script from the Supabase SQL Editor, following the instructions at the top of the file.
+**Run End-to-End Tests (Maestro):**
+(Requires Maestro CLI and a running simulator)
+```bash
+maestro test .maestro/
+```
 
 ## Authentication & Roles
 
-Portl uses Supabase Auth for sign-up/login. Every account has a `role` (`resident`, `guard`, or `admin`) stored in the `profiles` table, and every table is protected by row-level security policies scoped to the signed-in user's role and society. On first launch, new users go through an onboarding flow to either create a new society (becoming its admin) or join an existing one via an invite code.
+Portl uses Supabase Auth for sign-up/login. Every account has a `role` (`resident`, `guard`, or `admin`) stored in the `profiles` table, and every table is protected by row-level security (RLS) policies scoped to the signed-in user's role and society. On first launch, new users go through an onboarding flow to either create a new society (becoming its admin) or join an existing one via an invite code.
 
 ## Available Scripts
 
 | Command | Description |
 |---|---|
 | `npm start` | Start the Expo dev server |
-| `npm run start:clear` | Start with the Metro cache cleared |
+| `npm test` | Run Jest unit and integration tests |
+| `npm run lint` | Run ESLint and check for code/security issues |
 | `npm run android` | Build and run on a connected Android device/emulator |
 | `npm run ios` | Build and run on an iOS simulator |
-| `npm run web` | Run in a web browser |
-| `npm run lint` | Run ESLint |
-| `npm run reset-project` | Reset to a blank Expo Router starter |
 
 ## License
 
