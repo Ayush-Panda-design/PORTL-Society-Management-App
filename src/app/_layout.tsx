@@ -13,6 +13,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import Toast from 'react-native-toast-message';
 
+import { AppErrorBoundary } from '@/components/error-boundary';
 import { HardwareBackHandler } from '@/components/navigation/hardware-back-handler';
 import { AppThemeProvider } from '@/components/theme/app-theme-provider';
 import { OfflineBanner } from '@/components/ui/offline-banner';
@@ -20,6 +21,7 @@ import { Brand } from '@/constants/theme';
 import { useNotificationRouting } from '@/hooks/use-notification-routing';
 import { usePortlFonts } from '@/hooks/use-portl-fonts';
 import { destinationForProfile } from '@/lib/auth-routing';
+import { initObservability } from '@/lib/observability';
 import { configurePushPresentation } from '@/lib/push-notifications';
 import { queryClient } from '@/lib/query-client';
 import {
@@ -169,6 +171,7 @@ export default function RootLayout() {
   const { fontsLoaded } = usePortlFonts();
 
   useEffect(() => {
+    initObservability();
     void hideExpoToolsFab();
     // Retry once — native module can register after first paint in Expo Go.
     const t = setTimeout(() => {
@@ -192,6 +195,7 @@ export default function RootLayout() {
   }
 
   return (
+    <AppErrorBoundary>
     <GestureHandlerRootView style={{ flex: 1 }}>
       <BottomSheetModalProvider>
         <QueryClientProvider client={queryClient}>
@@ -217,5 +221,6 @@ export default function RootLayout() {
         <Toast />
       </BottomSheetModalProvider>
     </GestureHandlerRootView>
+    </AppErrorBoundary>
   );
 }

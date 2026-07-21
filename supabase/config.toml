@@ -1,3 +1,11 @@
+# Local DB + pgTAP: supabase db start && supabase test db
+
+[db]
+major_version = 15
+
+[db.migrations]
+enabled = true
+
 # Minimal Supabase CLI config for Edge Functions.
 # Deploy:
 #   supabase functions deploy send-push

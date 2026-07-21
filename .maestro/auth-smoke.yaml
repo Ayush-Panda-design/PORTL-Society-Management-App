@@ -1,0 +1,6 @@
+# Maestro smoke test — run after a dev/preview build is installed:
+#   maestro test .maestro/auth-smoke.yaml
+appId: com.ayush_panda.portl
+---
+- launchApp
+- assertVisible: "Portl"
