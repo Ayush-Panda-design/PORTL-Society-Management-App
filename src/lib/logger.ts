@@ -14,31 +14,19 @@ function serializeContext(context?: Record<string, unknown>) {
 
 export const logger = {
   debug(...args: unknown[]) {
-    if (__DEV__) {
-      // eslint-disable-next-line no-console
-      console.log(...args);
-    }
+    if (__DEV__) console.log(...args);
   },
 
   info(...args: unknown[]) {
-    if (__DEV__) {
-      // eslint-disable-next-line no-console
-      console.info(...args);
-    }
+    if (__DEV__) console.info(...args);
   },
 
   warn(message: string, context?: Record<string, unknown>) {
-    if (__DEV__) {
-      // eslint-disable-next-line no-console
-      console.warn(message, serializeContext(context));
-    }
+    if (__DEV__) console.warn(message, serializeContext(context));
   },
 
   error(message: string, error?: unknown, context?: Record<string, unknown>) {
-    if (__DEV__) {
-      // eslint-disable-next-line no-console
-      console.error(message, error, serializeContext(context));
-    }
+    if (__DEV__) console.error(message, error, serializeContext(context));
     errorReporter?.(error ?? new Error(message), { message, ...context });
   },
 };

@@ -81,8 +81,9 @@ function AuthGate({ children }: { children: ReactNode }) {
     const root = segments[0];
     const inAuthGroup = root === '(auth)';
     const inOnboardingGroup = root === '(onboarding)';
-    const authScreen = segments[1];
-    const onboardingScreen = segments[1];
+    const parts = segments as readonly string[];
+    const authScreen = parts[1];
+    const onboardingScreen = parts[1];
     const isRoot = !root;
 
     if (!session) {

@@ -141,6 +141,7 @@ export default function AdminJoinRequestsScreen() {
           <View className="mb-8">
             <EmptyState
               visual="invites"
+              title="No pending requests"
               subtitle="When someone searches for your society or uses an invite code, they appear here for approval."
             />
           </View>

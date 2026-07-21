@@ -1,6 +1,8 @@
 import type { Href } from 'expo-router';
 import type { User } from '@supabase/supabase-js';
 
+import { href } from '@/lib/href';
+
 import type { Profile, UserRole } from '@/types/database';
 import {
   isEmailVerified,
@@ -13,13 +15,13 @@ import {
 export function roleHome(role: UserRole | null): Href {
   switch (role) {
     case 'resident':
-      return '/(resident)';
+      return href('/(resident)');
     case 'guard':
-      return '/(guard)';
+      return href('/(guard)');
     case 'admin':
-      return '/(admin)';
+      return href('/(admin)');
     default:
-      return '/(auth)/welcome';
+      return href('/(auth)/welcome');
   }
 }
 
@@ -31,18 +33,18 @@ export function destinationForProfile(
   profile: Profile | null,
   user?: User | null,
 ): Href {
-  if (!profile) return '/(auth)/login';
+  if (!profile) return href('/(auth)/login');
 
   if (user && !isEmailVerified(user)) {
-    return '/(auth)/verify-email' as Href;
+    return href('/(auth)/verify-email');
   }
 
   if (needsProfileCompletion(profile)) {
-    return '/(onboarding)/complete-profile' as Href;
+    return href('/(onboarding)/complete-profile');
   }
 
-  if (needsSocietyOnboarding(profile)) return '/(onboarding)' as Href;
-  if (isMembershipPending(profile)) return '/(onboarding)/pending' as Href;
+  if (needsSocietyOnboarding(profile)) return href('/(onboarding)');
+  if (isMembershipPending(profile)) return href('/(onboarding)/pending');
   if (isMembershipActive(profile)) return roleHome(profile.role);
-  return '/(onboarding)' as Href;
+  return href('/(onboarding)');
 }

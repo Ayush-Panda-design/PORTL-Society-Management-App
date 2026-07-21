@@ -386,8 +386,8 @@ export default function RegisterVisitorScreen() {
                   onPress={pickFromLibrary}
                   style={{
                     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    borderRadius: 14, borderWidth: 1, borderColor: Tokens.color.borderDefault,
-                    backgroundColor: Tokens.color.surfaceCard, paddingVertical: 13,
+                    borderRadius: 14, borderWidth: 1, borderColor: Tokens.color.border,
+                    backgroundColor: Tokens.color.surface, paddingVertical: 13,
                   }}
                 >
                   <ImageIcon color={Tokens.color.textSecondary} size={18} />
@@ -502,8 +502,8 @@ export default function RegisterVisitorScreen() {
                 <View style={{ marginBottom: 16 }}>
                   <View style={{
                     marginBottom: 8, flexDirection: 'row', alignItems: 'center',
-                    borderRadius: 12, borderWidth: 1, borderColor: Tokens.color.borderDefault,
-                    backgroundColor: Tokens.color.surfaceCard, paddingHorizontal: 12,
+                    borderRadius: 12, borderWidth: 1, borderColor: Tokens.color.border,
+                    backgroundColor: Tokens.color.surface, paddingHorizontal: 12,
                   }}>
                     <Search color="#94A3B8" size={18} />
                     <TextInput
@@ -517,7 +517,7 @@ export default function RegisterVisitorScreen() {
                     {searchingFlats ? <ActivityIndicator color={Brand.primary} /> : null}
                   </View>
                   {flatResults.length > 0 ? (
-                    <View style={{ borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: Tokens.color.borderDefault, backgroundColor: Tokens.color.surfaceCard }}>
+                    <View style={{ borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: Tokens.color.border, backgroundColor: Tokens.color.surface }}>
                       <FlatList
                         data={flatResults}
                         keyExtractor={(item) => item.id}
@@ -532,7 +532,7 @@ export default function RegisterVisitorScreen() {
                             style={{
                               paddingHorizontal: 16, paddingVertical: 12,
                               borderBottomWidth: index < flatResults.length - 1 ? 1 : 0,
-                              borderBottomColor: Tokens.color.borderDefault,
+                              borderBottomColor: Tokens.color.border,
                             }}
                           >
                             <Text style={{ fontWeight: '500', color: Tokens.color.textPrimary }}>
@@ -544,7 +544,9 @@ export default function RegisterVisitorScreen() {
                       />
                     </View>
                   ) : flatQuery.trim().length > 0 && !searchingFlats ? (
-                    <Text style={{ fontSize: 13, color: Tokens.color.textMuted }}>No flats match "{flatQuery}".</Text>
+                    <Text style={{ fontSize: 13, color: Tokens.color.textMuted }}>
+                      No flats match &ldquo;{flatQuery}&rdquo;.
+                    </Text>
                   ) : null}
                 </View>
               )}

@@ -1,6 +1,6 @@
 import type { ComponentType, ReactNode } from 'react';
 import { Text, View, Pressable } from 'react-native';
-import LottieView from 'lottie-react-native';
+import LottieView, { type AnimationObject } from 'lottie-react-native';
 import type { LucideProps } from 'lucide-react-native';
 
 import {
@@ -30,7 +30,7 @@ type Props = {
   tips?: EmptyTip[];
 };
 
-const LOTTIE_BY_VISUAL: Partial<Record<EmptyVisual, number>> = {
+const LOTTIE_BY_VISUAL: Partial<Record<EmptyVisual, AnimationObject>> = {
   notices: require('@/assets/lottie/notices.json'),
   visitors: require('@/assets/lottie/visitors.json'),
   polls: require('@/assets/lottie/polls.json'),

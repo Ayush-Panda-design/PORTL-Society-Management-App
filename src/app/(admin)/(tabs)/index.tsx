@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useRouter, type Href } from 'expo-router';
+import { useRouter } from 'expo-router';
 import {
   Bell,
   Building2,
@@ -28,6 +28,7 @@ import { ErrorBanner } from '@/components/visitors/error-banner';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { fetchAdminDashboardStats } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
+import { href } from '@/lib/href';
 import { useAuthStore } from '@/stores/authStore';
 
 export default function AdminHome() {
@@ -63,7 +64,7 @@ export default function AdminHome() {
   }
 
   const stats = statsQuery.data;
-  const go = (href: Href) => router.push(href);
+  const go = (path: string) => router.push(href(path));
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
@@ -80,7 +81,7 @@ export default function AdminHome() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="My profile"
-            onPress={() => go('/(admin)/profile' as Href)}
+            onPress={() => go('/(admin)/profile')}
           >
             <InitialsAvatar name={profile?.full_name ?? 'You'} seed={profile?.id} size={40} imageUrl={profile?.avatar_url} />
           </Pressable>
@@ -131,7 +132,7 @@ export default function AdminHome() {
             </View>
             {stats.pendingVisitorsToday > 0 ? (
               <Pressable
-                onPress={() => go('/(admin)/join-requests' as Href)}
+                onPress={() => go('/(admin)/join-requests')}
                 style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -207,28 +208,28 @@ export default function AdminHome() {
             title="Towers"
             subtitle="Add and rename society buildings"
             icon={<Building2 color={Brand.primary} size={20} />}
-            onPress={() => go('/(admin)/towers' as Href)}
+            onPress={() => go('/(admin)/towers')}
             tone="sky"
           />
           <PressableActionTile
             title="Flats"
             subtitle="Map units to towers"
             icon={<Layers color={Brand.primary} size={20} />}
-            onPress={() => go('/(admin)/flats' as Href)}
+            onPress={() => go('/(admin)/flats')}
             tone="lilac"
           />
           <PressableActionTile
             title="Invite links"
             subtitle="Share resident and guard codes"
             icon={<KeyRound color={Brand.primary} size={20} />}
-            onPress={() => go('/(admin)/invites' as Href)}
+            onPress={() => go('/(admin)/invites')}
             tone="peach"
           />
           <PressableActionTile
             title="Join requests"
             subtitle="Approve new residents and guards"
             icon={<UserPlus color={Brand.primary} size={20} />}
-            onPress={() => go('/(admin)/join-requests' as Href)}
+            onPress={() => go('/(admin)/join-requests')}
             tone="butter"
           />
           <PressableActionTile

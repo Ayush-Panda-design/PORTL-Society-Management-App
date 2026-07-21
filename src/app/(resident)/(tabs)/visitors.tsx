@@ -18,6 +18,7 @@ import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { useThemePalette } from '@/hooks/use-theme';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { updateVisitorStatus } from '@/lib/visitors';
+import { href } from '@/lib/href';
 import { useAuthStore } from '@/stores/authStore';
 
 export default function ResidentVisitorsScreen() {
@@ -129,7 +130,7 @@ export default function ResidentVisitorsScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="View visitor history"
-              onPress={() => router.push('/(resident)/visitor-history')}
+              onPress={() => router.push(href('/(resident)/visitor-history'))}
               className="h-10 w-10 items-center justify-center rounded-full bg-white"
               style={{
                 shadowColor: '#000',
@@ -144,7 +145,7 @@ export default function ResidentVisitorsScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Pre-approve a guest"
-              onPress={() => router.push('/(resident)/pre-approve')}
+              onPress={() => router.push(href('/(resident)/pre-approve'))}
               className="h-10 w-10 items-center justify-center rounded-full bg-charcoal"
             >
               <UserPlus color="#fff" size={18} strokeWidth={1.5} />
@@ -154,7 +155,7 @@ export default function ResidentVisitorsScreen() {
 
         {!isEmpty ? (
           <Pressable
-            onPress={() => router.push('/(resident)/pre-approve')}
+            onPress={() => router.push(href('/(resident)/pre-approve'))}
             className="mx-4 mb-3 flex-row items-center justify-center gap-2 rounded-xl border border-brand-100 bg-brand-50 py-3"
           >
             <UserPlus color={Brand.primary} size={18} />
@@ -185,8 +186,8 @@ export default function ResidentVisitorsScreen() {
           }
           ListEmptyComponent={
             <VisitorsEmptyPanel
-              onPreApprove={() => router.push('/(resident)/pre-approve')}
-              onHistory={() => router.push('/(resident)/visitor-history')}
+              onPreApprove={() => router.push(href('/(resident)/pre-approve'))}
+              onHistory={() => router.push(href('/(resident)/visitor-history'))}
             />
           }
           renderItem={({ item }) => (

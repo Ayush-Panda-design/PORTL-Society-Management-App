@@ -210,6 +210,7 @@ export default function AdminInvitesScreen() {
             {!byRole.resident && !byRole.guard ? (
               <EmptyState
                 visual="invites"
+                title="No invite codes yet"
                 subtitle="Codes are created when the society is set up."
               />
             ) : null}

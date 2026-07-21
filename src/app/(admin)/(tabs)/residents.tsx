@@ -24,6 +24,7 @@ import {
   fetchResidents,
 } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
+import { href } from '@/lib/href';
 import { flatTowerName } from '@/lib/visitors';
 import { useAuthStore } from '@/stores/authStore';
 import type { ProfileWithFlat } from '@/types/database';
@@ -217,7 +218,7 @@ export default function AdminResidentsScreen() {
                   : 'Residents appear here after signing up with the resident role.'
               }
               actionLabel={!search.trim() ? 'Share invite link' : undefined}
-              onAction={!search.trim() ? () => router.push('/(admin)/invites') : undefined}
+              onAction={!search.trim() ? () => router.push(href('/(admin)/invites')) : undefined}
             />
           }
           renderItem={({ item }) => (

@@ -14,6 +14,7 @@ import Toast from 'react-native-toast-message';
 
 import { FontFamily, Gradients } from '@/constants/theme';
 import { createSociety } from '@/lib/society-api';
+import { href } from '@/lib/href';
 import { useAuthStore } from '@/stores/authStore';
 
 export default function CreateSocietyScreen() {
@@ -51,7 +52,7 @@ export default function CreateSocietyScreen() {
         text1: 'Society created',
         text2: `Resident code: ${result.resident_invite_code}`,
       });
-      router.replace('/(admin)/invites');
+      router.replace(href('/(admin)/invites'));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not create society');
     } finally {

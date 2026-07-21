@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { Brand, FontFamily, Gradients, Pastels } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
+import { href } from '@/lib/href';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { AnimatedPressable } from '@/components/ui/animated-pressable';
 
@@ -135,7 +136,7 @@ export default function GuardHomeRedirect() {
           icon={<ShieldCheck color="#C0392B" size={22} strokeWidth={1.5} />}
           accentColor="#C0392B"
           bg={Pastels.rose}
-          onPress={() => router.push('/(guard)/dashboard')}
+          onPress={() => router.push(href('/(guard)/dashboard'))}
           badge={pendingCount}
         />
         <GateCard
@@ -144,7 +145,7 @@ export default function GuardHomeRedirect() {
           icon={<UserPlus color={Brand.primary} size={22} strokeWidth={1.5} />}
           accentColor={Brand.primary}
           bg={Pastels.mint}
-          onPress={() => router.push('/(guard)/register-visitor')}
+          onPress={() => router.push(href('/(guard)/register-visitor'))}
         />
         <GateCard
           title="Entry & verify"
@@ -152,7 +153,7 @@ export default function GuardHomeRedirect() {
           icon={<ScanLine color="#2563EB" size={22} strokeWidth={1.5} />}
           accentColor="#2563EB"
           bg={Pastels.sky}
-          onPress={() => router.push('/(guard)/verify')}
+          onPress={() => router.push(href('/(guard)/verify'))}
         />
         <GateCard
           title="Visitor logs"
@@ -160,7 +161,7 @@ export default function GuardHomeRedirect() {
           icon={<ClipboardList color="#C4861A" size={22} strokeWidth={1.5} />}
           accentColor="#C4861A"
           bg={Pastels.butter}
-          onPress={() => router.push('/(guard)/logs')}
+          onPress={() => router.push(href('/(guard)/logs'))}
         />
 
         <Pressable
@@ -184,7 +185,7 @@ export default function GuardHomeRedirect() {
         style={{ backgroundColor: 'transparent' }}
       >
         <Pressable
-          onPress={() => router.push('/(guard)/scan-pass')}
+          onPress={() => router.push(href('/(guard)/scan-pass'))}
           className="flex-row items-center justify-center gap-3 rounded-card py-4"
           style={{
             backgroundColor: Brand.primary,

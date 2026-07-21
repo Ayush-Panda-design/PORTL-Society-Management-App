@@ -27,7 +27,7 @@ set
 
 drop policy if exists "amenity_covers_insert" on storage.objects;
 create policy "amenity_covers_insert"
-on storage.objects for insert to authenticated/*+/////////////////////////////
+on storage.objects for insert to authenticated
 with check (bucket_id = 'amenity-covers');
 
 drop policy if exists "amenity_covers_select" on storage.objects;
