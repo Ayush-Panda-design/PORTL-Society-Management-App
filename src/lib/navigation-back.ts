@@ -1,5 +1,7 @@
 import type { Href } from 'expo-router';
 
+import { href } from '@/lib/href';
+
 type RoleGroup = '(resident)' | '(admin)' | '(guard)';
 
 function isRoleGroup(segment: string | undefined): segment is RoleGroup {
@@ -12,7 +14,7 @@ export function backFallbackForSegments(segments: readonly string[]): Href | nul
   if (!isRoleGroup(group)) return null;
 
   if (segments[1] === 'profile') {
-    return `/${group}` as Href;
+    return href(`/${group}`);
   }
 
   if (segments[1] !== '(tabs)') return null;
@@ -21,10 +23,10 @@ export function backFallbackForSegments(segments: readonly string[]): Href | nul
   if (!tab) return null;
 
   if (tab === 'polls' && segments[3]) {
-    return `${group}/polls` as Href;
+    return href(`${group}/polls`);
   }
 
-  const residentAux: Record<string, Href> = {
+  const residentAux: Record<string, string> = {
     'pre-approve': '/(resident)/visitors',
     'visitor-history': '/(resident)/visitors',
     polls: '/(resident)/more',
@@ -33,7 +35,7 @@ export function backFallbackForSegments(segments: readonly string[]): Href | nul
     directory: '/(resident)/more',
   };
 
-  const adminAux: Record<string, Href> = {
+  const adminAux: Record<string, string> = {
     polls: '/(admin)/settings',
     complaints: '/(admin)/settings',
     amenities: '/(admin)/settings',
@@ -44,12 +46,19 @@ export function backFallbackForSegments(segments: readonly string[]): Href | nul
     'join-requests': '/(admin)/settings',
   };
 
-  const guardAux: Record<string, Href> = {
+  const guardAux: Record<string, string> = {
     'scan-pass': '/(guard)/verify',
     index: '/(guard)/dashboard',
   };
 
-  if (group === '(resident)') return residentAux[tab] ?? null;
-  if (group === '(admin)') return adminAux[tab] ?? null;
-  return guardAux[tab] ?? null;
+  if (group === '(resident)') {
+    const path = residentAux[tab];
+    return path ? href(path) : null;
+  }
+  if (group === '(admin)') {
+    const path = adminAux[tab];
+    return path ? href(path) : null;
+  }
+  const path = guardAux[tab];
+  return path ? href(path) : null;
 }

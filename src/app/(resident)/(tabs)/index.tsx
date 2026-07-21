@@ -46,6 +46,7 @@ import {
   fetchStaff,
 } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
+import { href } from '@/lib/href';
 import { formatRelativeTime, updateVisitorStatus } from '@/lib/visitors';
 import { useAuthStore } from '@/stores/authStore';
 import type { VisitorStatus, VisitorWithFlat } from '@/types/database';
@@ -337,7 +338,7 @@ export default function ResidentHome() {
     }
     buttons.push({
       text: 'Open emergency directory',
-      onPress: () => router.push('/(resident)/directory'),
+      onPress: () => router.push(href('/(resident)/directory')),
     });
     buttons.push({ text: 'Cancel', style: 'cancel' });
 
@@ -365,7 +366,7 @@ export default function ResidentHome() {
   const hub: HubCard[] = [
     {
       title: 'Polls',
-      href: '/(resident)/polls',
+      href: href('/(resident)/polls'),
       Icon: Vote,
       wash: Pastels.lilac,
       tint: '#7C3AED',
@@ -376,7 +377,7 @@ export default function ResidentHome() {
     },
     {
       title: 'Helpdesk',
-      href: '/(resident)/helpdesk',
+      href: href('/(resident)/helpdesk'),
       Icon: MessageSquare,
       wash: Pastels.rose,
       tint: '#C0392B',
@@ -387,7 +388,7 @@ export default function ResidentHome() {
     },
     {
       title: 'Amenities',
-      href: '/(resident)/amenities',
+      href: href('/(resident)/amenities'),
       Icon: Building2,
       wash: Pastels.mint,
       tint: Brand.primary,
@@ -398,7 +399,7 @@ export default function ResidentHome() {
     },
     {
       title: 'Directory',
-      href: '/(resident)/directory',
+      href: href('/(resident)/directory'),
       Icon: ClipboardList,
       wash: Pastels.butter,
       tint: '#B08020',
@@ -432,7 +433,7 @@ export default function ResidentHome() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="My profile"
-              onPress={() => router.push('/(resident)/profile')}
+              onPress={() => router.push(href('/(resident)/profile'))}
             >
               <InitialsAvatar
                 name={profile?.full_name ?? 'You'}
@@ -503,7 +504,7 @@ export default function ResidentHome() {
               </Text>
             </View>
             <Pressable
-              onPress={() => router.push('/(resident)/visitors')}
+              onPress={() => router.push(href('/(resident)/visitors'))}
               hitSlop={8}
               accessibilityRole="button"
             >
@@ -535,7 +536,7 @@ export default function ResidentHome() {
                 >
                   <GateActivityRow
                     visitor={v}
-                    onPress={() => router.push('/(resident)/visitors')}
+                    onPress={() => router.push(href('/(resident)/visitors'))}
                   />
                 </View>
               ))
@@ -548,7 +549,7 @@ export default function ResidentHome() {
             title="Ready when guests arrive"
             subtitle="Pre-approve visitors so the gate never has to wait on you."
             tone="sky"
-            onPress={() => router.push('/(resident)/pre-approve')}
+            onPress={() => router.push(href('/(resident)/pre-approve'))}
           />
         ) : null}
 
@@ -573,34 +574,34 @@ export default function ResidentHome() {
             label="Visitors"
             icon={<DoorOpen color={Brand.primary} size={22} strokeWidth={1.5} />}
             bg={Pastels.sky}
-            onPress={() => router.push('/(resident)/visitors')}
+            onPress={() => router.push(href('/(resident)/visitors'))}
             badge={pendingCount}
           />
           <QuickAction
             label="Invite"
             icon={<UserPlus color={Brand.accent} size={22} strokeWidth={1.5} />}
             bg={Pastels.peach}
-            onPress={() => router.push('/(resident)/pre-approve')}
+            onPress={() => router.push(href('/(resident)/pre-approve'))}
           />
           <QuickAction
             label="Notices"
             icon={<Bell color="#7C6BA8" size={22} strokeWidth={1.5} />}
             bg={Pastels.lilac}
-            onPress={() => router.push('/(resident)/notices')}
+            onPress={() => router.push(href('/(resident)/notices'))}
             badge={unreadNotices}
           />
           <QuickAction
             label="Requests"
             icon={<ClipboardList color="#B08020" size={22} strokeWidth={1.5} />}
             bg={Pastels.butter}
-            onPress={() => router.push('/(resident)/helpdesk')}
+            onPress={() => router.push(href('/(resident)/helpdesk'))}
             badge={openTickets}
           />
           <QuickAction
             label="Book"
             icon={<Building2 color={Brand.primary} size={22} strokeWidth={1.5} />}
             bg={Pastels.mint}
-            onPress={() => router.push('/(resident)/amenities')}
+            onPress={() => router.push(href('/(resident)/amenities'))}
           />
         </ScrollView>
 
@@ -679,7 +680,7 @@ export default function ResidentHome() {
               Guests you add ahead of time skip the wait — the gate can verify them immediately.
             </Text>
             <Pressable
-              onPress={() => router.push('/(resident)/pre-approve')}
+              onPress={() => router.push(href('/(resident)/pre-approve'))}
               className="mt-3.5 self-start rounded-full bg-white px-4 py-2 active:opacity-85"
             >
               <Text className="text-[13px]" style={{ fontFamily: FontFamily.heading, color: Brand.accentDark }}>
@@ -690,7 +691,7 @@ export default function ResidentHome() {
         </MotiView>
 
         <Pressable
-          onPress={() => router.push('/(resident)/more')}
+          onPress={() => router.push(href('/(resident)/more'))}
           accessibilityRole="button"
           className="mt-4 mb-1 flex-row items-center gap-3 rounded-[22px] bg-surface-card px-4 py-3.5"
           style={{

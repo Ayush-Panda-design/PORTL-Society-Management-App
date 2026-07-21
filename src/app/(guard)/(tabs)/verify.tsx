@@ -12,6 +12,7 @@ import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { supabase } from '@/lib/supabase';
 import { notifyFlatOfVisitorEntry } from '@/lib/visitors';
 import { useAuthStore } from '@/stores/authStore';
+import { href } from '@/lib/href';
 import type { VisitorWithFlat } from '@/types/database';
 
 export default function GuardVerifyScreen() {
@@ -38,7 +39,7 @@ export default function GuardVerifyScreen() {
     
     // Check if photo is missing (pre-approved visitor)
     if (!visitor.photo_url) {
-      router.push(`/(guard)/scan-pass?visitorId=${visitor.id}`);
+      router.push(href(`/(guard)/scan-pass?visitorId=${visitor.id}`));
       return;
     }
 

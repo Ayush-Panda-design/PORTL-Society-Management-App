@@ -13,6 +13,7 @@ import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { useAuthStore } from '@/stores/authStore';
+import { href } from '@/lib/href';
 
 export default function GuardDashboard() {
   const profile = useAuthStore((s) => s.profile);
@@ -72,7 +73,7 @@ export default function GuardDashboard() {
         </View>
         {/* Quick register FAB inline */}
         <Pressable
-          onPress={() => router.push('/(guard)/register-visitor')}
+          onPress={() => router.push(href('/(guard)/register-visitor'))}
           className="flex-row items-center gap-1.5 rounded-pill px-3 py-2"
           style={{ backgroundColor: Pastels.mint }}
         >
@@ -85,7 +86,7 @@ export default function GuardDashboard() {
 
       {/* Scan QR row */}
       <Pressable
-        onPress={() => router.push('/(guard)/scan-pass')}
+        onPress={() => router.push(href('/(guard)/scan-pass'))}
         className="mx-4 mb-3 flex-row items-center justify-center gap-2 rounded-card py-3"
         style={{
           backgroundColor: Brand.primary,
@@ -125,7 +126,7 @@ export default function GuardDashboard() {
               title="Queue is clear"
               subtitle="New visitor registrations will appear here instantly."
               actionLabel="+ Register a visitor"
-              onAction={() => router.push('/(guard)/register-visitor')}
+              onAction={() => router.push(href('/(guard)/register-visitor'))}
               tips={[
                 {
                   Icon: UserPlus,
