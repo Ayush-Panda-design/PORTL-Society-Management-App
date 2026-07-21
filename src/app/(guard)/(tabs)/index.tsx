@@ -34,10 +34,10 @@ function GateCard({
         className="mb-3 overflow-hidden rounded-panel bg-surface-card"
         style={{
           shadowColor: accentColor,
-          shadowOffset: { width: 0, height: 3 },
-          shadowOpacity: 0.1,
-          shadowRadius: 10,
-          elevation: 3,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 6,
+          elevation: 2,
           flexDirection: 'row',
         }}
       >
@@ -190,10 +190,10 @@ export default function GuardHomeRedirect() {
           style={{
             backgroundColor: Brand.primary,
             shadowColor: Brand.primary,
-            shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: 0.35,
-            shadowRadius: 18,
-            elevation: 8,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.18,
+            shadowRadius: 10,
+            elevation: 4,
           }}
         >
           <QrCode color="#fff" size={20} strokeWidth={1.5} />

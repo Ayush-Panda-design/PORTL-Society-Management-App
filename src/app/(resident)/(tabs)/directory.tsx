@@ -1,21 +1,22 @@
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import {
-  BadgeCheck,
   MessageSquare,
   Phone,
   ShieldCheck,
   Stethoscope,
-  Users,
   Wrench,
 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { FlatList, Linking, Pressable, Text, View } from 'react-native';
 
-import { AppCard, AvatarRing, InitialsAvatar } from '@/components/ui/brand';
+import { AvatarRing, InitialsAvatar } from '@/components/ui/brand';
+import { AvatarStack } from '@/components/ui/avatar-stack';
 import { ChipSelector } from '@/components/ui/chip-selector';
+import { ListRow } from '@/components/ui/list-row';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SearchField } from '@/components/ui/search-field';
+import { StaggeredListItem } from '@/components/ui/staggered-list-item';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
@@ -169,7 +170,7 @@ export default function ResidentDirectoryScreen() {
 
   return (
     <ScreenHeader title="Directory" subtitle="People, staff & services" showBack>
-      <View className="px-4 pb-2" style={{ flexGrow: 0, flexShrink: 0 }}>
+      <View className="z-10 border-b border-surface-border bg-surface px-4 pb-2">
         <ChipSelector
           presentation="filter"
           options={TABS}
@@ -201,8 +202,7 @@ export default function ResidentDirectoryScreen() {
         <FlatList
           data={people}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
-          ItemSeparatorComponent={() => <View className="h-2" />}
+          contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}
           refreshControl={
             <ThemedRefreshControl refreshing={listRefetching} onRefresh={refetch} />
           }
@@ -220,50 +220,29 @@ export default function ResidentDirectoryScreen() {
               }
             />
           }
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const name = item.full_name?.trim() || 'Unnamed';
             const isAdmin = item.role === 'admin';
-            const badgeBg = isAdmin ? Pastels.sky : Pastels.lilac;
             const badgeColor = isAdmin ? '#1F3A6B' : '#6B5CC4';
             return (
-              <AppCard className="flex-row items-center gap-3 p-3">
-                <InitialsAvatar
-                  name={name}
-                  size={48}
-                  seed={item.id}
-                  imageUrl={item.avatar_url}
+              <StaggeredListItem index={index} disabled={listRefetching}>
+                <ListRow
+                  title={name}
+                  subtitle={`${isAdmin ? 'Society admin' : memberFlatLabel(item)}${item.occupation ? ` · ${item.occupation}` : ''}`}
+                  meta={isAdmin ? 'Admin' : 'Resident'}
+                  accentColor={badgeColor}
+                  last={index === people.length - 1}
+                  leading={
+                    <InitialsAvatar
+                      name={name}
+                      size={44}
+                      seed={item.id}
+                      imageUrl={item.avatar_url}
+                    />
+                  }
+                  trailing={<ContactActions name={name} phone={item.phone} />}
                 />
-                <View className="min-w-0 flex-1">
-                  <Text
-                    className="font-semibold text-ink"
-                    style={{ fontFamily: FontFamily.heading }}
-                    numberOfLines={1}
-                  >
-                    {name}
-                  </Text>
-                  <Text className="mt-0.5 text-xs text-ink-muted" numberOfLines={1}>
-                    {isAdmin ? 'Society admin' : memberFlatLabel(item)}
-                    {item.occupation ? ` · ${item.occupation}` : ''}
-                  </Text>
-                  <View
-                    className="mt-1 flex-row items-center gap-1 self-start rounded-pill px-2 py-0.5"
-                    style={{ backgroundColor: badgeBg }}
-                  >
-                    {isAdmin ? (
-                      <BadgeCheck color={badgeColor} size={11} strokeWidth={1.5} />
-                    ) : (
-                      <Users color={badgeColor} size={11} strokeWidth={1.5} />
-                    )}
-                    <Text
-                      className="text-[11px]"
-                      style={{ color: badgeColor, fontFamily: FontFamily.medium }}
-                    >
-                      {isAdmin ? 'Admin' : 'Resident'}
-                    </Text>
-                  </View>
-                </View>
-                <ContactActions name={name} phone={item.phone} />
-              </AppCard>
+              </StaggeredListItem>
             );
           }}
         />
@@ -287,60 +266,65 @@ export default function ResidentDirectoryScreen() {
               }
             />
           }
-          renderItem={({ item }) => {
+          renderItem={({ item, index: groupIndex }) => {
             const { Icon: RoleIcon, color: roleColor, bg: roleBg } = getRoleMeta(item.role);
             return (
-              <View className="mb-5">
-                <View className="mb-2 flex-row items-center gap-2">
-                  <View
-                    className="h-6 w-6 items-center justify-center rounded-card"
-                    style={{ backgroundColor: roleBg }}
-                  >
-                    <RoleIcon color={roleColor} size={13} strokeWidth={1.5} />
-                  </View>
-                  <Text
-                    className="text-xs font-bold uppercase tracking-wider text-ink-muted"
-                    style={{ fontFamily: FontFamily.heading }}
-                  >
-                    {item.role}
-                  </Text>
-                </View>
-                {item.data.map((person) => (
-                  <AppCard key={person.id} className="mb-2 flex-row items-center gap-3 p-3">
-                    {person.photo_url ? (
-                      <AvatarRing size={48}>
-                        <Image
-                          source={{ uri: person.photo_url }}
-                          style={{ width: 48, height: 48 }}
-                          contentFit="cover"
-                        />
-                      </AvatarRing>
-                    ) : (
-                      <InitialsAvatar name={person.name} size={48} seed={person.id} />
-                    )}
-                    <View className="flex-1">
-                      <Text
-                        className="font-semibold text-ink"
-                        style={{ fontFamily: FontFamily.heading }}
-                      >
-                        {person.name}
-                      </Text>
+              <StaggeredListItem index={groupIndex} disabled={listRefetching}>
+                <View className="mb-5">
+                  <View className="mb-2 flex-row items-center justify-between gap-2">
+                    <View className="flex-row items-center gap-2">
                       <View
-                        className="mt-0.5 flex-row items-center gap-1 self-start rounded-pill px-2 py-0.5"
+                        className="h-6 w-6 items-center justify-center rounded-card"
                         style={{ backgroundColor: roleBg }}
                       >
-                        <Text
-                          className="text-[11px]"
-                          style={{ color: roleColor, fontFamily: FontFamily.medium }}
-                        >
-                          {person.role}
-                        </Text>
+                        <RoleIcon color={roleColor} size={13} strokeWidth={1.5} />
                       </View>
+                      <Text
+                        className="text-xs font-bold uppercase tracking-wider text-ink-muted"
+                        style={{ fontFamily: FontFamily.heading }}
+                      >
+                        {item.role}
+                      </Text>
                     </View>
-                    <ContactActions name={person.name} phone={person.phone} />
-                  </AppCard>
-                ))}
-              </View>
+                    {item.data.length > 1 ? (
+                      <AvatarStack
+                        people={item.data.map((person) => ({
+                          id: person.id,
+                          name: person.name,
+                          imageUrl: person.photo_url,
+                        }))}
+                        max={4}
+                        size={24}
+                      />
+                    ) : null}
+                  </View>
+                  <View className="overflow-hidden rounded-panel bg-surface-card">
+                    {item.data.map((person, personIndex) => (
+                      <ListRow
+                        key={person.id}
+                        title={person.name}
+                        meta={person.role}
+                        accentColor={roleColor}
+                        last={personIndex === item.data.length - 1}
+                        leading={
+                          person.photo_url ? (
+                            <AvatarRing size={44}>
+                              <Image
+                                source={{ uri: person.photo_url }}
+                                style={{ width: 44, height: 44 }}
+                                contentFit="cover"
+                              />
+                            </AvatarRing>
+                          ) : (
+                            <InitialsAvatar name={person.name} size={44} seed={person.id} />
+                          )
+                        }
+                        trailing={<ContactActions name={person.name} phone={person.phone} />}
+                      />
+                    ))}
+                  </View>
+                </View>
+              </StaggeredListItem>
             );
           }}
         />

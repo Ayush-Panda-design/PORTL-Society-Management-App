@@ -1,13 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
-import { ExternalLink } from 'lucide-react-native';
+import { ExternalLink, ShieldCheck } from 'lucide-react-native';
 import { Linking, Pressable, Text, View } from 'react-native';
+import Toast from 'react-native-toast-message';
 
-import { Card } from '@/components/ui/card';
+import { GlassCard } from '@/components/ui/glass-card';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
+import { hapticConfirm } from '@/lib/haptics';
 import { fetchSocietyPaymentAccount } from '@/lib/ops-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
@@ -50,6 +52,12 @@ export default function AdminPayoutSetupScreen() {
   const account = accountQuery.data;
   const badge = statusBadge(account?.status);
 
+  const openDashboard = () => {
+    hapticConfirm();
+    Toast.show({ type: 'success', text1: 'Opening Razorpay dashboard' });
+    void Linking.openURL(RAZORPAY_ROUTE_DASHBOARD);
+  };
+
   return (
     <ScreenHeader
       title="Payout setup"
@@ -64,9 +72,19 @@ export default function AdminPayoutSetupScreen() {
       ) : null}
       {accountQuery.isLoading && !accountQuery.data ? (
         <SkeletonList count={2} />
+      ) : !account ? (
+        <View className="px-4">
+          <EmptyState
+            visual="default"
+            title="Payouts not set up yet"
+            subtitle="Link a Razorpay Route account so society settlements can reach your bank."
+            actionLabel="Start onboarding"
+            onAction={openDashboard}
+          />
+        </View>
       ) : (
         <View className="px-4">
-          <Card>
+          <GlassCard accentColor={badge.fg}>
             <Text className="text-xs font-bold uppercase tracking-widest text-ink-muted">
               Onboarding status
             </Text>
@@ -75,10 +93,10 @@ export default function AdminPayoutSetupScreen() {
               style={{ backgroundColor: badge.bg }}
             >
               <Text className="text-[12px] font-semibold" style={{ color: badge.fg }}>
-                {account ? badge.label : 'Not started'}
+                {badge.label}
               </Text>
             </View>
-            {account?.razorpay_account_id ? (
+            {account.razorpay_account_id ? (
               <Text className="mt-3 text-sm text-ink-muted">
                 Linked account ID ·••• {account.razorpay_account_id.slice(-4)}
               </Text>
@@ -92,9 +110,7 @@ export default function AdminPayoutSetupScreen() {
               Payout dates and settlement amounts are managed in Razorpay Route after verification.
             </Text>
             <Pressable
-              onPress={() => {
-                void Linking.openURL(RAZORPAY_ROUTE_DASHBOARD);
-              }}
+              onPress={openDashboard}
               className="mt-4 flex-row items-center justify-center gap-2 rounded-bubbly py-3"
               style={{ backgroundColor: Pastels.mint }}
             >
@@ -103,7 +119,13 @@ export default function AdminPayoutSetupScreen() {
                 Open Razorpay payout dashboard
               </Text>
             </Pressable>
-          </Card>
+            {account.status === 'verified' ? (
+              <View className="mt-3 flex-row items-center gap-1.5">
+                <ShieldCheck color="#065F46" size={13} strokeWidth={1.5} />
+                <Text className="text-xs text-ink-soft">Verified — payouts are active.</Text>
+              </View>
+            ) : null}
+          </GlassCard>
         </View>
       )}
     </ScreenHeader>

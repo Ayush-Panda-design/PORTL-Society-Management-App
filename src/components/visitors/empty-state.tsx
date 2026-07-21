@@ -36,6 +36,9 @@ const LOTTIE_BY_VISUAL: Partial<Record<EmptyVisual, AnimationObject>> = {
   polls: require('@/assets/lottie/polls.json'),
   helpdesk: require('@/assets/lottie/inbox.json'),
   disconnected: require('@/assets/lottie/no-internet.json'),
+  amenities: require('@/assets/lottie/amenities.json'),
+  default: require('@/assets/lottie/empty.json'),
+  gate: require('@/assets/lottie/visitors.json'),
 };
 
 function Visual({ kind }: { kind: EmptyVisual }) {

@@ -17,6 +17,7 @@ import { BottomSheetModal } from '@/components/ui/bottom-sheet-modal';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { useThemePalette } from '@/hooks/use-theme';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
+import { hapticConfirm, hapticWarning } from '@/lib/haptics';
 import { updateVisitorStatus } from '@/lib/visitors';
 import { href } from '@/lib/href';
 import { useAuthStore } from '@/stores/authStore';
@@ -80,7 +81,10 @@ export default function ResidentVisitorsScreen() {
       if (updateError) {
         setActionError(updateError);
       } else if (status === 'approved') {
+        hapticConfirm();
         setSuccessVisible(true);
+      } else {
+        hapticWarning();
       }
     } catch (e) {
       setActionError(e instanceof Error ? e.message : 'Failed to update request');

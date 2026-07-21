@@ -3,6 +3,7 @@ import { ActivityIndicator, Animated, Pressable, Text, View } from 'react-native
 import { Check, ChevronRight, Lock, Megaphone, Users } from 'lucide-react-native';
 
 import { AnimatedPressable } from '@/components/ui/animated-pressable';
+import { AvatarStack } from '@/components/ui/avatar-stack';
 import { AppCard, InitialsAvatar } from '@/components/ui/brand';
 import { Brand, Elevation, FontFamily, Pastels, TypeScale } from '@/constants/theme';
 import { pollRespondentLabel, pollStatusKind, type PollStatusKind } from '@/lib/community';
@@ -210,41 +211,15 @@ export function PollDetailHeader({
 }
 
 export function PollVoterStack({ votes }: { votes: PollVoteWithProfile[] }) {
-  const shown = votes.slice(0, 3);
-  const extra = votes.length - shown.length;
-  if (shown.length === 0) return null;
-
+  const people = votes.map((v) => ({
+    id: v.user_id,
+    name: v.profile?.full_name?.trim() || 'Resident',
+    imageUrl: v.profile?.avatar_url,
+  }));
+  if (people.length === 0) return null;
   return (
     <View className="h-6 flex-row items-center justify-end" style={{ minWidth: 56 }}>
-      {shown.map((v, i) => {
-        const name = v.profile?.full_name?.trim() || 'Resident';
-        return (
-          <View
-            key={v.id}
-            style={{ marginLeft: i === 0 ? 0 : -8, zIndex: shown.length - i }}
-          >
-            <InitialsAvatar
-              name={name}
-              seed={v.user_id}
-              size={22}
-              imageUrl={v.profile?.avatar_url}
-            />
-          </View>
-        );
-      })}
-      {extra > 0 ? (
-        <View
-          className="h-6 w-6 items-center justify-center rounded-pill"
-          style={{ backgroundColor: Brand.primarySoft, marginLeft: -8 }}
-        >
-          <Text
-            className="text-[10px] font-bold"
-            style={{ color: Brand.primary, fontFamily: FontFamily.heading }}
-          >
-            +{extra}
-          </Text>
-        </View>
-      ) : null}
+      <AvatarStack people={people} max={3} size={22} />
     </View>
   );
 }

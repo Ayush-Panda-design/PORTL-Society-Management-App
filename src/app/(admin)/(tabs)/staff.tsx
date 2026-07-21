@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
-import { Plus, Trash2, Clock } from 'lucide-react-native';
+import { Plus } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -15,25 +15,30 @@ import {
   View,
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import Toast from 'react-native-toast-message';
 
 import { AvatarRing, InitialsAvatar, FloatingActionBtn } from '@/components/ui/brand';
-import { Card } from '@/components/ui/card';
 import { ChipSelector } from '@/components/ui/chip-selector';
-import { Tokens } from '@/theme/tokens';
-import { Edit2 } from 'lucide-react-native';
+import { ListRow } from '@/components/ui/list-row';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SearchField } from '@/components/ui/search-field';
+import { StaggeredListItem } from '@/components/ui/staggered-list-item';
+import { SwipeActionRow } from '@/components/ui/swipe-action-row';
+import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
+import { Brand } from '@/constants/theme';
 import {
   deleteStaff,
   fetchStaff,
   uploadStaffPhoto,
   upsertStaff,
 } from '@/lib/community-api';
+import { hapticConfirm } from '@/lib/haptics';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
+import { Tokens } from '@/theme/tokens';
 import type { StaffMember } from '@/types/database';
 
 function matchesSearch(item: StaffMember, query: string): boolean {
@@ -151,9 +156,12 @@ export default function AdminStaffScreen() {
       setFormError(e.message);
     },
     onSuccess: () => {
+      const wasCreate = !editing;
       setModalOpen(false);
       setEditing(null);
       setFormError(null);
+      hapticConfirm();
+      Toast.show({ type: 'success', text1: wasCreate ? 'Staff added' : 'Staff updated' });
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: staffKey });
@@ -173,6 +181,10 @@ export default function AdminStaffScreen() {
     onError: (e: Error, _id, context) => {
       if (context?.previous) queryClient.setQueryData(staffKey, context.previous);
       Alert.alert('Could not delete staff member', e.message);
+    },
+    onSuccess: () => {
+      hapticConfirm();
+      Toast.show({ type: 'success', text1: 'Staff removed' });
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: staffKey });
@@ -276,10 +288,16 @@ export default function AdminStaffScreen() {
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
-          ItemSeparatorComponent={() => <View className="h-3" />}
-          refreshing={listQuery.isRefetching}
-          onRefresh={() => void listQuery.refetch()}
+          contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}
+          refreshControl={
+            <ThemedRefreshControl
+              refreshing={listQuery.isRefetching}
+              onRefresh={() => void listQuery.refetch()}
+            />
+          }
+          initialNumToRender={15}
+          windowSize={8}
+          removeClippedSubviews
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <EmptyState
@@ -294,44 +312,47 @@ export default function AdminStaffScreen() {
               onAction={search.trim() ? undefined : openCreate}
             />
           }
-          renderItem={({ item }) => (
-            <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, marginBottom: 12 }}>
-              {item.photo_url ? (
-                <AvatarRing size={48} status="online">
-                  <Image
-                    source={{ uri: item.photo_url }}
-                    style={{ width: 48, height: 48 }}
-                    contentFit="cover"
+          renderItem={({ item, index }) => {
+            const shift =
+              item.shift_start && item.shift_end
+                ? `Shift ${item.shift_start}–${item.shift_end}`
+                : null;
+            const meta =
+              item.staff_type === 'service_provider' && item.company_name
+                ? item.company_name
+                : shift;
+            return (
+              <StaggeredListItem index={index} disabled={listQuery.isRefetching}>
+                <SwipeActionRow
+                  actions={[
+                    { key: 'edit', label: 'Edit', color: Brand.primary, onPress: () => openEdit(item) },
+                    { key: 'remove', label: 'Remove', color: '#C0392B', onPress: () => confirmDelete(item) },
+                  ]}
+                >
+                  <ListRow
+                    title={item.name}
+                    subtitle={`${item.role}${item.phone ? ` · ${item.phone}` : ''}`}
+                    meta={meta ?? undefined}
+                    last={index === filtered.length - 1}
+                    accessibilityLabel={`${item.name}, ${item.role}`}
+                    leading={
+                      item.photo_url ? (
+                        <AvatarRing size={48} status="online">
+                          <Image
+                            source={{ uri: item.photo_url }}
+                            style={{ width: 48, height: 48 }}
+                            contentFit="cover"
+                          />
+                        </AvatarRing>
+                      ) : (
+                        <InitialsAvatar name={item.name} size={48} seed={item.id} status="online" />
+                      )
+                    }
                   />
-                </AvatarRing>
-              ) : (
-                <InitialsAvatar name={item.name} size={48} seed={item.id} status="online" />
-              )}
-              <View style={{ flex: 1 }}>
-                <Text style={{ ...Tokens.typography.h3, color: Tokens.color.textPrimary }}>{item.name}</Text>
-                <Text style={{ ...Tokens.typography.caption, color: Tokens.color.textMuted }}>
-                  {item.role}
-                  {item.phone ? ` · ${item.phone}` : ''}
-                </Text>
-              </View>
-              <Pressable
-                onPress={() => openEdit(item)}
-                accessibilityRole="button"
-                accessibilityLabel={`Edit ${item.name}`}
-                style={{ padding: 8 }}
-              >
-                <Edit2 color={Tokens.color.primary} size={18} />
-              </Pressable>
-              <Pressable
-                onPress={() => confirmDelete(item)}
-                accessibilityRole="button"
-                accessibilityLabel={`Delete ${item.name}`}
-                style={{ padding: 8 }}
-              >
-                <Trash2 color={Tokens.color.danger} size={18} />
-              </Pressable>
-            </Card>
-          )}
+                </SwipeActionRow>
+              </StaggeredListItem>
+            );
+          }}
         />
       )}
 

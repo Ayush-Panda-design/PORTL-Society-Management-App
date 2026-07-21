@@ -91,10 +91,10 @@ export default function GuardDashboard() {
         style={{
           backgroundColor: Brand.primary,
           shadowColor: Brand.primary,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.2,
-          shadowRadius: 10,
-          elevation: 4,
+          shadowOffset: { width: 0, height: 3 },
+          shadowOpacity: 0.12,
+          shadowRadius: 6,
+          elevation: 2,
         }}
       >
         <QrCode color="#fff" size={16} strokeWidth={1.5} />
@@ -117,6 +117,10 @@ export default function GuardDashboard() {
             flexGrow: 1,
           }}
           ItemSeparatorComponent={() => <View className="h-3" />}
+          initialNumToRender={10}
+          windowSize={8}
+          maxToRenderPerBatch={10}
+          removeClippedSubviews
           refreshControl={
             <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }

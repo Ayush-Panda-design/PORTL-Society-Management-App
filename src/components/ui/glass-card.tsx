@@ -1,51 +1,73 @@
 import React from 'react';
-import { BlurView, BlurViewProps } from 'expo-blur';
-import { View, StyleSheet, ViewProps } from 'react-native';
+import { BlurView, type BlurViewProps } from 'expo-blur';
+import { View, StyleSheet, type ViewProps, type StyleProp, type ViewStyle } from 'react-native';
 import { useColorScheme } from 'nativewind';
 
-interface GlassCardProps extends BlurViewProps {
+import { Brand } from '@/constants/theme';
+
+type Props = Omit<BlurViewProps, 'style'> & {
   children: React.ReactNode;
   className?: string;
-  style?: ViewProps['style'];
-}
+  style?: StyleProp<ViewStyle>;
+  contentClassName?: string;
+  /** Left accent rail (status). */
+  accentColor?: string;
+  intensity?: number;
+};
 
-export const GlassCard = ({ children, className, style, ...props }: GlassCardProps) => {
+/**
+ * Frosted hero summary — use once per detail screen, not on every section.
+ */
+export function GlassCard({
+  children,
+  className,
+  style,
+  contentClassName = 'p-4',
+  accentColor,
+  intensity = 36,
+  ...props
+}: Props) {
   const { colorScheme } = useColorScheme();
   const tint = colorScheme === 'dark' ? 'dark' : 'light';
 
   return (
     <View
+      className={className}
       style={[
-        styles.shadowContainer,
         {
+          backgroundColor: 'transparent',
+          borderRadius: 20,
+          overflow: 'hidden',
+          borderLeftWidth: accentColor ? 4 : 0,
+          borderLeftColor: accentColor ?? 'transparent',
           shadowColor: colorScheme === 'dark' ? '#000' : '#1A2E28',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: colorScheme === 'dark' ? 0.4 : 0.07,
-          shadowRadius: 20,
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: colorScheme === 'dark' ? 0.35 : 0.08,
+          shadowRadius: 16,
           elevation: 3,
         },
         style,
       ]}
-      className={className}
     >
-      <View style={styles.innerContainer}>
-        <BlurView tint={tint} intensity={40} style={StyleSheet.absoluteFill} {...props} />
-        <View className="z-10 h-full w-full rounded-bubbly border border-surface-border p-4">
+      <View style={styles.inner}>
+        <BlurView tint={tint} intensity={intensity} style={StyleSheet.absoluteFill} {...props} />
+        <View
+          className={`z-10 w-full border border-white/40 ${contentClassName}`}
+          style={{ backgroundColor: colorScheme === 'dark' ? 'rgba(20,24,22,0.45)' : 'rgba(255,255,255,0.55)' }}
+        >
           {children}
         </View>
       </View>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  shadowContainer: {
-    backgroundColor: 'transparent',
-    borderRadius: 28,
-  },
-  innerContainer: {
+  inner: {
     overflow: 'hidden',
-    borderRadius: 28,
-    flex: 1,
+    borderRadius: 20,
   },
 });
+
+/** Re-export Brand for callers that tint the hero wash behind glass. */
+export const GlassHeroWash = Brand.primarySoft;

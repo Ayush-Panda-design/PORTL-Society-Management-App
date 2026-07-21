@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 
 import { AppCard } from '@/components/ui/brand';
+import { GlassCard } from '@/components/ui/glass-card';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
@@ -329,27 +330,29 @@ export default function ResidentAmenitiesScreen() {
           </View>
 
           <View className="mb-3 px-4">
-            <AmenityMetaRow amenity={selected} />
-            {selected.max_active_bookings_per_flat != null ? (
-              <Text className="mt-2 text-xs text-ink-muted">
-                Max {selected.max_active_bookings_per_flat} active booking
-                {selected.max_active_bookings_per_flat === 1 ? '' : 's'} per flat
-              </Text>
-            ) : null}
-            {selected.rules ? (
-              <View
-                className="mt-3 rounded-card px-3.5 py-3"
-                style={{ backgroundColor: Pastels.butter }}
-              >
-                <Text
-                  className="mb-1 text-xs font-bold uppercase tracking-widest text-ink-muted"
-                  style={{ fontFamily: FontFamily.heading }}
-                >
-                  Rules
+            <GlassCard accentColor={Brand.primary}>
+              <AmenityMetaRow amenity={selected} />
+              {selected.max_active_bookings_per_flat != null ? (
+                <Text className="mt-2 text-xs text-ink-muted">
+                  Max {selected.max_active_bookings_per_flat} active booking
+                  {selected.max_active_bookings_per_flat === 1 ? '' : 's'} per flat
                 </Text>
-                <Text className="text-sm leading-5 text-ink">{selected.rules}</Text>
-              </View>
-            ) : null}
+              ) : null}
+              {selected.rules ? (
+                <View
+                  className="mt-3 rounded-card px-3.5 py-3"
+                  style={{ backgroundColor: Pastels.butter }}
+                >
+                  <Text
+                    className="mb-1 text-xs font-bold uppercase tracking-widest text-ink-muted"
+                    style={{ fontFamily: FontFamily.heading }}
+                  >
+                    Rules
+                  </Text>
+                  <Text className="text-sm leading-5 text-ink">{selected.rules}</Text>
+                </View>
+              ) : null}
+            </GlassCard>
           </View>
 
           <View className="mb-3">
@@ -556,7 +559,7 @@ export default function ResidentAmenitiesScreen() {
 
   return (
     <ScreenHeader title="Amenities" subtitle="Book clubhouse, gym, and more" showBack>
-      <View className="mb-3 px-4">
+      <View className="z-10 border-b border-surface-border bg-surface px-4 pb-3">
         <SegmentedControl
           options={[
             { value: 'book', label: 'Book' },

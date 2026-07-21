@@ -13,25 +13,22 @@ import {
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import {
-  Car,
   CheckCircle,
   ChevronRight,
   Clock,
-  Droplets,
-  Leaf,
   MessageSquarePlus,
   Plus,
-  ShieldAlert,
   Wrench,
-  Zap,
   Image as ImageIcon,
   Send,
 } from 'lucide-react-native';
 import { Image } from 'expo-image';
 
-import { AppCard, FloatingActionBtn } from '@/components/ui/brand';
+import { FloatingActionBtn } from '@/components/ui/brand';
+import { ListRow } from '@/components/ui/list-row';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SearchField } from '@/components/ui/search-field';
+import { StaggeredListItem } from '@/components/ui/staggered-list-item';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { ChipSelector } from '@/components/ui/chip-selector';
 import { SuccessOverlay } from '@/components/ui/success-overlay';
@@ -39,6 +36,7 @@ import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
+import { complaintCategoryMeta } from '@/lib/complaint-category';
 import { complaintStatusTone } from '@/lib/community';
 import { uploadLocalImage } from '@/lib/storage-upload';
 import { createComplaint, fetchComplaintsForFlat, fetchComplaintComments, addComplaintComment } from '@/lib/community-api';
@@ -46,20 +44,6 @@ import { rateComplaint, reopenComplaint } from '@/lib/ops-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
 import { COMPLAINT_CATEGORIES, type Complaint, type ComplaintPriority } from '@/types/database';
-
-const CATEGORY_ICONS: Record<string, { Icon: typeof Wrench; color: string; bg: string }> = {
-  Parking: { Icon: Car, color: '#6B5CC4', bg: Pastels.lilac },
-  Plumbing: { Icon: Droplets, color: '#2563EB', bg: Pastels.sky },
-  Electrical: { Icon: Zap, color: '#C4861A', bg: Pastels.butter },
-  Housekeeping: { Icon: Leaf, color: Brand.primary, bg: Pastels.mint },
-  Security: { Icon: ShieldAlert, color: '#C0392B', bg: Pastels.rose },
-  Noise: { Icon: Wrench, color: '#B06020', bg: Pastels.peach },
-  Other: { Icon: Wrench, color: Brand.inkMuted, bg: Pastels.sage },
-};
-
-function getCategory(cat: string) {
-  return CATEGORY_ICONS[cat] ?? { Icon: Wrench, color: Brand.inkMuted, bg: Pastels.sage };
-}
 
 function StatusBadge({ status }: { status: string }) {
   const tone = complaintStatusTone(status as Complaint['status']);
@@ -210,7 +194,7 @@ export default function ResidentHelpdeskScreen() {
   };
 
   if (selected) {
-    const { Icon: CatIcon, color: catColor, bg: catBg } = getCategory(selected.category);
+    const { Icon: CatIcon, color: catColor, bg: catBg } = complaintCategoryMeta(selected.category);
     return (
       <ScreenHeader title="Complaint" subtitle={selected.category}>
         <KeyboardAvoidingView behavior="padding" className="flex-1">
@@ -393,7 +377,10 @@ export default function ResidentHelpdeskScreen() {
           data={filtered}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100, flexGrow: 1 }}
-          ItemSeparatorComponent={() => <View className="h-2" />}
+          initialNumToRender={12}
+          windowSize={8}
+          maxToRenderPerBatch={10}
+          removeClippedSubviews
           refreshControl={
             <ThemedRefreshControl
               refreshing={listQuery.isRefetching}
@@ -438,39 +425,33 @@ export default function ResidentHelpdeskScreen() {
               }
             />
           }
-          renderItem={({ item }) => {
-            const { Icon: CatIcon, color: catColor, bg: catBg } = getCategory(item.category);
+          renderItem={({ item, index }) => {
+            const { Icon: CatIcon, color: catColor, bg: catBg } = complaintCategoryMeta(item.category);
             return (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`${item.category} complaint`}
-                onPress={() => setSelectedId(item.id)}
-              >
-                <AppCard className="flex-row items-center gap-3 p-3.5">
-                  <View
-                    className="h-10 w-10 items-center justify-center rounded-card"
-                    style={{ backgroundColor: catBg }}
-                  >
-                    <CatIcon color={catColor} size={16} strokeWidth={1.5} />
-                  </View>
-                  <View className="min-w-0 flex-1">
-                    <View className="flex-row items-center justify-between gap-2">
-                      <Text
-                        className="flex-1 text-[15px] text-ink"
-                        numberOfLines={1}
-                        style={{ fontFamily: FontFamily.heading }}
-                      >
-                        {item.category}
-                      </Text>
-                      <StatusBadge status={item.status} />
+              <StaggeredListItem index={index} disabled={listQuery.isRefetching}>
+                <ListRow
+                  title={item.category}
+                  subtitle={item.description}
+                  meta={ageLabel(item.created_at)}
+                  last={index === filtered.length - 1}
+                  accessibilityLabel={`${item.category} complaint`}
+                  onPress={() => setSelectedId(item.id)}
+                  leading={
+                    <View
+                      className="h-10 w-10 items-center justify-center rounded-card"
+                      style={{ backgroundColor: catBg }}
+                    >
+                      <CatIcon color={catColor} size={16} strokeWidth={1.5} />
                     </View>
-                    <Text className="mt-0.5 text-xs text-ink-muted" numberOfLines={1}>
-                      {ageLabel(item.created_at)} · {item.description}
-                    </Text>
-                  </View>
-                  <ChevronRight color={Brand.inkMuted} size={16} strokeWidth={1.5} />
-                </AppCard>
-              </Pressable>
+                  }
+                  trailing={
+                    <View className="items-end gap-1.5">
+                      <StatusBadge status={item.status} />
+                      <ChevronRight color={Brand.inkMuted} size={14} strokeWidth={1.5} />
+                    </View>
+                  }
+                />
+              </StaggeredListItem>
             );
           }}
         />
@@ -504,7 +485,7 @@ export default function ResidentHelpdeskScreen() {
               </Text>
               <View className="mb-4 flex-row flex-wrap gap-2">
                 {COMPLAINT_CATEGORIES.map((cat) => {
-                  const { Icon, color, bg } = getCategory(cat);
+                  const { Icon, color, bg } = complaintCategoryMeta(cat);
                   const selectedCat = valueIs(category, cat);
                   return (
                     <Pressable

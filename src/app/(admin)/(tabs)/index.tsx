@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import {
   Bell,
   Building2,
+  ChevronRight,
   ClipboardList,
   KeyRound,
   Layers,
@@ -15,21 +16,53 @@ import {
   LayoutGrid,
   Settings2,
 } from 'lucide-react-native';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCallback, useState } from 'react';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { EmptyMailboxIllustration } from '@/components/illustrations';
 import { DrawerMenuButton } from '@/components/navigation/drawer-menu-button';
-import { AppCard, HeroBanner, InitialsAvatar, PressableActionTile } from '@/components/ui/brand';
-import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
+import { AppCard, InitialsAvatar } from '@/components/ui/brand';
+import { ListRow } from '@/components/ui/list-row';
+import { BrandedRefreshMark, ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
-import { Brand, FontFamily, Pastels } from '@/constants/theme';
+import { SkeletonList } from '@/components/visitors/loading-state';
+import { Brand, FontFamily, Gradients, Pastels } from '@/constants/theme';
 import { fetchAdminDashboardStats } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
 import { href } from '@/lib/href';
 import { useAuthStore } from '@/stores/authStore';
+
+type ActionRow = {
+  title: string;
+  subtitle: string;
+  Icon: typeof Building2;
+  path: string;
+  tone: keyof typeof Pastels;
+};
+
+const STRUCTURE_ROWS: ActionRow[] = [
+  { title: 'Towers', subtitle: 'Add and rename society buildings', Icon: Building2, path: '/(admin)/towers', tone: 'sky' },
+  { title: 'Flats', subtitle: 'Map units to towers', Icon: Layers, path: '/(admin)/flats', tone: 'lilac' },
+  { title: 'Invite links', subtitle: 'Share resident and guard codes', Icon: KeyRound, path: '/(admin)/invites', tone: 'peach' },
+  { title: 'Join requests', subtitle: 'Approve new residents and guards', Icon: UserPlus, path: '/(admin)/join-requests', tone: 'butter' },
+  { title: 'Residents', subtitle: 'Assign members to flats', Icon: Users, path: '/(admin)/residents', tone: 'mint' },
+];
+
+const OPERATIONS_ROWS: ActionRow[] = [
+  { title: 'Post a notice', subtitle: 'Reach every resident', Icon: Bell, path: '/(admin)/notices', tone: 'sky' },
+  { title: 'Complaints queue', subtitle: 'Triage helpdesk tickets', Icon: ClipboardList, path: '/(admin)/complaints', tone: 'rose' },
+  { title: 'Staff directory', subtitle: 'Contacts residents can call', Icon: Phone, path: '/(admin)/staff', tone: 'mint' },
+];
 
 export default function AdminHome() {
   const router = useRouter();
@@ -44,12 +77,41 @@ export default function AdminHome() {
   });
 
   const [refreshing, setRefreshing] = useState(false);
+  const scrollY = useSharedValue(0);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await statsQuery.refetch();
     setRefreshing(false);
   }, [statsQuery]);
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+
+  const compactHeaderStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [10, 46], [0, 1], Extrapolation.CLAMP),
+    transform: [
+      { translateY: interpolate(scrollY.value, [10, 46], [8, 0], Extrapolation.CLAMP) },
+    ],
+  }));
+
+  const heroTitleStyle = useAnimatedStyle(() => ({
+    fontSize: interpolate(scrollY.value, [0, 60], [28, 20], Extrapolation.CLAMP),
+    opacity: interpolate(scrollY.value, [0, 60], [1, 0.82], Extrapolation.CLAMP),
+    transform: [
+      { translateY: interpolate(scrollY.value, [0, 60], [0, -8], Extrapolation.CLAMP) },
+    ],
+  }));
+
+  const heroIllustrationStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [0, 50], [1, 0], Extrapolation.CLAMP),
+    transform: [
+      { scale: interpolate(scrollY.value, [0, 50], [1, 0.6], Extrapolation.CLAMP) },
+    ],
+  }));
 
   if (!societyId) {
     return (
@@ -68,29 +130,72 @@ export default function AdminHome() {
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
-      <ScrollView
+      <View className="flex-row items-center justify-between px-5 pb-1 pt-2">
+        <DrawerMenuButton />
+        <Animated.View style={[{ position: 'absolute', left: 56, right: 56, alignItems: 'center' }, compactHeaderStyle]}>
+          <Text
+            className="text-[15px] text-ink"
+            numberOfLines={1}
+            style={{ fontFamily: FontFamily.heading }}
+          >
+            Hello, {name}
+          </Text>
+        </Animated.View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="My profile"
+          onPress={() => go('/(admin)/profile')}
+        >
+          <InitialsAvatar name={profile?.full_name ?? 'You'} seed={profile?.id} size={40} imageUrl={profile?.avatar_url} />
+        </Pressable>
+      </View>
+
+      <Animated.ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         refreshControl={
           <ThemedRefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
         }
       >
-        <View className="mb-3 flex-row items-center justify-between">
-          <DrawerMenuButton />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="My profile"
-            onPress={() => go('/(admin)/profile')}
+        <View
+          className="mb-5 overflow-hidden rounded-hero"
+          style={{
+            shadowColor: Brand.primaryDark,
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.2,
+            shadowRadius: 24,
+            elevation: 5,
+          }}
+        >
+          <LinearGradient
+            colors={[...Gradients.hero]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ paddingHorizontal: 24, paddingVertical: 28 }}
           >
-            <InitialsAvatar name={profile?.full_name ?? 'You'} seed={profile?.id} size={40} imageUrl={profile?.avatar_url} />
-          </Pressable>
+            <View className="flex-row items-center gap-3">
+              <View className="min-w-0 flex-1">
+                <Animated.Text
+                  className="mb-1.5 font-bold text-white tracking-tight"
+                  style={[{ fontFamily: FontFamily.display }, heroTitleStyle]}
+                >
+                  Hello, {name}
+                </Animated.Text>
+                <Text className="text-[15px] leading-5 text-white/85">
+                  Structure, notices, and day-to-day society ops
+                </Text>
+              </View>
+              <Animated.View style={heroIllustrationStyle}>
+                <EmptyMailboxIllustration width={108} height={76} />
+              </Animated.View>
+            </View>
+          </LinearGradient>
         </View>
-        <HeroBanner
-          title={`Hello, ${name}`}
-          subtitle="Structure, notices, and day-to-day society ops"
-          illustration={<EmptyMailboxIllustration width={108} height={76} />}
-        />
+
+        <BrandedRefreshMark visible={refreshing} />
 
         <Text
           className="mb-3 mt-2 text-lg text-ink"
@@ -162,8 +267,8 @@ export default function AdminHome() {
         ) : null}
 
         {statsQuery.isLoading && !stats ? (
-          <View className="mb-2 h-36 items-center justify-center rounded-bubbly border border-surface-border bg-surface-card">
-            <ActivityIndicator color={Brand.primary} />
+          <View className="mb-2">
+            <SkeletonList count={3} />
           </View>
         ) : (
           <View className="mb-6 flex-row flex-wrap justify-between gap-y-3">
@@ -203,42 +308,25 @@ export default function AdminHome() {
             Structure
           </Text>
         </View>
-        <View className="mb-5 rounded-bubbly bg-pastel-mint/50 p-2.5 dark:bg-surface-muted">
-          <PressableActionTile
-            title="Towers"
-            subtitle="Add and rename society buildings"
-            icon={<Building2 color={Brand.primary} size={20} />}
-            onPress={() => go('/(admin)/towers')}
-            tone="sky"
-          />
-          <PressableActionTile
-            title="Flats"
-            subtitle="Map units to towers"
-            icon={<Layers color={Brand.primary} size={20} />}
-            onPress={() => go('/(admin)/flats')}
-            tone="lilac"
-          />
-          <PressableActionTile
-            title="Invite links"
-            subtitle="Share resident and guard codes"
-            icon={<KeyRound color={Brand.primary} size={20} />}
-            onPress={() => go('/(admin)/invites')}
-            tone="peach"
-          />
-          <PressableActionTile
-            title="Join requests"
-            subtitle="Approve new residents and guards"
-            icon={<UserPlus color={Brand.primary} size={20} />}
-            onPress={() => go('/(admin)/join-requests')}
-            tone="butter"
-          />
-          <PressableActionTile
-            title="Residents"
-            subtitle="Assign members to flats"
-            icon={<Users color={Brand.primary} size={20} />}
-            onPress={() => go('/(admin)/residents')}
-            tone="mint"
-          />
+        <View className="mb-5 overflow-hidden rounded-panel bg-surface-card">
+          {STRUCTURE_ROWS.map((row, index) => (
+            <ListRow
+              key={row.title}
+              title={row.title}
+              subtitle={row.subtitle}
+              onPress={() => go(row.path)}
+              last={index === STRUCTURE_ROWS.length - 1}
+              leading={
+                <View
+                  className="h-11 w-11 items-center justify-center rounded-panel"
+                  style={{ backgroundColor: Pastels[row.tone] }}
+                >
+                  <row.Icon color={Brand.primary} size={19} strokeWidth={1.5} />
+                </View>
+              }
+              trailing={<ChevronRight color={Brand.inkMuted} size={16} strokeWidth={1.5} />}
+            />
+          ))}
         </View>
 
         <View className="mb-3 mt-1 flex-row items-center">
@@ -249,34 +337,31 @@ export default function AdminHome() {
             Operations
           </Text>
         </View>
-        <View className="mb-4 rounded-bubbly bg-pastel-peach/40 p-2.5 dark:bg-surface-muted">
-          <PressableActionTile
-            title="Post a notice"
-            subtitle="Reach every resident"
-            icon={<Bell color={Brand.primary} size={20} />}
-            onPress={() => go('/(admin)/notices')}
-            tone="sky"
-          />
-          <PressableActionTile
-            title="Complaints queue"
-            subtitle="Triage helpdesk tickets"
-            icon={<ClipboardList color={Brand.primary} size={20} />}
-            onPress={() => go('/(admin)/complaints')}
-            tone="rose"
-          />
-          <PressableActionTile
-            title="Staff directory"
-            subtitle="Contacts residents can call"
-            icon={<Phone color={Brand.primary} size={20} />}
-            onPress={() => go('/(admin)/staff')}
-            tone="mint"
-          />
+        <View className="mb-4 overflow-hidden rounded-panel bg-surface-card">
+          {OPERATIONS_ROWS.map((row, index) => (
+            <ListRow
+              key={row.title}
+              title={row.title}
+              subtitle={row.subtitle}
+              onPress={() => go(row.path)}
+              last={index === OPERATIONS_ROWS.length - 1}
+              leading={
+                <View
+                  className="h-11 w-11 items-center justify-center rounded-panel"
+                  style={{ backgroundColor: Pastels[row.tone] }}
+                >
+                  <row.Icon color={Brand.primary} size={19} strokeWidth={1.5} />
+                </View>
+              }
+              trailing={<ChevronRight color={Brand.inkMuted} size={16} strokeWidth={1.5} />}
+            />
+          ))}
         </View>
 
         <Text className="mt-1 text-center text-sm text-ink-muted">
           More tools live under the More tab
         </Text>
-      </ScrollView>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }

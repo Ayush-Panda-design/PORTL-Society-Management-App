@@ -1,4 +1,3 @@
-import * as Haptics from 'expo-haptics';
 import { Check, X } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -6,6 +5,7 @@ import { Pressable, Text, View } from 'react-native';
 import { SwipeableMemberCard } from '@/components/members/swipeable-member-card';
 import type { SwipeDecision } from '@/components/visitors/swipeable-visitor-card';
 import { FontFamily, StatusColors } from '@/constants/theme';
+import { hapticConfirm, hapticWarning } from '@/lib/haptics';
 import type { ProfileWithFlat } from '@/types/database';
 
 const DECK_HEIGHT = 280;
@@ -26,11 +26,8 @@ export function MemberSwipeDeck({ members, busy = false, onDecision }: Props) {
       if (!top || busy) return;
       setError(null);
       if (!fromSwipe) {
-        void Haptics.notificationAsync(
-          decision === 'approved'
-            ? Haptics.NotificationFeedbackType.Success
-            : Haptics.NotificationFeedbackType.Warning,
-        );
+        if (decision === 'approved') hapticConfirm();
+        else hapticWarning();
       }
       try {
         await onDecision(top, decision);

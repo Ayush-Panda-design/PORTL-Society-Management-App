@@ -3,6 +3,7 @@ import { Alert, FlatList, Modal, Pressable, Share, Text, TextInput, View } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Flag, Download, X } from 'lucide-react-native';
 
+import { StaggeredListItem } from '@/components/ui/staggered-list-item';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
@@ -299,23 +300,27 @@ export default function GuardLogsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
           ItemSeparatorComponent={() => <View className="h-3" />}
+          initialNumToRender={10}
+          windowSize={8}
+          maxToRenderPerBatch={10}
+          removeClippedSubviews
           refreshControl={
             <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           ListEmptyComponent={
             <EmptyState
-              visual="gate"
+              visual="visitors"
               title="No visitor history"
               subtitle="Registered visitors will show here with entry and exit times."
             />
           }
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const meta = logMeta[item.id];
             const canExit = item.status === 'checked_in';
             const isFlagged = flagged.has(item.id);
 
             return (
-              <View>
+              <StaggeredListItem index={index} disabled={refreshing}>
                 <VisitorCard
                   visitor={item}
                   actions={[
@@ -345,7 +350,7 @@ export default function GuardLogsScreen() {
                     </Text>
                   </View>
                 )}
-              </View>
+              </StaggeredListItem>
             );
           }}
         />

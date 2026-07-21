@@ -2,23 +2,17 @@ import { Tabs } from 'expo-router';
 import { ClipboardList, MoreHorizontal, ScanLine, ShieldCheck, UserPlus } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { TabBarIcon } from '@/components/ui/tab-bar-icon';
 import { useResolvedColorScheme } from '@/hooks/use-resolved-color-scheme';
 import { getGuardTabOptions, TAB_ICON_SIZE } from '@/constants/navigation';
 
-/** Consistent 1.5px stroke weight per design spec (Lucide icon family). */
+/** Consistent 1.5px stroke weight per design spec (Lucide icon family), with a spring focus bounce. */
 function tabIcon(
   Icon: typeof ShieldCheck,
   color: string,
   focused: boolean,
 ) {
-  return (
-    <Icon
-      color={color}
-      size={TAB_ICON_SIZE}
-      strokeWidth={1.5}
-      fill={focused ? color : 'transparent'}
-    />
-  );
+  return <TabBarIcon Icon={Icon} color={color} size={TAB_ICON_SIZE} focused={focused} />;
 }
 
 export default function GuardLayout() {
