@@ -40,7 +40,10 @@ Deno.serve(async (req) => {
       return jsonResponse(500, { error: 'Missing Supabase env on function' });
     }
     if (!razorpayKeyId || !razorpayKeySecret) {
-      return jsonResponse(500, { error: 'Missing Razorpay credentials on function' });
+      return jsonResponse(500, {
+        error:
+          'Online payments are not configured on the server yet. Please contact your society office.',
+      });
     }
     if (!razorpayKeyId.startsWith('rzp_test_') && !razorpayKeyId.startsWith('rzp_live_')) {
       return jsonResponse(500, {
@@ -111,7 +114,10 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!account || account.status !== 'verified') {
-      return jsonResponse(409, { error: 'Society payment account is not verified' });
+      return jsonResponse(409, {
+        error:
+          'Your society has not finished setting up online payments. Please contact the management committee.',
+      });
     }
 
     const orderBody: Record<string, unknown> = {
@@ -153,7 +159,7 @@ Deno.serve(async (req) => {
     const rzpJson = await rzpRes.json();
     if (!rzpRes.ok || !rzpJson?.id) {
       return jsonResponse(502, {
-        error: 'Razorpay order creation failed',
+        error: 'We could not start payment with the bank. Please try again shortly.',
         detail: rzpJson,
       });
     }

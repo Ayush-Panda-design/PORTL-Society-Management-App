@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
+  NativeModules,
   Platform,
   Pressable,
   Text,
@@ -10,6 +11,12 @@ import {
 import RazorpayCheckout from 'react-native-razorpay';
 
 import { Brand, FontFamily } from '@/constants/theme';
+import {
+  messageFromFunctionInvoke,
+  paymentErrorIsNativeUnavailable,
+  paymentErrorNeedsRebook,
+  toUserFriendlyPaymentMessage,
+} from '@/lib/payment-user-messages';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { Payment, PaymentPurpose } from '@/types/database';
@@ -47,6 +54,11 @@ function razorpayKey(): string {
   return process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID?.trim() ?? '';
 }
 
+function isRazorpayNativeLinked(): boolean {
+  if (Platform.OS === 'web') return false;
+  return Boolean(NativeModules.RNRazorpayCheckout);
+}
+
 export function PaymentSheet({
   visible,
   societyId,
@@ -61,6 +73,7 @@ export function PaymentSheet({
   const profile = useAuthStore((s) => s.profile);
   const [phase, setPhase] = useState<Phase>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [canRetry, setCanRetry] = useState(true);
   const [payment, setPayment] = useState<Payment | null>(null);
 
   const instanceId = useRef(`p${Math.random().toString(36).slice(2, 10)}`).current;
@@ -84,8 +97,21 @@ export function PaymentSheet({
     clearWait();
     setPhase('idle');
     setError(null);
+    setCanRetry(true);
     setPayment(null);
   }, [clearWait]);
+
+  const showPaymentError = useCallback((rawMessage: string) => {
+    const friendly = toUserFriendlyPaymentMessage(rawMessage);
+    setError(friendly);
+    setCanRetry(
+      !paymentErrorNeedsRebook(rawMessage) &&
+        !paymentErrorNeedsRebook(friendly) &&
+        !paymentErrorIsNativeUnavailable(rawMessage) &&
+        !paymentErrorIsNativeUnavailable(friendly),
+    );
+    setPhase('error');
+  }, []);
 
   const finishConfirmed = useCallback(
     (row: Payment) => {
@@ -103,7 +129,10 @@ export function PaymentSheet({
     (message?: string) => {
       if (confirmedRef.current) return;
       clearWait();
-      setError(message ?? 'Payment expired before confirmation.');
+      setError(
+        toUserFriendlyPaymentMessage(message ?? 'Payment expired before confirmation.'),
+      );
+      setCanRetry(false);
       setPhase('expired');
       // Expiry cron also frees holds; no client abandon needed for server-side expire.
     },
@@ -116,7 +145,7 @@ export function PaymentSheet({
       setPhase('waiting');
 
       waitTimerRef.current = setTimeout(() => {
-        finishExpired('Timed out waiting for confirmation.');
+        finishExpired('Timed out waiting for confirmation from your bank.');
       }, CONFIRM_WAIT_MS);
 
       const channelName = `payments:${paymentId}:${instanceId}`;
@@ -140,8 +169,8 @@ export function PaymentSheet({
           if (row.status === 'expired' || row.status === 'failed') {
             finishExpired(
               row.status === 'failed'
-                ? 'Payment failed.'
-                : 'Payment expired before confirmation.',
+                ? 'Your payment did not go through.'
+                : 'Payment was not confirmed in time.',
             );
           }
         },
@@ -166,8 +195,8 @@ export function PaymentSheet({
         } else if (row.status === 'expired' || row.status === 'failed') {
           finishExpired(
             row.status === 'failed'
-              ? 'Payment failed.'
-              : 'Payment expired before confirmation.',
+              ? 'Your payment did not go through.'
+              : 'Payment was not confirmed in time.',
           );
         }
       });
@@ -190,15 +219,13 @@ export function PaymentSheet({
 
   const startCheckout = useCallback(async () => {
     if (Platform.OS === 'web') {
-      setError('Payments are not available on web.');
-      setPhase('error');
+      showPaymentError('Payments are not available on web.');
       return;
     }
 
     const key = razorpayKey();
     if (!key) {
-      setError('Missing EXPO_PUBLIC_RAZORPAY_KEY_ID.');
-      setPhase('error');
+      showPaymentError('Missing EXPO_PUBLIC_RAZORPAY_KEY_ID.');
       return;
     }
 
@@ -225,13 +252,17 @@ export function PaymentSheet({
       paymentId = row.id;
       setPayment(row);
 
-      const { data: orderData, error: orderError } = await supabase.functions.invoke(
-        'create-razorpay-order',
-        { body: { paymentId: row.id } },
-      );
+      const {
+        data: orderData,
+        error: orderError,
+        response: orderResponse,
+      } = await supabase.functions.invoke('create-razorpay-order', {
+        body: { paymentId: row.id },
+      });
 
       if (orderError) {
-        throw new Error(orderError.message);
+        const detail = await messageFromFunctionInvoke(orderError, orderResponse);
+        throw new Error(detail || orderError.message);
       }
 
       const orderPayload = orderData as {
@@ -251,6 +282,10 @@ export function PaymentSheet({
           : prev,
       );
       setPhase('checkout');
+
+      if (!isRazorpayNativeLinked()) {
+        throw new Error('RAZORPAY_NATIVE_UNAVAILABLE');
+      }
 
       await RazorpayCheckout.open({
         key: orderPayload.keyId || key,
@@ -288,20 +323,27 @@ export function PaymentSheet({
           ? Number((e as { code?: unknown }).code)
           : null;
 
-      await abandonIfNeeded(paymentId);
+      const nativeUnavailable =
+        /razorpay_native_unavailable/i.test(message) ||
+        /cannot read property 'open' of null/i.test(message);
+
+      if (!nativeUnavailable) {
+        await abandonIfNeeded(paymentId);
+      }
 
       // Razorpay user-cancel codes are typically 0 / 2.
       if (code === 0 || code === 2 || /cancel/i.test(message)) {
         setPhase('cancelled');
-        setError(message);
+        setError(toUserFriendlyPaymentMessage(message));
+        setCanRetry(true);
         return;
       }
 
-      setError(message);
-      setPhase('error');
+      showPaymentError(message);
     }
   }, [
     abandonIfNeeded,
+    showPaymentError,
     amountPaise,
     description,
     profile?.full_name,
@@ -401,11 +443,6 @@ export function PaymentSheet({
           ) : (
             <View className="mb-6 rounded-2xl bg-surface px-4 py-3">
               <Text className="text-sm leading-5 text-ink-soft">{statusCopy}</Text>
-              {payment?.status ? (
-                <Text className="mt-2 text-xs text-ink-muted">
-                  Status: {payment.status}
-                </Text>
-              ) : null}
             </View>
           )}
 
@@ -418,7 +455,7 @@ export function PaymentSheet({
                 >
                   <Text className="font-semibold text-ink-soft">Close</Text>
                 </Pressable>
-                {phase !== 'expired' ? (
+                {phase !== 'expired' && canRetry ? (
                   <Pressable
                     onPress={() => {
                       reset();

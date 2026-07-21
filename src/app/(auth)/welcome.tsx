@@ -3,15 +3,19 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { MotiView } from 'moti';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 import { FontFamily, Radii, Spacing } from '@/constants/theme';
+import { appStorage } from '@/lib/app-storage';
 
 /** Amber-gold sampled from the hero sconces / sunset — not the generic brand orange. */
 const HERO_GOLD = '#E09A3C';
 const HERO_GOLD_DEEP = '#C47A28';
+
+const WELCOME_SEEN_KEY = 'portl_welcome_seen';
 
 function PortlGateMark({ size = 36, color = HERO_GOLD }: { size?: number; color?: string }) {
   // Simplified gate: twin pillars + arch — reads as “portal / gate,” not a generic blob.
@@ -35,9 +39,52 @@ function PortlGateMark({ size = 36, color = HERO_GOLD }: { size?: number; color?
   );
 }
 
+type EnterMotion = {
+  from: { opacity: number; translateY: number };
+  animate: { opacity: number; translateY: number };
+  transition: { type: 'timing'; duration: number; delay?: number };
+};
+
+function enterMotion(skip: boolean, translateY: number, duration: number, delay = 0): EnterMotion {
+  if (skip) {
+    return {
+      from: { opacity: 1, translateY: 0 },
+      animate: { opacity: 1, translateY: 0 },
+      transition: { type: 'timing', duration: 0 },
+    };
+  }
+  return {
+    from: { opacity: 0, translateY },
+    animate: { opacity: 1, translateY: 0 },
+    transition: { type: 'timing', duration, delay },
+  };
+}
+
 export default function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [skipMotion, setSkipMotion] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const seen = await appStorage.getItem(WELCOME_SEEN_KEY);
+      if (cancelled) return;
+      if (seen === '1') {
+        setSkipMotion(true);
+      } else {
+        setSkipMotion(false);
+        void appStorage.setItem(WELCOME_SEEN_KEY, '1');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const brandMotion = enterMotion(skipMotion === true, -8, 700);
+  const copyMotion = enterMotion(skipMotion === true, 24, 760, 140);
+  const ctaMotion = enterMotion(skipMotion === true, 18, 700, 300);
 
   return (
     <View style={styles.root}>
@@ -68,68 +115,84 @@ export default function WelcomeScreen() {
         style={[
           styles.content,
           {
-            paddingTop: insets.top + Spacing.lg,
+            paddingTop: insets.top + Spacing.xl,
             paddingBottom: Math.max(insets.bottom, Spacing.lg) + Spacing.lg,
           },
         ]}
       >
-        <MotiView
-          from={{ opacity: 0, translateY: -8 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 700 }}
-          style={styles.brandRow}
-        >
-          <PortlGateMark size={34} />
-          <Text style={styles.brandWord}>Portl</Text>
-        </MotiView>
+        {skipMotion !== null ? (
+          <MotiView
+            from={brandMotion.from}
+            animate={brandMotion.animate}
+            transition={brandMotion.transition}
+            style={styles.brandBlock}
+          >
+            <View style={styles.brandRow}>
+              <PortlGateMark size={34} />
+              <Text style={styles.brandWord}>Portl</Text>
+            </View>
+            {/* Secondary cues — half the weight of headline/CTA */}
+            <Text style={styles.rolesLine}>Resident · Guard · Admin</Text>
+            <Text style={styles.trustLine}>Your data stays private to your society</Text>
+          </MotiView>
+        ) : (
+          <View style={styles.brandBlock} />
+        )}
 
         <View style={styles.spacer} pointerEvents="none" />
 
-        <View>
-          <MotiView
-            from={{ opacity: 0, translateY: 24 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'timing', duration: 760, delay: 140 }}
-          >
-            <Text style={styles.headline}>Your society,{'\n'}securely connected</Text>
-            <Text style={styles.sub}>One calm place for everything at your gate.</Text>
-          </MotiView>
-
-          <MotiView
-            from={{ opacity: 0, translateY: 18 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'timing', duration: 700, delay: 300 }}
-            style={styles.ctaBlock}
-          >
-            <Pressable
-              onPress={() => router.push('/(auth)/signup' as Href)}
-              style={({ pressed }) => [
-                styles.primaryBtn,
-                pressed && { opacity: 0.92, transform: [{ scale: 0.985 }] },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Get started"
+        {skipMotion !== null ? (
+          <View>
+            <MotiView
+              from={copyMotion.from}
+              animate={copyMotion.animate}
+              transition={copyMotion.transition}
             >
-              <LinearGradient
-                colors={[HERO_GOLD, HERO_GOLD_DEEP]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.primaryBtnFill}
+              <Text style={styles.headline}>Your society,{'\n'}securely connected</Text>
+              <Text style={styles.sub}>
+                Approve visitors, pay dues, and get notices — right from your phone.
+              </Text>
+            </MotiView>
+
+            <MotiView
+              from={ctaMotion.from}
+              animate={ctaMotion.animate}
+              transition={ctaMotion.transition}
+              style={styles.ctaBlock}
+            >
+              <Pressable
+                onPress={() => router.push('/(auth)/signup' as Href)}
+                style={({ pressed }) => [
+                  styles.primaryBtn,
+                  pressed && { opacity: 0.92, transform: [{ scale: 0.985 }] },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Set up your society"
               >
-                <Text style={styles.primaryBtnText}>Get started</Text>
-              </LinearGradient>
-            </Pressable>
+                <LinearGradient
+                  colors={[HERO_GOLD, HERO_GOLD_DEEP]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.primaryBtnFill}
+                >
+                  <Text style={styles.primaryBtnText}>Set up your society</Text>
+                </LinearGradient>
+              </Pressable>
 
-            <Pressable
-              onPress={() => router.push('/(auth)/login' as Href)}
-              style={({ pressed }) => [styles.signInHit, pressed && { opacity: 0.7 }]}
-              accessibilityRole="button"
-              accessibilityLabel="Sign in"
-            >
-              <Text style={styles.signInText}>Sign in</Text>
-            </Pressable>
-          </MotiView>
-        </View>
+              <Pressable
+                onPress={() => router.push('/(auth)/login' as Href)}
+                style={({ pressed }) => [
+                  styles.signInBtn,
+                  pressed && { opacity: 0.78, backgroundColor: 'rgba(255,255,255,0.06)' },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Sign in"
+              >
+                <Text style={styles.signInText}>Sign in</Text>
+              </Pressable>
+            </MotiView>
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -159,6 +222,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl + Spacing.sm, // 32
     justifyContent: 'space-between',
   },
+  brandBlock: {
+    gap: Spacing.sm,
+  },
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -169,6 +235,23 @@ const styles = StyleSheet.create({
     fontSize: 38,
     letterSpacing: -1.6,
     color: '#FFFFFF',
+  },
+  rolesLine: {
+    fontFamily: FontFamily.medium,
+    fontSize: 12,
+    lineHeight: 16,
+    color: 'rgba(255,255,255,0.58)',
+    letterSpacing: 0.4,
+    paddingLeft: 34 + Spacing.md, // align under wordmark
+  },
+  trustLine: {
+    fontFamily: FontFamily.body,
+    fontSize: 12,
+    lineHeight: 16,
+    color: 'rgba(255,255,255,0.72)',
+    letterSpacing: 0.15,
+    paddingLeft: 34 + Spacing.md,
+    marginTop: -2,
   },
   spacer: {
     flex: 1,
@@ -186,7 +269,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     color: 'rgba(255,255,255,0.86)',
-    maxWidth: 300,
+    maxWidth: 320,
   },
   ctaBlock: {
     marginTop: Spacing.xxl,
@@ -213,15 +296,18 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 0.15,
   },
-  signInHit: {
+  signInBtn: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.md + 2,
+    borderRadius: Radii.pill,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderColor: 'rgba(255,255,255,0.42)',
   },
   signInText: {
     fontFamily: FontFamily.heading,
     fontSize: 16,
-    color: 'rgba(255,255,255,0.92)',
+    color: 'rgba(255,255,255,0.96)',
     letterSpacing: 0.2,
   },
 });
