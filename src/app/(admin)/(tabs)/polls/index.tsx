@@ -14,7 +14,7 @@ import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
-import { Brand, FontFamily, TypeScale } from '@/constants/theme';
+import { FontFamily, TypeScale } from '@/constants/theme';
 import { useModalBack } from '@/hooks/use-modal-back';
 import { useThemePalette } from '@/hooks/use-theme';
 import { canPublishPoll, isPollExpired } from '@/lib/community';

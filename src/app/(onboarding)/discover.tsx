@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -51,15 +51,7 @@ export default function DiscoverSocietyScreen() {
     [flats],
   );
 
-  useEffect(() => {
-    const t = setTimeout(() => {
-      void runSearch(query);
-    }, 350);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query]);
-
-  const runSearch = async (q: string) => {
+  const runSearch = useCallback(async (q: string) => {
     setSearching(true);
     setError(null);
     try {
@@ -74,7 +66,14 @@ export default function DiscoverSocietyScreen() {
     } finally {
       setSearching(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      void runSearch(query);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [query, runSearch]);
 
   const onSelect = async (society: DiscoverableSociety) => {
     setSelected(society);

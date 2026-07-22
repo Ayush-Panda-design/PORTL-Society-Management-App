@@ -28,7 +28,6 @@ export function useNetworkStatus(): NetworkStatus {
     const hasNetInfoNative = Boolean((NativeModules as any)?.RNCNetInfo);
     // Helpful during development when the native module isn't linked yet.
     if (__DEV__) {
-      // eslint-disable-next-line no-console
       console.log('[useNetworkStatus] netinfo native available:', hasNetInfoNative);
     }
     if (!hasNetInfoNative) return;
@@ -38,7 +37,7 @@ export function useNetworkStatus(): NetworkStatus {
 
     void (async () => {
       try {
-        const netinfoModule = require('@react-native-community/netinfo');
+        const netinfoModule = await import('@react-native-community/netinfo');
         const NetInfo = netinfoModule?.default ?? netinfoModule;
 
         const apply = (state: {

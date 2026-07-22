@@ -41,7 +41,7 @@ import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
-import { Brand, FontFamily, Pastels, getPastels, type PastelTone } from '@/constants/theme';
+import { Brand, FontFamily, getPastels, type PastelTone } from '@/constants/theme';
 import { useModalBack } from '@/hooks/use-modal-back';
 import { useThemePalette } from '@/hooks/use-theme';
 import { formatNoticeDate } from '@/lib/community';

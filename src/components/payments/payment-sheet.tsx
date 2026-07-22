@@ -75,7 +75,7 @@ export function PaymentSheet({
   const [phase, setPhase] = useState<Phase>('idle');
   const [error, setError] = useState<string | null>(null);
   const [canRetry, setCanRetry] = useState(true);
-  const [payment, setPayment] = useState<Payment | null>(null);
+  const [, setPayment] = useState<Payment | null>(null);
 
   const instanceId = useRef(`p${Math.random().toString(36).slice(2, 10)}`).current;
   const startedRef = useRef(false);

@@ -8,7 +8,7 @@ import Toast from 'react-native-toast-message';
 import { DrawerMenuButton } from '@/components/navigation/drawer-menu-button';
 import { InitialsAvatar } from '@/components/ui/brand';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { Brand, FontFamily, Pastels, type PastelTone } from '@/constants/theme';
+import { Brand, FontFamily, type PastelTone } from '@/constants/theme';
 import {
   getPushRegistrationHint,
   registerForPushNotifications,

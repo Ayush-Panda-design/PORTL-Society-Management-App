@@ -1,6 +1,6 @@
 import React from 'react';
 import { BlurView, type BlurViewProps } from 'expo-blur';
-import { View, StyleSheet, type ViewProps, type StyleProp, type ViewStyle } from 'react-native';
+import { View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { useColorScheme } from 'nativewind';
 
 import { Brand } from '@/constants/theme';

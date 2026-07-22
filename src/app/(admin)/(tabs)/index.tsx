@@ -166,23 +166,6 @@ export default function AdminHome() {
     ],
   }));
 
-  if (!societyId) {
-    return (
-      <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
-        <EmptyState
-          visual="disconnected"
-          title="No society linked"
-          subtitle="Finish onboarding to create or join a society."
-        />
-      </SafeAreaView>
-    );
-  }
-
-  const stats = statsQuery.data;
-  const go = (path: string) => router.push(href(path));
-  const pending = stats?.pendingVisitorsToday ?? 0;
-  const complaints = stats?.openComplaints ?? 0;
-  const residents = stats?.totalResidents ?? 0;
   const query = search.trim().toLowerCase();
 
   const toolHits = useMemo(() => {
@@ -202,6 +185,23 @@ export default function AdminHome() {
       .slice(0, 6);
   }, [query, residentsQuery.data]);
 
+  if (!societyId) {
+    return (
+      <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
+        <EmptyState
+          visual="disconnected"
+          title="No society linked"
+          subtitle="Finish onboarding to create or join a society."
+        />
+      </SafeAreaView>
+    );
+  }
+
+  const stats = statsQuery.data;
+  const go = (path: string) => router.push(href(path));
+  const pending = stats?.pendingVisitorsToday ?? 0;
+  const complaints = stats?.openComplaints ?? 0;
+  const residents = stats?.totalResidents ?? 0;
   const showSearchResults = query.length > 0;
 
   return (
