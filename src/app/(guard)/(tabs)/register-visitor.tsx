@@ -1,7 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { Search, X, Camera, ImageIcon, ChevronRight, ChevronLeft } from 'lucide-react-native';
-import { useThemePalette } from '@/hooks/use-theme';
 import { type ReactNode, useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -31,7 +30,6 @@ import { Brand, FontFamily } from '@/constants/theme';
 import { Tokens } from '@/theme/tokens';
 
 const STEPS = ['Photo', 'Details', 'Type & Submit'] as const;
-const TOTAL_STEPS = STEPS.length;
 
 // ─── Step progress bar ──────────────────────────────────────────────────────
 function StepIndicator({ current }: { current: number }) {
@@ -73,7 +71,6 @@ function StepIndicator({ current }: { current: number }) {
 }
 
 export default function RegisterVisitorScreen() {
-  const palette = useThemePalette();
   const profile = useAuthStore((s) => s.profile);
   const user = useAuthStore((s) => s.user);
 

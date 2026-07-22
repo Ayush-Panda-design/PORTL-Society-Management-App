@@ -1,6 +1,9 @@
 import { useEffect, type ComponentType } from 'react';
 import type { LucideProps } from 'lucide-react-native';
+import { View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+
+import { Brand } from '@/constants/theme';
 
 type Props = {
   Icon: ComponentType<LucideProps>;
@@ -11,8 +14,7 @@ type Props = {
 };
 
 /**
- * Bottom-tab icon with a springy focus bounce: pops to ~1.15 then settles
- * at 1.08 while active, relaxes back to 1 when the tab loses focus.
+ * Bottom-tab icon with a soft brand-red focus wash + spring bounce.
  */
 export function TabBarIcon({ Icon, color, size, focused, strokeWidth = 1.5 }: Props) {
   const scale = useSharedValue(focused ? 1.08 : 1);
@@ -35,7 +37,23 @@ export function TabBarIcon({ Icon, color, size, focused, strokeWidth = 1.5 }: Pr
 
   return (
     <Animated.View style={animatedStyle}>
-      <Icon color={color} size={size} strokeWidth={strokeWidth} fill={focused ? color : 'transparent'} />
+      <View
+        style={{
+          width: size + 18,
+          height: size + 18,
+          borderRadius: 999,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: focused ? Brand.primarySoft : 'transparent',
+        }}
+      >
+        <Icon
+          color={color}
+          size={size}
+          strokeWidth={strokeWidth}
+          fill={focused ? color : 'transparent'}
+        />
+      </View>
     </Animated.View>
   );
 }

@@ -8,7 +8,8 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
-import { Brand, FontFamily } from '@/constants/theme';
+import { FontFamily } from '@/constants/theme';
+import { useThemePalette } from '@/hooks/use-theme';
 import { hapticLight } from '@/lib/haptics';
 
 export type SwipeAction = {
@@ -34,6 +35,7 @@ const ACTION_W = 76;
 export function SwipeActionRow({ children, actions, actionWidth = ACTION_W }: Props) {
   const reveal = actions.length * actionWidth;
   const translateX = useSharedValue(0);
+  const { surface } = useThemePalette();
 
   const snapClosed = () => {
     translateX.value = withSpring(0, { damping: 18, stiffness: 240 });
@@ -89,7 +91,7 @@ export function SwipeActionRow({ children, actions, actionWidth = ACTION_W }: Pr
         ))}
       </View>
       <GestureDetector gesture={pan}>
-        <Animated.View style={[{ backgroundColor: Brand.surface }, rowStyle]}>
+        <Animated.View style={[{ backgroundColor: surface }, rowStyle]}>
           {children}
         </Animated.View>
       </GestureDetector>

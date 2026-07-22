@@ -1,15 +1,33 @@
 import React from 'react';
-import { View, ViewProps, StyleSheet } from 'react-native';
+import { View, type ViewProps, StyleSheet } from 'react-native';
 
-import { Tokens } from '@/theme/tokens';
+import { useThemePalette } from '@/hooks/use-theme';
+import { getTokens } from '@/theme/tokens';
 
 interface CardProps extends ViewProps {
   children: React.ReactNode;
 }
 
 export function Card({ children, style, ...props }: CardProps) {
+  const { scheme, card, isDark } = useThemePalette();
+  const tokens = getTokens(scheme);
+
   return (
-    <View style={[styles.card, style]} {...props}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: card,
+          borderRadius: tokens.radius.card,
+          padding: tokens.spacing.lg,
+          ...tokens.elevation.level1,
+          borderWidth: isDark ? StyleSheet.hairlineWidth : 0,
+          borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'transparent',
+        },
+        style,
+      ]}
+      {...props}
+    >
       {children}
     </View>
   );
@@ -17,9 +35,6 @@ export function Card({ children, style, ...props }: CardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Tokens.color.surface,
-    borderRadius: Tokens.radius.card,
-    padding: Tokens.spacing.lg,
-    ...Tokens.elevation.level1,
+    overflow: 'hidden',
   },
 });

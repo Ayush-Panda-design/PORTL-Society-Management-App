@@ -30,7 +30,7 @@ export default function CompleteProfileScreen() {
 
   const [fullName, setFullName] = useState(profile?.full_name ?? '');
   const [phone, setPhone] = useState(profile?.phone ?? '');
-  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url ?? '');
+  const [avatarUrl] = useState(profile?.avatar_url ?? '');
   const [localUri, setLocalUri] = useState<string | null>(null);
   const [pendingAsset, setPendingAsset] = useState<{
     uri: string;

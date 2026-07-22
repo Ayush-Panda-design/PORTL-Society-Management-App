@@ -1,7 +1,5 @@
 import React from 'react';
-import { Text, TextProps, TextStyle } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import MaskedView from '@react-native-masked-view/masked-view';
+import { Text, type TextProps } from 'react-native';
 
 interface GradientTextProps extends TextProps {
   colors: [string, string, ...string[]];
@@ -11,15 +9,13 @@ interface GradientTextProps extends TextProps {
 
 export const GradientText = ({
   colors,
-  start = { x: 0, y: 0 },
-  end = { x: 1, y: 0 },
+  start: _start = { x: 0, y: 0 },
+  end: _end = { x: 1, y: 0 },
   style,
   ...props
 }: GradientTextProps) => {
   // Fallback to standard text with the primary color to avoid MaskedView native crashes on Fabric/New Architecture
   const primaryColor = colors[0] || '#14B8A6';
-  
-  return (
-    <Text {...props} style={[style, { color: primaryColor }]} />
-  );
+
+  return <Text {...props} style={[style, { color: primaryColor }]} />;
 };

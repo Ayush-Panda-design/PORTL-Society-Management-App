@@ -17,6 +17,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Brand, FontFamily } from '@/constants/theme';
+import { useModalBack } from '@/hooks/use-modal-back';
 import { useThemePalette } from '@/hooks/use-theme';
 
 export type ChipOption<T extends string = string> = {
@@ -263,6 +264,7 @@ function RadioSheet<T extends string>({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  useModalBack(open, () => setOpen(false));
   const palette = useThemePalette();
   const selectedLabel = options.find((o) => o.value === value)?.label ?? 'Select';
 

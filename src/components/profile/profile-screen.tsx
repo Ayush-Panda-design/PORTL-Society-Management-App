@@ -7,6 +7,7 @@ import {
   LayoutAnimation,
   Platform,
   Pressable,
+  StyleSheet,
   Text,
   TextInput,
   UIManager,
@@ -31,6 +32,7 @@ import {
   upsertPrivateProfile,
 } from '@/lib/profile-api';
 import { queryKeys } from '@/lib/query-client';
+import { useThemePalette } from '@/hooks/use-theme';
 import { useAuthStore } from '@/stores/authStore';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -87,6 +89,8 @@ function Field({
   error?: string | null;
   helper?: string;
 }) {
+  const { isDark, muted, border, inkMuted, inkSoft, pastels } = useThemePalette();
+
   return (
     <View className="mb-3">
       <View className="mb-1.5 flex-row items-center gap-2">
@@ -95,7 +99,7 @@ function Field({
           style={{
             fontFamily: FontFamily.heading,
             fontSize: TypeScale.label,
-            color: Brand.inkSoft,
+            color: isDark ? inkSoft : Brand.inkSoft,
           }}
         >
           {label}
@@ -103,13 +107,13 @@ function Field({
         {important ? (
           <View
             className="rounded-pill px-1.5 py-0.5"
-            style={{ backgroundColor: Pastels.butter }}
+            style={{ backgroundColor: isDark ? pastels.butter : Pastels.butter }}
           >
             <Text
               style={{
                 fontFamily: FontFamily.heading,
                 fontSize: 9,
-                color: Brand.accentDark,
+                color: isDark ? '#FCD34D' : Brand.accentDark,
               }}
             >
               Important
@@ -121,7 +125,7 @@ function Field({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={Brand.inkMuted}
+        placeholderTextColor={isDark ? inkMuted : Brand.inkMuted}
         multiline={multiline}
         keyboardType={keyboardType}
         autoCapitalize={keyboardType === 'email-address' ? 'none' : 'sentences'}
@@ -131,8 +135,14 @@ function Field({
           minHeight: multiline ? 104 : 48,
           textAlignVertical: multiline ? 'top' : 'center',
           borderWidth: 1.5,
-          borderColor: error ? '#DC2626' : multiline ? '#E5E7EB' : 'transparent',
-          backgroundColor: error ? '#FEF2F2' : Pastels.sage,
+          borderColor: error
+            ? '#DC2626'
+            : isDark
+              ? border
+              : multiline
+                ? '#E5E7EB'
+                : 'transparent',
+          backgroundColor: error ? '#FEF2F2' : isDark ? muted : Pastels.sage,
         }}
       />
       {error ? (
@@ -161,16 +171,27 @@ function ProfileCard({
   onToggle: () => void;
   children: ReactNode;
 }) {
+  const { isDark, pastels, border, primarySoftText, primaryAccent, inkMuted } =
+    useThemePalette();
+
   return (
     <View
       className="mb-4 overflow-hidden rounded-panel bg-surface-card"
-      style={{
-        shadowColor: '#101512',
-        shadowOffset: Elevation.sm.shadowOffset,
-        shadowOpacity: Elevation.sm.shadowOpacity,
-        shadowRadius: Elevation.sm.shadowRadius,
-        elevation: 2,
-      }}
+      style={
+        isDark
+          ? {
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: border,
+              elevation: 0,
+            }
+          : {
+              shadowColor: '#0F172A',
+              shadowOffset: Elevation.sm.shadowOffset,
+              shadowOpacity: Elevation.sm.shadowOpacity,
+              shadowRadius: Elevation.sm.shadowRadius,
+              elevation: 2,
+            }
+      }
     >
       <Pressable
         onPress={onToggle}
@@ -189,19 +210,29 @@ function ProfileCard({
             {privateSection ? (
               <View
                 className="flex-row items-center gap-1 rounded-pill px-2 py-0.5"
-                style={{ backgroundColor: Pastels.rose }}
+                style={{ backgroundColor: isDark ? pastels.rose : Pastels.rose }}
               >
-                <Lock color="#C0392B" size={10} strokeWidth={1.5} />
-                <Text className="text-[10px] font-semibold" style={{ color: '#C0392B' }}>
+                <Lock
+                  color={isDark ? primarySoftText : '#E11D48'}
+                  size={10}
+                  strokeWidth={1.5}
+                />
+                <Text
+                  className="text-[10px] font-semibold"
+                  style={{ color: isDark ? primarySoftText : '#E11D48' }}
+                >
                   Only you
                 </Text>
               </View>
             ) : (
               <View
                 className="rounded-pill px-2 py-0.5"
-                style={{ backgroundColor: Pastels.mint }}
+                style={{ backgroundColor: isDark ? pastels.mint : Pastels.mint }}
               >
-                <Text className="text-[10px] font-semibold" style={{ color: Brand.primary }}>
+                <Text
+                  className="text-[10px] font-semibold"
+                  style={{ color: isDark ? primaryAccent : Brand.primary }}
+                >
                   Visible to admin
                 </Text>
               </View>
@@ -212,13 +243,24 @@ function ProfileCard({
           ) : null}
         </View>
         <ChevronDown
-          color={Brand.inkMuted}
+          color={isDark ? inkMuted : Brand.inkMuted}
           size={20}
           strokeWidth={1.5}
           style={{ transform: [{ rotate: open ? '180deg' : '0deg' }], marginTop: 2 }}
         />
       </Pressable>
-      {open ? <View className="border-t border-surface-border px-4 pb-4 pt-3">{children}</View> : null}
+      {open ? (
+        <View
+          className={isDark ? 'px-4 pb-4 pt-3' : 'border-t border-surface-border px-4 pb-4 pt-3'}
+          style={
+            isDark
+              ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: border }
+              : undefined
+          }
+        >
+          {children}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -229,6 +271,7 @@ export function ProfileScreen() {
   const queryClient = useQueryClient();
   const userId = profile?.id;
   const insets = useSafeAreaInsets();
+  const { isDark, muted, border, inkMuted, inkSoft, primaryAccent } = useThemePalette();
 
   const [fullName, setFullName] = useState(profile?.full_name ?? '');
   const [phone, setPhone] = useState(profile?.phone ?? '');
@@ -535,9 +578,16 @@ export function ProfileScreen() {
                 void pickAvatar();
               }}
               className="rounded-card px-3.5 py-2"
-              style={{ backgroundColor: Pastels.mint }}
+              style={{
+                backgroundColor: isDark ? muted : Pastels.mint,
+              }}
             >
-              <Text style={{ fontFamily: FontFamily.heading, color: Brand.primary }}>
+              <Text
+                style={{
+                  fontFamily: FontFamily.heading,
+                  color: isDark ? primaryAccent : Brand.primary,
+                }}
+              >
                 {avatarUrl ? 'Change photo' : 'Add photo'}
               </Text>
             </Pressable>
@@ -549,9 +599,24 @@ export function ProfileScreen() {
                   void persistAvatar(null);
                 }}
                 className="rounded-card px-3.5 py-2"
-                style={{ backgroundColor: Pastels.rose }}
+                style={
+                  isDark
+                    ? {
+                        backgroundColor: muted,
+                        borderWidth: StyleSheet.hairlineWidth,
+                        borderColor: border,
+                      }
+                    : { backgroundColor: Pastels.rose }
+                }
               >
-                <Text style={{ fontFamily: FontFamily.heading, color: '#C0392B' }}>Remove</Text>
+                <Text
+                  style={{
+                    fontFamily: FontFamily.heading,
+                    color: isDark ? primaryAccent : '#E11D48',
+                  }}
+                >
+                  Remove
+                </Text>
               </Pressable>
             ) : null}
           </View>
@@ -618,11 +683,20 @@ export function ProfileScreen() {
         >
           <View
             className="rounded-card px-3 py-3"
-            style={{ backgroundColor: Pastels.butter, borderLeftWidth: 3, borderLeftColor: Brand.accent }}
+            style={{
+              backgroundColor: isDark ? muted : Pastels.butter,
+              borderLeftWidth: 3,
+              borderLeftColor: isDark ? primaryAccent : Brand.accent,
+              borderWidth: isDark ? 1 : 0,
+              borderColor: isDark ? border : 'transparent',
+            }}
           >
             <Text
               className="mb-3 text-xs uppercase tracking-widest"
-              style={{ fontFamily: FontFamily.heading, color: Brand.accentDark }}
+              style={{
+                fontFamily: FontFamily.heading,
+                color: isDark ? primaryAccent : Brand.accentDark,
+              }}
             >
               Contact person
             </Text>
@@ -713,16 +787,16 @@ export function ProfileScreen() {
             value={noteDraft}
             onChangeText={setNoteDraft}
             placeholder="Write a new note…"
-            placeholderTextColor={Brand.inkMuted}
+            placeholderTextColor={isDark ? inkMuted : Brand.inkMuted}
             multiline
             className="mb-2 rounded-card px-4 py-3 text-[15px] text-ink"
             style={{
               fontFamily: FontFamily.body,
               minHeight: 88,
               textAlignVertical: 'top',
-              backgroundColor: Pastels.sage,
+              backgroundColor: isDark ? muted : Pastels.sage,
               borderWidth: 1.5,
-              borderColor: '#E5E7EB',
+              borderColor: isDark ? border : '#E5E7EB',
             }}
           />
           <Pressable
@@ -731,7 +805,7 @@ export function ProfileScreen() {
             onPress={() => addNoteMutation.mutate()}
             className="mb-4 items-center rounded-card py-3"
             style={{
-              backgroundColor: noteDraft.trim() ? Brand.primary : Pastels.sage,
+              backgroundColor: noteDraft.trim() ? Brand.primary : isDark ? muted : Pastels.sage,
               opacity: noteDraft.trim() ? 1 : 0.7,
             }}
           >
@@ -741,7 +815,7 @@ export function ProfileScreen() {
               <Text
                 style={{
                   fontFamily: FontFamily.heading,
-                  color: noteDraft.trim() ? '#fff' : Brand.inkMuted,
+                  color: noteDraft.trim() ? '#fff' : isDark ? inkMuted : Brand.inkMuted,
                 }}
               >
                 Add to timeline
@@ -765,7 +839,7 @@ export function ProfileScreen() {
                 style={{
                   fontFamily: FontFamily.heading,
                   fontSize: TypeScale.label,
-                  color: Brand.inkSoft,
+                  color: isDark ? inkSoft : Brand.inkSoft,
                 }}
               >
                 Timeline · {notes.length}
@@ -818,7 +892,7 @@ export function ProfileScreen() {
         className="border-t border-surface-border bg-surface-card px-5 pt-3"
         style={{
           paddingBottom: Math.max(insets.bottom, 12),
-          shadowColor: '#101512',
+          shadowColor: '#0F172A',
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.06,
           shadowRadius: 8,

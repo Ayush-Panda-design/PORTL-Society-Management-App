@@ -1,11 +1,10 @@
 import { useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Check, Camera as CameraIcon, ScanLine, X } from 'lucide-react-native';
-import { useEffect, useState, useRef } from 'react';
-import { ActivityIndicator, Pressable, Text, View, StyleSheet } from 'react-native';
+import { ArrowLeft, Check, ScanLine } from 'lucide-react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Camera, CameraView, useCameraPermissions } from 'expo-camera';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 
-import { ErrorBanner } from '@/components/visitors/error-banner';
 import { useAppBack } from '@/hooks/use-app-back';
 import { supabase } from '@/lib/supabase';
 import { uploadLocalImage } from '@/lib/storage-upload';
@@ -18,21 +17,23 @@ export default function ScanPassScreen() {
   const { visitorId } = useLocalSearchParams<{ visitorId?: string }>();
   const profile = useAuthStore((s) => s.profile);
   const [permission, requestPermission] = useCameraPermissions();
-  
+
   const [scanned, setScanned] = useState(false);
   const [visitor, setVisitor] = useState<VisitorWithFlat | null>(null);
-  
+
   const [takingPhoto, setTakingPhoto] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  
+
   const cameraRef = useRef<CameraView>(null);
 
   useEffect(() => {
     if (visitorId && permission?.granted) {
-      handleBarCodeScanned({ data: visitorId });
+      void handleBarCodeScanned({ data: visitorId });
     }
+    // Initial deep-link scan only — handler identity changes every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visitorId, permission?.granted]);
 
   if (!permission) {
@@ -173,7 +174,7 @@ export default function ScanPassScreen() {
 
       setSuccess(true);
       setTakingPhoto(false);
-    } catch (e) {
+    } catch {
       throw new Error('Failed to mark entry');
     }
   };

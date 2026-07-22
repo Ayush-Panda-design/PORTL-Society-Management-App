@@ -36,14 +36,18 @@ export function backFallbackForSegments(segments: readonly string[]): Href | nul
   };
 
   const adminAux: Record<string, string> = {
-    polls: '/(admin)/settings',
-    complaints: '/(admin)/settings',
-    amenities: '/(admin)/settings',
-    staff: '/(admin)/settings',
-    towers: '/(admin)/settings',
-    flats: '/(admin)/settings',
-    invites: '/(admin)/settings',
-    'join-requests': '/(admin)/settings',
+    // Opened from dashboard (and More) — prefer home, not the More tab
+    polls: '/(admin)',
+    complaints: '/(admin)',
+    amenities: '/(admin)',
+    staff: '/(admin)',
+    towers: '/(admin)',
+    flats: '/(admin)',
+    invites: '/(admin)',
+    'join-requests': '/(admin)',
+    'audit-log': '/(admin)/settings',
+    roles: '/(admin)/settings',
+    'payout-setup': '/(admin)/settings',
   };
 
   const guardAux: Record<string, string> = {

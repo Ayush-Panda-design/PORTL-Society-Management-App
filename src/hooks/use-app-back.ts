@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 
 import { backFallbackForSegments } from '@/lib/navigation-back';
 import { destinationForProfile } from '@/lib/auth-routing';
+import { dismissTopModal } from '@/lib/modal-back-stack';
 import { useAuthStore } from '@/stores/authStore';
 
 type UseAppBackOptions = {
@@ -11,9 +12,16 @@ type UseAppBackOptions = {
   allowRoleHomeFallback?: boolean;
 };
 
+type NavLike = {
+  canGoBack: () => boolean;
+  goBack: () => void;
+  getParent?: () => NavLike | undefined;
+};
+
 /**
  * Back navigation that respects tab/stack history on the focused navigator.
- * Root `router.canGoBack()` is wrong inside tab aux screens — it skips tab history.
+ * Walks parent navigators so a root Android BackHandler still finds tab history.
+ * Open modals/sheets are dismissed first.
  */
 export function useAppBack(options?: UseAppBackOptions) {
   const navigation = useNavigation();
@@ -24,9 +32,17 @@ export function useAppBack(options?: UseAppBackOptions) {
   const allowRoleHomeFallback = options?.allowRoleHomeFallback !== false;
 
   return useCallback((): boolean => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
+    if (dismissTopModal()) {
       return true;
+    }
+
+    let nav: NavLike | undefined = navigation as unknown as NavLike;
+    while (nav) {
+      if (nav.canGoBack()) {
+        nav.goBack();
+        return true;
+      }
+      nav = nav.getParent?.();
     }
 
     const fallback = backFallbackForSegments(segments);

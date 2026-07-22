@@ -8,7 +8,7 @@ import {
   type LucideIcon,
 } from 'lucide-react-native';
 
-import { Brand, Pastels } from '@/constants/theme';
+import { Brand, getPastels, type PastelTone } from '@/constants/theme';
 
 export type ComplaintCategoryMeta = {
   Icon: LucideIcon;
@@ -16,22 +16,36 @@ export type ComplaintCategoryMeta = {
   bg: string;
 };
 
-const CATEGORY_META: Record<string, ComplaintCategoryMeta> = {
-  Parking: { Icon: Car, color: '#6B5CC4', bg: Pastels.lilac },
-  Plumbing: { Icon: Droplets, color: '#2563EB', bg: Pastels.sky },
-  Electrical: { Icon: Zap, color: '#C4861A', bg: Pastels.butter },
-  Housekeeping: { Icon: Leaf, color: Brand.primary, bg: Pastels.mint },
-  Security: { Icon: ShieldAlert, color: '#C0392B', bg: Pastels.rose },
-  Noise: { Icon: Wrench, color: '#B06020', bg: Pastels.peach },
-  Other: { Icon: Wrench, color: Brand.inkMuted, bg: Pastels.sage },
+type CategoryDef = {
+  Icon: LucideIcon;
+  color: string;
+  bg: PastelTone;
 };
 
-const FALLBACK: ComplaintCategoryMeta = {
+const CATEGORY_META: Record<string, CategoryDef> = {
+  Parking: { Icon: Car, color: '#F43F5E', bg: 'lilac' },
+  Plumbing: { Icon: Droplets, color: '#2563EB', bg: 'sky' },
+  Electrical: { Icon: Zap, color: '#C4861A', bg: 'butter' },
+  Housekeeping: { Icon: Leaf, color: Brand.primary, bg: 'mint' },
+  Security: { Icon: ShieldAlert, color: '#E11D48', bg: 'rose' },
+  Noise: { Icon: Wrench, color: '#B06020', bg: 'peach' },
+  Other: { Icon: Wrench, color: Brand.inkMuted, bg: 'sage' },
+};
+
+const FALLBACK: CategoryDef = {
   Icon: Wrench,
   color: Brand.inkMuted,
-  bg: Pastels.sage,
+  bg: 'sage',
 };
 
-export function complaintCategoryMeta(category: string): ComplaintCategoryMeta {
-  return CATEGORY_META[category] ?? FALLBACK;
+export function complaintCategoryMeta(
+  category: string,
+  scheme?: 'light' | 'dark',
+): ComplaintCategoryMeta {
+  const def = CATEGORY_META[category] ?? FALLBACK;
+  return {
+    Icon: def.Icon,
+    color: def.color,
+    bg: getPastels(scheme)[def.bg],
+  };
 }

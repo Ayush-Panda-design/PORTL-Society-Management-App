@@ -148,7 +148,7 @@ export const AdminBookingDetailSheet = forwardRef<GorhomBottomSheetModal, Props>
               <Text className="mt-1 text-xs text-brand-700">Part of recurring series</Text>
             ) : null}
             {(booking.cancel_penalty_charged_paise ?? 0) > 0 ? (
-              <Text className="mt-1 text-xs" style={{ color: '#C0392B' }}>
+              <Text className="mt-1 text-xs" style={{ color: '#E11D48' }}>
                 Late-cancel penalty {formatPaise(booking.cancel_penalty_charged_paise!)} (
                 {paymentStatusLabel(String(booking.cancel_penalty_payment_status))})
               </Text>

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, FlatList, Modal, Pressable, Share, Text, TextInput, View } from 'react-native';
+import { FlatList, Modal, Pressable, Share, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Flag, Download, X } from 'lucide-react-native';
+import { Download, X } from 'lucide-react-native';
 
 import { StaggeredListItem } from '@/components/ui/staggered-list-item';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
@@ -11,7 +11,8 @@ import { SkeletonList } from '@/components/visitors/loading-state';
 import { VisitorCard } from '@/components/visitors/visitor-card';
 import { ChipSelector } from '@/components/ui/chip-selector';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { Brand, FontFamily, Pastels } from '@/constants/theme';
+import { Brand, FontFamily } from '@/constants/theme';
+import { useModalBack } from '@/hooks/use-modal-back';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { formatDateTime, flatTowerName } from '@/lib/visitors';
 import { supabase } from '@/lib/supabase';
@@ -41,6 +42,7 @@ export default function GuardLogsScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [notesModal, setNotesModal] = useState<{ visitorId: string; logId: string | null } | null>(null);
+  useModalBack(notesModal !== null, () => setNotesModal(null));
   const [notesText, setNotesText] = useState('');
   const [flagged, setFlagged] = useState<Set<string>>(new Set());
   const [logMeta, setLogMeta] = useState<Record<string, { logId: string; entry: string | null; exit: string | null; notes: string | null; isFlagged: boolean }>>({});
@@ -357,7 +359,12 @@ export default function GuardLogsScreen() {
       )}
 
       {/* Notes Modal */}
-      <Modal visible={notesModal !== null} animationType="fade" transparent>
+      <Modal
+        visible={notesModal !== null}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setNotesModal(null)}
+      >
         <View className="flex-1 justify-center bg-black/50 px-6">
           <View className="rounded-2xl bg-surface-card p-5">
             <View className="flex-row items-center justify-between mb-3">

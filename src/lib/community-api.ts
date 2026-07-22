@@ -124,7 +124,7 @@ export async function fetchPolls(societyId: string): Promise<Poll[]> {
 
   if (error) throw new Error(error.message);
 
-  return ((data as Array<Omit<Poll, 'options'> & { options: unknown }>) ?? []).map((row) => ({
+  return ((data as (Omit<Poll, 'options'> & { options: unknown })[]) ?? []).map((row) => ({
     ...row,
     options: parseJsonStringArray(row.options),
   }));
@@ -531,7 +531,7 @@ export async function fetchAmenities(societyId: string): Promise<Amenity[]> {
     .order('is_featured', { ascending: false })
     .order('name', { ascending: true });
   if (error) throw new Error(error.message);
-  return ((data as Array<Omit<Amenity, 'slots'> & { slots: unknown }>) ?? []).map((row) => ({
+  return ((data as (Omit<Amenity, 'slots'> & { slots: unknown })[]) ?? []).map((row) => ({
     ...row,
     slots: parseJsonStringArray(row.slots),
     is_featured: Boolean(row.is_featured),

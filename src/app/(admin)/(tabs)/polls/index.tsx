@@ -14,7 +14,9 @@ import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
-import { Brand, FontFamily, TypeScale } from '@/constants/theme';
+import { FontFamily, TypeScale } from '@/constants/theme';
+import { useModalBack } from '@/hooks/use-modal-back';
+import { useThemePalette } from '@/hooks/use-theme';
 import { canPublishPoll, isPollExpired } from '@/lib/community';
 import { createPoll, fetchPolls } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
@@ -46,8 +48,10 @@ export default function AdminPollsScreen() {
   const societyId = profile?.society_id;
   const userId = profile?.id;
   const queryClient = useQueryClient();
+  const palette = useThemePalette();
 
   const [modalOpen, setModalOpen] = useState(false);
+  useModalBack(modalOpen, () => setModalOpen(false));
   const [formError, setFormError] = useState<string | null>(null);
 
   const pollsQuery = useQuery({
@@ -157,7 +161,9 @@ export default function AdminPollsScreen() {
                     fontFamily: FontFamily.heading,
                     fontSize: TypeScale.label,
                     color:
-                      section.title === 'Needs action' ? Brand.accentDark : Brand.inkSoft,
+                      section.title === 'Needs action'
+                        ? palette.primaryAccent
+                        : palette.inkSoft,
                   }}
                 >
                   {section.title}

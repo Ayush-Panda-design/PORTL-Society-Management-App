@@ -19,6 +19,7 @@ import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand, FontFamily } from '@/constants/theme';
+import { useThemePalette } from '@/hooks/use-theme';
 import { hapticConfirm } from '@/lib/haptics';
 import { queryKeys } from '@/lib/query-client';
 import { listSocietyInviteCodes, regenerateInviteCode } from '@/lib/society-api';
@@ -38,6 +39,7 @@ function InviteCodeCard({
   busyRole: InviteRole | null;
   onRegenerate: (role: InviteRole) => void;
 }) {
+  const { card, surface, border, inkMuted, primaryAccent, isDark } = useThemePalette();
   const shareMessage = `Join our society on Portl with this ${roleLabel(invite.role).toLowerCase()} invite code: ${invite.code}`;
 
   const share = async () => {
@@ -53,6 +55,7 @@ function InviteCodeCard({
   };
 
   const isResident = invite.role === 'resident';
+  const ticketTop = isResident ? Brand.charcoal : Brand.primaryDark;
   const expiresLabel = invite.expires_at
     ? new Date(invite.expires_at).toLocaleDateString(undefined, {
         day: 'numeric',
@@ -65,14 +68,14 @@ function InviteCodeCard({
 
   return (
     <View className="mb-5 overflow-hidden rounded-bubbly">
-      {/* Top Half */}
-      <View
-        className={`p-6 ${isResident ? 'bg-charcoal' : 'bg-accent-500'}`}
-      >
+      <View className="p-6" style={{ backgroundColor: ticketTop }}>
         <Text className="mb-1 text-xs font-medium uppercase tracking-wider text-white/75">
           {roleLabel(invite.role)} Access
         </Text>
-        <Text className="mb-2 text-3xl tracking-[0.2em] text-white" style={{ fontFamily: FontFamily.display }}>
+        <Text
+          className="mb-2 text-3xl tracking-[0.2em] text-white"
+          style={{ fontFamily: FontFamily.display }}
+        >
           {invite.code}
         </Text>
         <Text className="text-xs text-white/70">
@@ -85,18 +88,31 @@ function InviteCodeCard({
         ) : null}
       </View>
 
-      {/* Perforated Divider */}
-      <View className="h-8 flex-row items-center overflow-hidden bg-surface-card">
-        <View className="absolute left-0 -ml-2 h-8 w-4 rounded-r-full bg-surface" />
-        <View className="mx-4 h-[1px] flex-1 border-b border-dashed border-surface-border" />
-        <View className="absolute right-0 -mr-2 h-8 w-4 rounded-l-full bg-surface" />
+      <View className="h-8 flex-row items-center overflow-hidden" style={{ backgroundColor: card }}>
+        <View
+          className="absolute left-0 -ml-2 h-8 w-4 rounded-r-full"
+          style={{ backgroundColor: surface }}
+        />
+        <View
+          className="mx-4 h-[1px] flex-1 border-b border-dashed"
+          style={{ borderColor: border }}
+        />
+        <View
+          className="absolute right-0 -mr-2 h-8 w-4 rounded-l-full"
+          style={{ backgroundColor: surface }}
+        />
       </View>
 
-      {/* Bottom Half */}
-      <View className="flex-row items-center justify-between bg-surface-card px-4 pb-4 pt-1">
+      <View
+        className="flex-row items-center justify-between px-4 pb-4 pt-1"
+        style={{ backgroundColor: card }}
+      >
         <View />
         <AnimatedPressable onPress={() => void share()}>
-          <View className="flex-row items-center rounded-soft bg-charcoal px-4 py-2.5">
+          <View
+            className="flex-row items-center rounded-soft px-4 py-2.5"
+            style={{ backgroundColor: isResident ? Brand.charcoal : Brand.primary }}
+          >
             <Share2 color="#fff" size={16} className="mr-2" />
             <Text className="font-bold text-white">Share</Text>
           </View>
@@ -111,11 +127,11 @@ function InviteCodeCard({
         }`}
       >
         {busyRole === invite.role ? (
-          <ActivityIndicator color={Brand.inkMuted} size="small" />
+          <ActivityIndicator color={inkMuted} size="small" />
         ) : (
-          <RefreshCw color={Brand.inkMuted} size={14} />
+          <RefreshCw color={isDark ? primaryAccent : Brand.inkMuted} size={14} />
         )}
-        <Text className="text-xs text-ink-muted">
+        <Text className="text-xs text-ink-soft">
           Regenerate code (invalidates old code · resets 90-day expiry)
         </Text>
       </Pressable>
@@ -221,7 +237,7 @@ export default function AdminInvitesScreen() {
           </>
         )}
 
-        <Text className="mt-2 text-center text-xs text-ink-faint">
+        <Text className="mt-2 text-center text-xs text-ink-muted">
           Admin access is not joinable via code. Promote co-admins from the residents panel later.
         </Text>
       </ScrollView>

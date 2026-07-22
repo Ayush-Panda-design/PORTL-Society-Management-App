@@ -10,7 +10,7 @@ import { colorScheme as nwColorScheme, vars } from 'nativewind';
 import { type ReactNode, useEffect, useMemo } from 'react';
 import { AppState, View } from 'react-native';
 
-import { Brand, getPalette, themeCssVars } from '@/constants/theme';
+import { Brand, getPalette, setPastelsScheme, themeCssVars } from '@/constants/theme';
 import {
   resolveColorScheme,
   useResolvedColorScheme,
@@ -26,7 +26,7 @@ const PortlLightNav: Theme = {
     card: themeCssVars.light['--color-surface-card'],
     text: themeCssVars.light['--color-ink'],
     border: themeCssVars.light['--color-surface-border'],
-    notification: Brand.accent,
+    notification: Brand.primary,
   },
 };
 
@@ -34,19 +34,19 @@ const PortlDarkNav: Theme = {
   ...NavDarkTheme,
   colors: {
     ...NavDarkTheme.colors,
-    primary: Brand.primary,
+    primary: Brand.primaryOnDark,
     background: themeCssVars.dark['--color-surface'],
     card: themeCssVars.dark['--color-surface-card'],
     text: themeCssVars.dark['--color-ink'],
     border: themeCssVars.dark['--color-surface-border'],
-    notification: Brand.accent,
+    notification: Brand.primaryOnDark,
   },
 };
 
 /**
- * Applies Light / Dark / System like Instagram & WhatsApp:
+ * Applies Light / Dark preference:
  * - NativeWind colorScheme for dark: variants
- * - CSS vars remap surface/ink tokens instantly
+ * - CSS vars remap surface/ink/pastel tokens instantly
  * - React Navigation + StatusBar + system root background stay in sync
  */
 export function AppThemeProvider({ children }: { children: ReactNode }) {
@@ -57,6 +57,10 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     nwColorScheme.set(mode);
   }, [mode]);
+
+  useEffect(() => {
+    setPastelsScheme(resolved);
+  }, [resolved]);
 
   useEffect(() => {
     const apply = () => {

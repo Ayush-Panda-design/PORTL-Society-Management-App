@@ -31,6 +31,8 @@ import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand, FontFamily, Pastels, amenityCoverUri } from '@/constants/theme';
+import { useThemePalette } from '@/hooks/use-theme';
+import { useModalBack } from '@/hooks/use-modal-back';
 import {
   amenityDateOptions,
   amenitySlotCapacity,
@@ -130,6 +132,7 @@ function slotStats(bookings: AmenityBooking[], slot: string, flatId: string, cap
 
 export default function ResidentAmenitiesScreen() {
   const profile = useAuthStore((s) => s.profile);
+  const { isDark, ...palette } = useThemePalette();
   const societyId = profile?.society_id;
   const flatId = profile?.flat_id;
   const queryClient = useQueryClient();
@@ -141,6 +144,7 @@ export default function ResidentAmenitiesScreen() {
   const [message, setMessage] = useState<string | null>(null);
   const [successVisible, setSuccessVisible] = useState(false);
   const [pendingSlot, setPendingSlot] = useState<string | null>(null);
+  useModalBack(Boolean(pendingSlot), () => setPendingSlot(null));
   const [payBooking, setPayBooking] = useState<{
     bookingId: string;
     amountPaise: number;
@@ -623,11 +627,18 @@ export default function ResidentAmenitiesScreen() {
                       )
                     }
                     className="mt-3 self-start rounded-pill px-3 py-1.5"
-                    style={{ backgroundColor: Pastels.peach }}
+                    style={{
+                      backgroundColor: isDark ? palette.muted : Pastels.peach,
+                      borderWidth: isDark ? 1 : 0,
+                      borderColor: isDark ? palette.border : 'transparent',
+                    }}
                   >
                     <Text
                       className="text-[12px]"
-                      style={{ fontFamily: FontFamily.heading, color: Brand.accentDark }}
+                      style={{
+                        fontFamily: FontFamily.heading,
+                        color: isDark ? Brand.primaryOnDark : Brand.accentDark,
+                      }}
                     >
                       Cancel booking
                     </Text>

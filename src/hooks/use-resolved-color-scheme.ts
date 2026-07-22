@@ -1,20 +1,13 @@
-import { useColorScheme as useSystemColorScheme, type ColorSchemeName } from 'react-native';
-
 import { useThemeStore, type ThemeMode } from '@/stores/themeStore';
 
-export function resolveColorScheme(
-  mode: ThemeMode,
-  system: ColorSchemeName | null | undefined,
-): 'light' | 'dark' {
-  if (mode === 'system') {
-    return system === 'dark' ? 'dark' : 'light';
-  }
-  return mode;
+/** Maps stored preference (and legacy `system`) to effective light/dark. */
+export function resolveColorScheme(mode: ThemeMode | 'system' | string): 'light' | 'dark' {
+  if (mode === 'dark') return 'dark';
+  return 'light';
 }
 
-/** Effective light/dark after applying the user's Light / Dark / System preference. */
+/** Effective light/dark from the user's Light / Dark preference. */
 export function useResolvedColorScheme(): 'light' | 'dark' {
   const mode = useThemeStore((s) => s.mode);
-  const systemScheme = useSystemColorScheme();
-  return resolveColorScheme(mode, systemScheme);
+  return resolveColorScheme(mode);
 }

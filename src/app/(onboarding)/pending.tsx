@@ -2,14 +2,13 @@ import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Clock3, LogOut } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Brand, FontFamily, Gradients } from '@/constants/theme';
 import { fetchSocietyName } from '@/lib/society-api';
 import { useAuthStore } from '@/stores/authStore';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
-import { ScrollView } from 'react-native';
 
 export default function PendingApprovalScreen() {
   const profile = useAuthStore((s) => s.profile);

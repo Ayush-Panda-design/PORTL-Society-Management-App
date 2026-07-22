@@ -36,6 +36,7 @@ import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
+import { useModalBack } from '@/hooks/use-modal-back';
 import { complaintCategoryMeta } from '@/lib/complaint-category';
 import { complaintStatusTone } from '@/lib/community';
 import { uploadLocalImage } from '@/lib/storage-upload';
@@ -87,6 +88,7 @@ export default function ResidentHelpdeskScreen() {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
+  useModalBack(composeOpen, () => setComposeOpen(false));
   const [category, setCategory] = useState<string>(COMPLAINT_CATEGORIES[0]);
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<ComplaintPriority>('medium');
@@ -404,7 +406,7 @@ export default function ResidentHelpdeskScreen() {
                         Icon: MessageSquarePlus,
                         title: 'Raise an issue',
                         body: 'Pick a category, describe the problem, and submit.',
-                        tint: '#C0392B',
+                        tint: '#E11D48',
                         wash: Pastels.rose,
                       },
                       {
@@ -466,7 +468,12 @@ export default function ResidentHelpdeskScreen() {
         label="New"
       />
 
-      <Modal visible={composeOpen} animationType="slide" transparent>
+      <Modal
+        visible={composeOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setComposeOpen(false)}
+      >
         <KeyboardAvoidingView behavior="padding" className="flex-1 justify-end bg-black/40">
           <View className="max-h-[90%] rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
             <ScrollView keyboardShouldPersistTaps="handled">

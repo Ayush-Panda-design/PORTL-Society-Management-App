@@ -196,7 +196,7 @@ export default function LoginScreen() {
           <View className="mb-5 flex-row rounded-soft border border-surface-border bg-surface-card p-1">
             <Pressable
               className={`flex-1 items-center rounded-soft py-2.5 ${
-                method === 'password' ? 'bg-charcoal' : ''
+                method === 'password' ? 'bg-brand-600' : ''
               }`}
               onPress={() => switchMethod('password')}
             >
@@ -210,7 +210,7 @@ export default function LoginScreen() {
             </Pressable>
             <Pressable
               className={`flex-1 items-center rounded-soft py-2.5 ${
-                method === 'otp' ? 'bg-charcoal' : ''
+                method === 'otp' ? 'bg-brand-600' : ''
               }`}
               onPress={() => switchMethod('otp')}
             >
@@ -232,7 +232,7 @@ export default function LoginScreen() {
               autoComplete="email"
               keyboardType="email-address"
               placeholder="you@example.com"
-              placeholderTextColor="#9AAFA7"
+              placeholderTextColor="#94A3B8"
               value={email}
               editable={!otpSent || method === 'password'}
               onChangeText={setEmail}
@@ -247,7 +247,7 @@ export default function LoginScreen() {
                 secureTextEntry
                 autoComplete="password"
                 placeholder="••••••••"
-                placeholderTextColor="#9AAFA7"
+                placeholderTextColor="#94A3B8"
                 value={password}
                 onChangeText={setPassword}
               />
@@ -262,7 +262,7 @@ export default function LoginScreen() {
                 keyboardType="number-pad"
                 maxLength={8}
                 placeholder="000000"
-                placeholderTextColor="#9AAFA7"
+                placeholderTextColor="#94A3B8"
                 value={otp}
                 onChangeText={setOtp}
               />
@@ -280,14 +280,15 @@ export default function LoginScreen() {
 
           {method === 'password' ? (
             <Pressable
-              className={`items-center rounded-bubbly bg-charcoal py-4 ${submitting ? 'opacity-70' : ''}`}
+              className={`items-center rounded-bubbly py-4 ${submitting ? 'opacity-70' : ''}`}
               disabled={submitting}
               onPress={() => void onPasswordLogin()}
               style={{
-                shadowColor: Brand.charcoal,
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.22,
-                shadowRadius: 12,
+                backgroundColor: Brand.primary,
+                shadowColor: Brand.primary,
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.28,
+                shadowRadius: 14,
                 elevation: 4,
               }}
             >
@@ -305,14 +306,15 @@ export default function LoginScreen() {
           ) : (
             <>
               <Pressable
-                className={`items-center rounded-bubbly bg-charcoal py-4 ${submitting ? 'opacity-70' : ''}`}
+                className={`items-center rounded-bubbly py-4 ${submitting ? 'opacity-70' : ''}`}
                 disabled={submitting}
                 onPress={() => void (otpSent ? onVerifyOtp() : onSendOtp())}
                 style={{
-                  shadowColor: Brand.charcoal,
-                  shadowOffset: { width: 0, height: 6 },
-                  shadowOpacity: 0.22,
-                  shadowRadius: 12,
+                  backgroundColor: Brand.primary,
+                  shadowColor: Brand.primary,
+                  shadowOffset: { width: 0, height: 8 },
+                  shadowOpacity: 0.28,
+                  shadowRadius: 14,
                   elevation: 4,
                 }}
               >

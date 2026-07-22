@@ -1,5 +1,5 @@
 import { useRouter, type Href } from 'expo-router';
-import { Bell, ChevronRight, LogOut, Monitor, Moon, Sun, type LucideIcon } from 'lucide-react-native';
+import { Bell, ChevronRight, LogOut, Moon, Sun, type LucideIcon } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,16 +8,16 @@ import Toast from 'react-native-toast-message';
 import { DrawerMenuButton } from '@/components/navigation/drawer-menu-button';
 import { InitialsAvatar } from '@/components/ui/brand';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { Brand, FontFamily, Pastels } from '@/constants/theme';
+import { Brand, FontFamily, type PastelTone } from '@/constants/theme';
 import {
   getPushRegistrationHint,
   registerForPushNotifications,
 } from '@/lib/push-notifications';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore, type ThemeMode } from '@/stores/themeStore';
+import { useThemePalette } from '@/hooks/use-theme';
 
 /** Shared icon treatment — calm, one system (not rainbow category colors). */
-const ICON_BG = Pastels.sage;
 const ICON_COLOR = Brand.primary;
 
 export type SettingsLink = {
@@ -26,7 +26,7 @@ export type SettingsLink = {
   subtitle: string;
   Icon: LucideIcon;
   /** @deprecated Ignored — icons use a single neutral treatment. Kept for call-site compat. */
-  tone?: keyof typeof Pastels;
+  tone?: PastelTone;
   /** @deprecated Ignored — icons use a single neutral treatment. Kept for call-site compat. */
   iconColor?: string;
 };
@@ -47,13 +47,11 @@ type Props = {
 const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
-  { value: 'system', label: 'System' },
 ];
 
 function ThemeIcon({ mode }: { mode: ThemeMode }) {
   if (mode === 'dark') return <Moon color={ICON_COLOR} size={18} strokeWidth={1.5} />;
-  if (mode === 'light') return <Sun color={ICON_COLOR} size={18} strokeWidth={1.5} />;
-  return <Monitor color={ICON_COLOR} size={18} strokeWidth={1.5} />;
+  return <Sun color={ICON_COLOR} size={18} strokeWidth={1.5} />;
 }
 
 function LinkRow({
@@ -63,22 +61,31 @@ function LinkRow({
   Icon,
   onPress,
 }: SettingsLink & { onPress: () => void }) {
+  const { pastels, isDark } = useThemePalette();
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      className="mb-2 flex-row items-center gap-3.5 rounded-card bg-surface-card px-4 py-3.5"
-      style={{
-        shadowColor: '#101512',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 6,
-        elevation: 1,
-      }}
+      className={
+        isDark
+          ? 'flex-row items-center gap-3.5 px-4 py-3.5'
+          : 'mb-2 flex-row items-center gap-3.5 rounded-card bg-surface-card px-4 py-3.5'
+      }
+      style={
+        isDark
+          ? undefined
+          : {
+              shadowColor: '#0F172A',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.05,
+              shadowRadius: 6,
+              elevation: 1,
+            }
+      }
     >
       <View
         className="h-10 w-10 items-center justify-center rounded-card"
-        style={{ backgroundColor: ICON_BG }}
+        style={{ backgroundColor: pastels.sage }}
       >
         <Icon color={ICON_COLOR} size={17} strokeWidth={1.5} />
       </View>
@@ -113,6 +120,7 @@ export function SettingsHub({ title, subtitle, links, sections }: Props) {
   const userId = useAuthStore((s) => s.user?.id);
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
+  const { pastels, card, primarySoft, isDark } = useThemePalette();
   const [signingOut, setSigningOut] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
   const [pushHint, setPushHint] = useState('Checking…');
@@ -169,14 +177,21 @@ export function SettingsHub({ title, subtitle, links, sections }: Props) {
     }
   };
 
-  const renderLinks = (items: SettingsLink[]) =>
-    items.map((item) => (
+  const renderLinks = (items: SettingsLink[]) => {
+    const rows = items.map((item) => (
       <LinkRow
         key={String(item.href)}
         {...item}
         onPress={() => router.push(item.href)}
       />
     ));
+    if (isDark) {
+      return (
+        <View className="mb-2 overflow-hidden rounded-panel bg-surface-card">{rows}</View>
+      );
+    }
+    return rows;
+  };
 
   const displayName = profile?.full_name?.trim() || 'You';
 
@@ -217,15 +232,15 @@ export function SettingsHub({ title, subtitle, links, sections }: Props) {
         <View
           className="mb-2 rounded-panel px-4 py-3.5"
           style={{
-            backgroundColor: Pastels.mint,
+            backgroundColor: pastels.mint,
             borderWidth: 1,
-            borderColor: Brand.primarySoft,
+            borderColor: primarySoft,
           }}
         >
           <View className="mb-3 flex-row items-center gap-3">
             <View
               className="h-10 w-10 items-center justify-center rounded-card"
-              style={{ backgroundColor: '#fff' }}
+              style={{ backgroundColor: card }}
             >
               <ThemeIcon mode={mode} />
             </View>
@@ -233,15 +248,13 @@ export function SettingsHub({ title, subtitle, links, sections }: Props) {
               <Text className="text-[15px] text-ink" style={{ fontFamily: FontFamily.heading }}>
                 Appearance
               </Text>
-              <Text className="mt-0.5 text-xs text-ink-muted">
-                Light, Dark, or match your device
-              </Text>
+              <Text className="mt-0.5 text-xs text-ink-muted">Light or Dark</Text>
             </View>
             <Text
               className="rounded-pill px-2 py-0.5 text-[10px]"
               style={{
                 fontFamily: FontFamily.heading,
-                backgroundColor: '#fff',
+                backgroundColor: isDark ? card : '#fff',
                 color: Brand.primary,
                 overflow: 'hidden',
               }}
@@ -260,16 +273,16 @@ export function SettingsHub({ title, subtitle, links, sections }: Props) {
           accessibilityRole="button"
           className="mb-6 flex-row items-center gap-3.5 rounded-card bg-surface-card px-4 py-3.5"
           style={{
-            shadowColor: '#101512',
+            shadowColor: '#0F172A',
             shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.05,
+            shadowOpacity: isDark ? 0.35 : 0.05,
             shadowRadius: 6,
             elevation: 1,
           }}
         >
           <View
             className="h-10 w-10 items-center justify-center rounded-card"
-            style={{ backgroundColor: ICON_BG }}
+            style={{ backgroundColor: pastels.sage }}
           >
             <Bell color={ICON_COLOR} size={17} strokeWidth={1.5} />
           </View>
@@ -299,24 +312,36 @@ export function SettingsHub({ title, subtitle, links, sections }: Props) {
           <View className="mb-5">{renderLinks(links)}</View>
         )}
 
-        <View className="mb-2 mt-4 h-px" style={{ backgroundColor: '#E5E8E4' }} />
+        <View
+          className="mb-2 mt-4 h-px"
+          style={{ backgroundColor: isDark ? 'transparent' : '#E5E8E4' }}
+        />
         <Pressable
           accessibilityRole="button"
           disabled={signingOut}
           className="mt-4 items-center rounded-card py-4"
-          style={{ backgroundColor: `${Brand.accent}15` }}
+          style={{
+            backgroundColor: isDark ? `${Brand.primary}15` : `${Brand.accent}15`,
+          }}
           onPress={() => {
             void onSignOut();
           }}
         >
           {signingOut ? (
-            <ActivityIndicator color={Brand.accent} />
+            <ActivityIndicator color={isDark ? Brand.primary : Brand.accent} />
           ) : (
             <View className="flex-row items-center gap-2">
-              <LogOut color={Brand.accent} size={16} strokeWidth={1.5} />
+              <LogOut
+                color={isDark ? Brand.primary : Brand.accent}
+                size={16}
+                strokeWidth={1.5}
+              />
               <Text
                 className="text-base"
-                style={{ color: Brand.accent, fontFamily: FontFamily.heading }}
+                style={{
+                  color: isDark ? Brand.primary : Brand.accent,
+                  fontFamily: FontFamily.heading,
+                }}
               >
                 Sign out
               </Text>

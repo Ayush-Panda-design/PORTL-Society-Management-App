@@ -11,6 +11,7 @@ import {
 import RazorpayCheckout from 'react-native-razorpay';
 
 import { Brand, FontFamily } from '@/constants/theme';
+import { useModalBack } from '@/hooks/use-modal-back';
 import {
   messageFromFunctionInvoke,
   paymentErrorIsNativeUnavailable,
@@ -74,7 +75,7 @@ export function PaymentSheet({
   const [phase, setPhase] = useState<Phase>('idle');
   const [error, setError] = useState<string | null>(null);
   const [canRetry, setCanRetry] = useState(true);
-  const [payment, setPayment] = useState<Payment | null>(null);
+  const [, setPayment] = useState<Payment | null>(null);
 
   const instanceId = useRef(`p${Math.random().toString(36).slice(2, 10)}`).current;
   const startedRef = useRef(false);
@@ -373,6 +374,10 @@ export function PaymentSheet({
 
   const busy = phase === 'initiating' || phase === 'checkout' || phase === 'waiting';
   const canDismiss = !busy || phase === 'waiting';
+
+  useModalBack(visible, () => {
+    if (canDismiss) onClose();
+  });
 
   const statusCopy = (() => {
     switch (phase) {

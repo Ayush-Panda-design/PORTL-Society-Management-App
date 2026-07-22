@@ -4,7 +4,11 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { appStorage } from '@/lib/app-storage';
 
 /** Instagram / WhatsApp / iOS-style appearance preference. */
-export type ThemeMode = 'light' | 'dark' | 'system';
+export type ThemeMode = 'light' | 'dark';
+
+function coerceThemeMode(raw: unknown): ThemeMode {
+  return raw === 'dark' ? 'dark' : 'light';
+}
 
 type ThemeState = {
   mode: ThemeMode;
@@ -17,7 +21,7 @@ type ThemeState = {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      mode: 'system',
+      mode: 'light',
       hasHydrated: false,
       setMode: (mode) => set({ mode }),
       setHasHydrated: (hasHydrated) => set({ hasHydrated }),
@@ -26,8 +30,19 @@ export const useThemeStore = create<ThemeState>()(
       name: 'portl-theme',
       storage: createJSONStorage(() => appStorage),
       partialize: (state) => ({ mode: state.mode }),
+      migrate: (persisted) => {
+        const row = persisted as { mode?: unknown } | undefined;
+        return { mode: coerceThemeMode(row?.mode) };
+      },
+      version: 1,
       onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
+        if (state) {
+          const coerced = coerceThemeMode(state.mode);
+          if (coerced !== state.mode) {
+            state.setMode(coerced);
+          }
+          state.setHasHydrated(true);
+        }
       },
     },
   ),

@@ -5,11 +5,11 @@ import { Check, ChevronRight, Lock, Megaphone, Users } from 'lucide-react-native
 import { AnimatedPressable } from '@/components/ui/animated-pressable';
 import { AvatarStack } from '@/components/ui/avatar-stack';
 import { AppCard, InitialsAvatar } from '@/components/ui/brand';
-import { Brand, Elevation, FontFamily, Pastels, TypeScale } from '@/constants/theme';
+import { Brand, Elevation, FontFamily, TypeScale } from '@/constants/theme';
+import { useThemePalette } from '@/hooks/use-theme';
 import { pollRespondentLabel, pollStatusKind, type PollStatusKind } from '@/lib/community';
 import type { Poll, PollVoteWithProfile } from '@/types/database';
 
-const TRACK_BG = '#E5E8E4';
 const PCT_COL_WIDTH = 44;
 
 export function PollProgressBar({
@@ -19,6 +19,7 @@ export function PollProgressBar({
   pct: number;
   active?: boolean;
 }) {
+  const { muted } = useThemePalette();
   const anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -36,17 +37,17 @@ export function PollProgressBar({
 
   return (
     <View
-      className="mt-2.5 h-2 overflow-hidden rounded-pill"
-      style={{ backgroundColor: TRACK_BG }}
+      className="mt-2.5 h-2.5 overflow-hidden rounded-pill"
+      style={{ backgroundColor: muted }}
     >
       <Animated.View
         style={{
           height: '100%',
           width,
-          minWidth: pct > 0 ? 2 : 0,
+          minWidth: pct > 0 ? 4 : 0,
           backgroundColor: active ? Brand.primary : Brand.primaryMid,
           borderRadius: 999,
-          opacity: active ? 1 : 0.7,
+          opacity: active ? 1 : 0.55,
         }}
       />
     </View>
@@ -54,14 +55,21 @@ export function PollProgressBar({
 }
 
 export function PollStatusChip({ kind }: { kind: PollStatusKind }) {
+  const { pastels, primarySoft, primarySoftText, isDark } = useThemePalette();
   const label = kind === 'live' ? 'Live' : kind === 'results' ? 'Results' : 'Closed';
   const bg =
-    kind === 'live' ? Brand.primarySoft : kind === 'results' ? Pastels.mint : Pastels.peach;
+    kind === 'live' ? primarySoft : kind === 'results' ? pastels.mint : pastels.rose;
   const color =
-    kind === 'live' ? Brand.primaryDark : kind === 'results' ? Brand.primary : Brand.accentDark;
+    kind === 'live'
+      ? primarySoftText
+      : kind === 'results'
+        ? isDark
+          ? '#6EE7B7'
+          : '#047857'
+        : primarySoftText;
 
   return (
-    <View className="rounded-pill px-2.5 py-1" style={{ backgroundColor: bg }}>
+    <View className="rounded-pill px-3 py-1.5" style={{ backgroundColor: bg }}>
       <Text
         style={{
           color,
@@ -90,25 +98,28 @@ export function PollListRow({
   needsAction?: boolean;
   onPress: () => void;
 }) {
+  const { pastels, primarySoft, primaryAccent, inkMuted, isDark } = useThemePalette();
   const kind = pollStatusKind(poll);
   const accent = needsAction
-    ? Brand.accent
+    ? Brand.primary
     : kind === 'live'
-      ? Pastels.mint
+      ? primarySoft
       : kind === 'results'
-        ? Brand.primarySoft
-        : Pastels.peach;
+        ? pastels.mint
+        : pastels.peach;
 
   return (
     <AnimatedPressable onPress={onPress} scaleTo={0.98} accessibilityRole="button">
       <View
         className="overflow-hidden rounded-panel bg-surface-card"
         style={{
-          shadowColor: '#101512',
-          shadowOffset: Elevation.sm.shadowOffset,
-          shadowOpacity: Elevation.sm.shadowOpacity,
-          shadowRadius: Elevation.sm.shadowRadius,
-          elevation: 2,
+          shadowColor: '#0F172A',
+          shadowOffset: Elevation.md.shadowOffset,
+          shadowOpacity: isDark ? 0.35 : Elevation.md.shadowOpacity,
+          shadowRadius: Elevation.md.shadowRadius,
+          elevation: 4,
+          borderWidth: isDark ? 1 : 0,
+          borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'transparent',
         }}
       >
         <View className="h-1 w-full" style={{ backgroundColor: accent }} />
@@ -118,19 +129,23 @@ export function PollListRow({
               {needsAction ? (
                 <View
                   className="mr-1 h-2 w-2 rounded-full"
-                  style={{ backgroundColor: Brand.accent }}
+                  style={{ backgroundColor: Brand.primary }}
                 />
               ) : null}
               <PollStatusChip kind={kind} />
               {voted ? (
                 <View
                   className="ml-1 flex-row items-center gap-1 rounded-pill px-2.5 py-1"
-                  style={{ backgroundColor: Pastels.mint }}
+                  style={{ backgroundColor: pastels.mint }}
                 >
-                  <Check color={Brand.primaryDark} size={11} strokeWidth={2.5} />
+                  <Check
+                    color={isDark ? '#6EE7B7' : Brand.primaryDark}
+                    size={11}
+                    strokeWidth={2.5}
+                  />
                   <Text
                     style={{
-                      color: Brand.primaryDark,
+                      color: isDark ? '#6EE7B7' : Brand.primaryDark,
                       fontFamily: FontFamily.heading,
                       fontSize: TypeScale.label,
                     }}
@@ -145,7 +160,7 @@ export function PollListRow({
                   numberOfLines={1}
                   ellipsizeMode="tail"
                   style={{
-                    color: needsAction ? Brand.accentDark : Brand.inkMuted,
+                    color: needsAction ? primaryAccent : inkMuted,
                     fontFamily: needsAction ? FontFamily.heading : FontFamily.body,
                     fontSize: TypeScale.label,
                   }}
@@ -248,6 +263,7 @@ export function PollOptionRow({
   showTallies?: boolean;
   showVoters?: boolean;
 }) {
+  const { card, pastels, border } = useThemePalette();
   const content = (
     <>
       <View className="flex-row items-center gap-3">
@@ -322,11 +338,16 @@ export function PollOptionRow({
   if (!interactive || !onPress) {
     return (
       <View
-        className="mb-2.5 rounded-card px-3.5 py-3"
+        className="mb-3 rounded-[18px] bg-surface-card px-4 py-3.5"
         style={{
-          backgroundColor: selected ? `${Brand.primary}12` : Pastels.sage,
-          borderWidth: 1,
-          borderColor: selected ? Brand.primary : 'transparent',
+          shadowColor: '#0F172A',
+          shadowOpacity: 0.06,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 2,
+          borderWidth: selected || pct > 0 ? 1.5 : 0,
+          borderColor: selected || pct > 0 ? `${Brand.primary}55` : 'transparent',
+          backgroundColor: selected ? pastels.rose : card,
         }}
       >
         {content}
@@ -339,12 +360,17 @@ export function PollOptionRow({
       disabled={disabled}
       onPress={onPress}
       android_ripple={{ color: `${Brand.primary}18` }}
-      className="mb-2.5 rounded-card px-3.5 py-3"
+      className="mb-3 rounded-[18px] px-4 py-3.5"
       style={{
-        backgroundColor: selected ? `${Brand.primary}10` : Brand.card,
+        backgroundColor: selected ? pastels.rose : card,
         borderWidth: 1.5,
-        borderColor: selected ? Brand.primary : '#D1D5DB',
+        borderColor: selected ? Brand.primary : border,
         opacity: disabled && !selected ? 0.72 : 1,
+        shadowColor: '#0F172A',
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 1,
       }}
     >
       {content}
@@ -379,6 +405,14 @@ export function PollOptionsPanel({
 
   return (
     <View>
+      {showTallies ? (
+        <Text
+          className="mb-2.5 text-[11px] uppercase tracking-widest text-ink-muted"
+          style={{ fontFamily: FontFamily.heading }}
+        >
+          Options
+        </Text>
+      ) : null}
       {options.map((option) => {
         const count = counts[option] ?? 0;
         const pct = total === 0 ? 0 : Math.round((count / total) * 100);
@@ -415,23 +449,27 @@ export function PollRespondentsList({
   votes: PollVoteWithProfile[];
   loading?: boolean;
 }) {
+  const { pastels } = useThemePalette();
   return (
     <View
-      className="mt-3 overflow-hidden rounded-panel bg-surface-card"
+      className="mt-3 overflow-hidden rounded-[20px] bg-surface-card"
       style={{
-        shadowColor: '#101512',
-        shadowOffset: Elevation.sm.shadowOffset,
-        shadowOpacity: Elevation.sm.shadowOpacity,
-        shadowRadius: Elevation.sm.shadowRadius,
-        elevation: 2,
+        shadowColor: '#0F172A',
+        shadowOffset: Elevation.md.shadowOffset,
+        shadowOpacity: Elevation.md.shadowOpacity,
+        shadowRadius: Elevation.md.shadowRadius,
+        elevation: 3,
       }}
     >
-      <View className="flex-row items-center gap-2 border-b border-surface-border px-4 py-3">
+      <View
+        className="flex-row items-center gap-2 px-4 py-3.5"
+        style={{ backgroundColor: pastels.rose }}
+      >
         <Users color={Brand.primary} size={14} strokeWidth={1.5} />
         <Text
           className="uppercase tracking-wide"
           style={{
-            color: Brand.primary,
+            color: Brand.primaryDark,
             fontFamily: FontFamily.heading,
             fontSize: TypeScale.label,
           }}
@@ -456,16 +494,16 @@ export function PollRespondentsList({
           return (
             <View
               key={vote.id}
-              className="flex-row items-center gap-3 px-4 py-3"
+              className="flex-row items-center gap-3 px-4 py-3.5"
               style={{
                 borderTopWidth: index === 0 ? 0 : StyleSheetHairline,
-                borderTopColor: '#E5E7EB',
+                borderTopColor: '#F0F0F2',
               }}
             >
               <InitialsAvatar
                 name={name}
                 seed={vote.user_id}
-                size={36}
+                size={40}
                 imageUrl={vote.profile?.avatar_url}
               />
               <View className="min-w-0 flex-1">
@@ -487,12 +525,12 @@ export function PollRespondentsList({
                 </Text>
               </View>
               <View
-                className="max-w-[38%] rounded-pill px-2.5 py-1"
-                style={{ backgroundColor: Brand.primarySoft }}
+                className="max-w-[38%] rounded-pill px-3 py-1.5"
+                style={{ backgroundColor: Brand.primary }}
               >
                 <Text
                   style={{
-                    color: Brand.primaryDark,
+                    color: '#fff',
                     fontFamily: FontFamily.heading,
                     fontSize: TypeScale.label,
                   }}
@@ -559,11 +597,12 @@ export function PollPublishCard({
   publishing?: boolean;
   onPublish: () => void;
 }) {
+  const { pastels } = useThemePalette();
   if (published) {
     return (
       <View
         className="mt-5 flex-row items-center gap-3 rounded-panel px-4 py-3.5"
-        style={{ backgroundColor: Pastels.mint }}
+        style={{ backgroundColor: pastels.mint }}
       >
         <Megaphone color={Brand.primary} size={18} strokeWidth={1.5} />
         <View className="min-w-0 flex-1">
@@ -582,7 +621,7 @@ export function PollPublishCard({
     return (
       <View
         className="mt-5 flex-row items-center gap-3 rounded-panel px-4 py-3.5"
-        style={{ backgroundColor: Pastels.sage }}
+        style={{ backgroundColor: pastels.sage }}
       >
         <Lock color={Brand.inkMuted} size={18} strokeWidth={1.5} />
         <View className="min-w-0 flex-1">
@@ -625,10 +664,11 @@ export function PollPublishCard({
 }
 
 export function PollAwaitingResultsNote() {
+  const { pastels } = useThemePalette();
   return (
     <View
       className="mt-4 flex-row items-start gap-2.5 rounded-card px-3.5 py-3"
-      style={{ backgroundColor: Pastels.butter }}
+      style={{ backgroundColor: pastels.butter }}
     >
       <Lock color={Brand.accentDark} size={16} strokeWidth={1.5} style={{ marginTop: 1 }} />
       <Text className="min-w-0 flex-1 text-sm leading-5 text-ink-muted">
@@ -640,14 +680,16 @@ export function PollAwaitingResultsNote() {
 
 export function PollShell({
   children,
-  accent = Pastels.mint,
+  accent,
 }: {
   children: ReactNode;
   accent?: string;
 }) {
+  const { pastels } = useThemePalette();
+  const barColor = accent ?? pastels.mint;
   return (
     <AppCard className="overflow-hidden p-0">
-      <View className="h-1.5 w-full" style={{ backgroundColor: accent }} />
+      <View className="h-1.5 w-full" style={{ backgroundColor: barColor }} />
       <View className="p-4">{children}</View>
     </AppCard>
   );

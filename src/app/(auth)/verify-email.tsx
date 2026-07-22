@@ -158,9 +158,17 @@ export default function VerifyEmailScreen() {
         ) : null}
 
         <Pressable
-          className={`mb-3 items-center rounded-bubbly bg-charcoal py-4 ${checking ? 'opacity-70' : ''}`}
+          className={`mb-3 items-center rounded-bubbly py-4 ${checking ? 'opacity-70' : ''}`}
           disabled={checking}
           onPress={() => void continueIfVerified()}
+          style={{
+            backgroundColor: Brand.primary,
+            shadowColor: Brand.primary,
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.28,
+            shadowRadius: 14,
+            elevation: 4,
+          }}
         >
           {checking ? (
             <ActivityIndicator color="#fff" />

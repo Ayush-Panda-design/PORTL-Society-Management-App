@@ -54,7 +54,7 @@ export default function AdminPollDetailScreen() {
   });
 
   const poll = pollQuery.data;
-  const votes = votesQuery.data ?? [];
+  const votes = useMemo(() => votesQuery.data ?? [], [votesQuery.data]);
   const published = poll ? isPollPublished(poll) : false;
   const expired = poll ? isPollExpired(poll.expires_at) : false;
 
