@@ -7,7 +7,8 @@ import {
   EmptyIllustration,
   type EmptyVisual,
 } from '@/components/ui/empty-illustration';
-import { Brand, FontFamily, Pastels } from '@/constants/theme';
+import { Brand, FontFamily } from '@/constants/theme';
+import { useThemePalette } from '@/hooks/use-theme';
 
 export type { EmptyVisual };
 
@@ -16,6 +17,9 @@ export type EmptyTip = {
   body: string;
   Icon: ComponentType<LucideProps>;
   tint?: string;
+  /** Pastel key — resolved against theme (light/dark). */
+  washKey?: 'rose' | 'peach' | 'mint' | 'sky' | 'lilac' | 'butter' | 'sage';
+  /** @deprecated Prefer washKey — raw hex freezes light pastels in dark. */
   wash?: string;
 };
 
@@ -42,13 +46,17 @@ const LOTTIE_BY_VISUAL: Partial<Record<EmptyVisual, AnimationObject>> = {
 };
 
 function Visual({ kind }: { kind: EmptyVisual }) {
+  const { pastels, isDark } = useThemePalette();
   const lottie = LOTTIE_BY_VISUAL[kind];
 
   if (lottie) {
     return (
       <View
-        className="mb-1 w-full items-center justify-center overflow-hidden rounded-[24px] py-2"
-        style={{ backgroundColor: Pastels.sage }}
+        className="mb-1 w-full items-center justify-center overflow-hidden rounded-[24px] py-3"
+        style={{
+          backgroundColor: pastels.rose,
+          opacity: isDark ? 0.95 : 1,
+        }}
       >
         <LottieView
           source={lottie}
@@ -68,8 +76,7 @@ function Visual({ kind }: { kind: EmptyVisual }) {
 }
 
 /**
- * Compact empty panel — top-aligned illustration + copy + tip cards.
- * Avoids flex-centered voids that leave half the screen blank.
+ * Compact empty panel — illustration + copy + WhatsApp-style tip rail.
  */
 export function EmptyState({
   title,
@@ -80,6 +87,8 @@ export function EmptyState({
   onAction,
   tips,
 }: Props) {
+  const { pastels, isDark, border, primaryAccent } = useThemePalette();
+
   return (
     <View className="w-full px-1 pt-2 pb-6">
       <Visual kind={visual} />
@@ -91,7 +100,7 @@ export function EmptyState({
         {title}
       </Text>
       {subtitle ? (
-        <Text className="mt-1.5 px-4 text-center text-[14px] leading-5 text-ink-muted">
+        <Text className="mt-1.5 px-4 text-center text-[14px] leading-5 text-ink-soft">
           {subtitle}
         </Text>
       ) : null}
@@ -99,7 +108,15 @@ export function EmptyState({
       {actionLabel && onAction ? (
         <Pressable
           onPress={onAction}
-          className="mt-5 self-center rounded-bubbly bg-charcoal px-7 py-3.5 active:opacity-70"
+          className="mt-5 self-center rounded-pill px-8 py-3.5 active:opacity-70"
+          style={{
+            backgroundColor: Brand.primary,
+            shadowColor: Brand.primary,
+            shadowOpacity: 0.28,
+            shadowRadius: 12,
+            shadowOffset: { width: 0, height: 6 },
+            elevation: 4,
+          }}
         >
           <Text className="text-[15px] text-white" style={{ fontFamily: FontFamily.heading }}>
             {actionLabel}
@@ -110,22 +127,31 @@ export function EmptyState({
       {action ? <View className="mt-4 items-center">{action}</View> : null}
 
       {tips && tips.length > 0 ? (
-        <View className="mt-6 gap-2.5">
-          {tips.map((tip) => {
-            const tint = tip.tint ?? Brand.primary;
-            const wash = tip.wash ?? Pastels.mint;
-            return (
-              <View
-                key={tip.title}
-                className="flex-row items-start gap-3 rounded-2xl bg-surface-card px-3.5 py-3"
-                style={{
+        <View
+          className="mt-6 overflow-hidden rounded-[20px] bg-surface-card"
+          style={
+            isDark
+              ? { borderWidth: 1, borderColor: border }
+              : {
                   shadowColor: '#000',
                   shadowOpacity: 0.04,
                   shadowRadius: 8,
                   shadowOffset: { width: 0, height: 2 },
                   elevation: 1,
-                }}
-              >
+                }
+          }
+        >
+          {tips.map((tip) => {
+            const tint =
+              tip.tint === Brand.accent && isDark
+                ? primaryAccent
+                : tip.tint ?? (isDark ? primaryAccent : Brand.primary);
+            const wash =
+              tip.washKey != null
+                ? pastels[tip.washKey]
+                : tip.wash ?? pastels.rose;
+            return (
+              <View key={tip.title} className="flex-row items-start gap-3 px-3.5 py-3.5">
                 <View
                   className="mt-0.5 h-10 w-10 items-center justify-center rounded-xl"
                   style={{ backgroundColor: wash }}
@@ -139,7 +165,7 @@ export function EmptyState({
                   >
                     {tip.title}
                   </Text>
-                  <Text className="mt-0.5 text-[13px] leading-[18px] text-ink-muted">
+                  <Text className="mt-0.5 text-[13px] leading-[18px] text-ink-soft">
                     {tip.body}
                   </Text>
                 </View>

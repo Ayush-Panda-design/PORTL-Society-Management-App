@@ -41,7 +41,9 @@ import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
-import { Brand, FontFamily, Pastels } from '@/constants/theme';
+import { Brand, FontFamily, Pastels, getPastels, type PastelTone } from '@/constants/theme';
+import { useModalBack } from '@/hooks/use-modal-back';
+import { useThemePalette } from '@/hooks/use-theme';
 import { formatNoticeDate } from '@/lib/community';
 import { deleteNotice, fetchNotices, fetchTowers, uploadNoticeCover, upsertNotice } from '@/lib/community-api';
 import { hapticConfirm } from '@/lib/haptics';
@@ -54,15 +56,17 @@ import { NOTICE_CATEGORIES } from '@/types/database';
 
 const NOTICE_CATEGORY_META: Record<
   NoticeCategory,
-  { label: string; accent: string; bg: string; Icon: LucideIcon }
+  { label: string; accent: string; bg: PastelTone; Icon: LucideIcon }
 > = {
-  urgent: { label: 'Urgent', accent: '#C0392B', bg: Pastels.rose, Icon: AlertCircle },
-  event: { label: 'Event', accent: '#2563EB', bg: Pastels.sky, Icon: CalendarDays },
-  general: { label: 'General', accent: Brand.primaryMid, bg: Pastels.mint, Icon: Megaphone },
+  urgent: { label: 'Urgent', accent: '#E11D48', bg: 'rose', Icon: AlertCircle },
+  event: { label: 'Event', accent: '#2563EB', bg: 'sky', Icon: CalendarDays },
+  general: { label: 'General', accent: Brand.primaryMid, bg: 'mint', Icon: Megaphone },
 };
 
 function noticeCategoryMeta(category: Notice['category']) {
-  return NOTICE_CATEGORY_META[category ?? 'general'] ?? NOTICE_CATEGORY_META.general;
+  const base = NOTICE_CATEGORY_META[category ?? 'general'] ?? NOTICE_CATEGORY_META.general;
+  const pastels = getPastels();
+  return { ...base, bg: pastels[base.bg] };
 }
 
 function matchesNotice(notice: Notice, query: string): boolean {
@@ -76,6 +80,7 @@ export default function AdminNoticesScreen() {
   const societyId = profile?.society_id;
   const userId = profile?.id;
   const queryClient = useQueryClient();
+  const palette = useThemePalette();
   const editingNoticeId = useCommunityUiStore((s) => s.editingNoticeId);
   const setEditingNoticeId = useCommunityUiStore((s) => s.setEditingNoticeId);
   const isNoticeUnread = useReadStateStore((s) => s.isNoticeUnread);
@@ -84,6 +89,7 @@ export default function AdminNoticesScreen() {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  useModalBack(modalOpen, () => setModalOpen(false));
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [coverUri, setCoverUri] = useState<string | null>(null);
@@ -288,7 +294,12 @@ export default function AdminNoticesScreen() {
   }
 
   const noticeFormModal = (
-    <Modal visible={modalOpen} animationType="slide" transparent>
+    <Modal
+      visible={modalOpen}
+      animationType="slide"
+      transparent
+      onRequestClose={() => setModalOpen(false)}
+    >
       <KeyboardAvoidingView behavior="padding" className="flex-1 justify-end bg-black/40">
         <View className="max-h-[90%] rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
           <ScrollView keyboardShouldPersistTaps="handled">
@@ -452,7 +463,12 @@ export default function AdminNoticesScreen() {
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
         >
           <Pressable onPress={() => setSelectedId(null)} className="mb-4 self-start">
-            <Text className="font-semibold text-brand-700">← All notices</Text>
+            <Text
+              className="font-semibold"
+              style={{ color: palette.isDark ? Brand.primaryOnDark : Brand.primaryDark }}
+            >
+              ← All notices
+            </Text>
           </Pressable>
 
           {selected.cover_url ? (
@@ -486,12 +502,19 @@ export default function AdminNoticesScreen() {
             </Pressable>
             <Pressable
               onPress={() => confirmDelete(selected)}
-              className="flex-1 items-center rounded-card py-3.5"
-              style={{ backgroundColor: Pastels.rose }}
+              className="flex-1 items-center rounded-card border border-surface-border py-3.5"
+              style={{ backgroundColor: palette.card }}
             >
               <View className="flex-row items-center gap-2">
-                <Trash2 color="#C0392B" size={16} strokeWidth={1.5} />
-                <Text className="font-semibold" style={{ color: '#C0392B' }}>
+                <Trash2
+                  color={palette.isDark ? Brand.primaryOnDark : Brand.primary}
+                  size={16}
+                  strokeWidth={1.5}
+                />
+                <Text
+                  className="font-semibold"
+                  style={{ color: palette.isDark ? Brand.primaryOnDark : Brand.primary }}
+                >
                   Delete
                 </Text>
               </View>
@@ -552,21 +575,21 @@ export default function AdminNoticesScreen() {
                         title: 'Reach every flat',
                         body: 'Notices push to residents’ feeds and unread badges.',
                         tint: Brand.primary,
-                        wash: Pastels.mint,
+                        washKey: 'mint',
                       },
                       {
                         Icon: ImagePlus,
                         title: 'Add a cover photo',
                         body: 'Visual posts get more attention for events and alerts.',
-                        tint: Brand.accent,
-                        wash: Pastels.peach,
+                        tint: Brand.primary,
+                        washKey: 'peach',
                       },
                       {
                         Icon: Users,
                         title: 'Open to manage',
                         body: 'Tap a notice to read it fully, then edit or delete.',
-                        tint: '#1F3A6B',
-                        wash: Pastels.sky,
+                        tint: '#FB7185',
+                        washKey: 'sky',
                       },
                     ]
               }
@@ -581,7 +604,7 @@ export default function AdminNoticesScreen() {
                 <SwipeActionRow
                   actions={[
                     { key: 'edit', label: 'Edit', color: Brand.primary, onPress: () => openEdit(item) },
-                    { key: 'delete', label: 'Delete', color: '#C0392B', onPress: () => confirmDelete(item) },
+                    { key: 'delete', label: 'Delete', color: '#E11D48', onPress: () => confirmDelete(item) },
                   ]}
                 >
                   <ListRow

@@ -2,6 +2,7 @@ import { X } from 'lucide-react-native';
 import { Modal, Pressable, Text, View, StyleSheet, useColorScheme } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { Palette } from '@/constants/theme';
+import { useModalBack } from '@/hooks/use-modal-back';
 import { BlurView } from 'expo-blur';
 import { VisitorWithFlat } from '@/types/database';
 
@@ -14,6 +15,7 @@ type Props = {
 export function QRCodeModal({ visible, onClose, visitor }: Props) {
   const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const palette = Palette[scheme];
+  useModalBack(visible && Boolean(visitor), onClose);
   if (!visitor) return null;
 
   return (

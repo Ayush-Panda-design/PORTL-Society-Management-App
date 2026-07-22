@@ -11,7 +11,8 @@ import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
-import { Brand, FontFamily, Pastels } from '@/constants/theme';
+import { Brand, FontFamily, type PastelTone } from '@/constants/theme';
+import { useThemePalette } from '@/hooks/use-theme';
 import { formatNoticeDate } from '@/lib/community';
 import { fetchNotices } from '@/lib/community-api';
 import { acknowledgeNotice, fetchMyNoticeAcks } from '@/lib/ops-api';
@@ -22,11 +23,11 @@ import type { Notice, NoticeCategory } from '@/types/database';
 
 const CATEGORY_META: Record<
   NoticeCategory,
-  { label: string; color: string; bg: string; Icon: typeof Megaphone }
+  { label: string; color: string; wash: PastelTone; Icon: typeof Megaphone }
 > = {
-  event: { label: 'Event', color: '#6B5CC4', bg: Pastels.lilac, Icon: Calendar },
-  urgent: { label: 'Urgent', color: '#C0392B', bg: Pastels.rose, Icon: AlertCircle },
-  general: { label: 'General', color: Brand.primary, bg: Pastels.mint, Icon: Megaphone },
+  event: { label: 'Event', color: '#F43F5E', wash: 'lilac', Icon: Calendar },
+  urgent: { label: 'Urgent', color: '#E11D48', wash: 'rose', Icon: AlertCircle },
+  general: { label: 'General', color: Brand.primary, wash: 'mint', Icon: Megaphone },
 };
 
 function noticeCategory(notice: Notice): NoticeCategory {
@@ -46,6 +47,7 @@ export default function ResidentNoticesScreen() {
   const societyId = useAuthStore((s) => s.profile?.society_id);
   const userId = useAuthStore((s) => s.user?.id);
   const queryClient = useQueryClient();
+  const { pastels, isDark, inkMuted, primaryAccent } = useThemePalette();
   const isNoticeUnread = useReadStateStore((s) => s.isNoticeUnread);
   const markNoticeSeen = useReadStateStore((s) => s.markNoticeSeen);
 
@@ -118,7 +120,7 @@ export default function ResidentNoticesScreen() {
             accessibilityRole="button"
             accessibilityLabel="Back to notices list"
           >
-            <Text className="font-semibold text-brand-700">← All notices</Text>
+            <Text className="font-semibold text-brand-600">← All notices</Text>
           </Pressable>
 
           {selected.cover_url ? (
@@ -133,7 +135,7 @@ export default function ResidentNoticesScreen() {
 
           <View
             className="mb-3 flex-row items-center gap-1.5 self-start rounded-pill px-2.5 py-1"
-            style={{ backgroundColor: meta.bg }}
+            style={{ backgroundColor: pastels[meta.wash] }}
           >
             <meta.Icon color={meta.color} size={12} strokeWidth={1.5} />
             <Text
@@ -160,16 +162,21 @@ export default function ResidentNoticesScreen() {
               disabled={acked || ackMutation.isPending}
               onPress={() => ackMutation.mutate(selected.id)}
               className="flex-row items-center justify-center gap-2 rounded-card py-3.5"
-              style={{ backgroundColor: acked ? Pastels.mint : Brand.primary }}
+              style={{ backgroundColor: acked ? pastels.mint : Brand.primary }}
             >
               {ackMutation.isPending ? (
                 <ActivityIndicator color="#fff" />
               ) : (
                 <>
-                  <CheckCircle2 color={acked ? Brand.primary : '#fff'} size={18} />
+                  <CheckCircle2
+                    color={acked ? (isDark ? primaryAccent : Brand.primary) : '#fff'}
+                    size={18}
+                  />
                   <Text
                     className="font-semibold"
-                    style={{ color: acked ? Brand.primary : '#fff' }}
+                    style={{
+                      color: acked ? (isDark ? primaryAccent : Brand.primary) : '#fff',
+                    }}
                   >
                     {acked ? 'Acknowledged' : 'I acknowledge this notice'}
                   </Text>
@@ -204,7 +211,7 @@ export default function ResidentNoticesScreen() {
           data={notices}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 28, flexGrow: 1 }}
-          ItemSeparatorComponent={() => <View className="h-2" />}
+          ItemSeparatorComponent={() => <View className={isDark ? 'h-0' : 'h-2'} />}
           refreshControl={
             <ThemedRefreshControl
               refreshing={isRefetching}
@@ -229,21 +236,21 @@ export default function ResidentNoticesScreen() {
                         title: 'Society updates',
                         body: 'Events, maintenance, and alerts from your admin show up first.',
                         tint: Brand.primary,
-                        wash: Pastels.mint,
+                        washKey: 'mint',
                       },
                       {
                         Icon: AlertCircle,
                         title: 'Acknowledge critical notices',
                         body: 'Water shutoffs and fire drills may ask you to confirm you read them.',
-                        tint: '#C0392B',
-                        wash: Pastels.rose,
+                        tint: '#E11D48',
+                        washKey: 'rose',
                       },
                       {
                         Icon: Sparkles,
                         title: 'Search quickly',
                         body: 'Use the search bar to find a notice without scrolling forever.',
-                        tint: '#6B5CC4',
-                        wash: Pastels.lilac,
+                        tint: '#F43F5E',
+                        washKey: 'lilac',
                       },
                     ]
               }
@@ -263,37 +270,79 @@ export default function ResidentNoticesScreen() {
                   markNoticeSeen(item.id);
                   setSelectedId(item.id);
                 }}
+                className={
+                  isDark
+                    ? 'flex-row items-center gap-3 px-1 py-3.5'
+                    : undefined
+                }
               >
-                <AppCard className="flex-row items-center gap-3 p-3.5">
-                  <View
-                    className="h-10 w-10 items-center justify-center rounded-card"
-                    style={{ backgroundColor: meta.bg }}
-                  >
-                    <meta.Icon color={meta.color} size={16} strokeWidth={1.5} />
-                  </View>
-                  <View className="min-w-0 flex-1">
-                    <View className="flex-row items-center gap-2">
-                      <Text
-                        className="flex-1 text-[15px] text-ink"
-                        numberOfLines={1}
-                        style={{ fontFamily: FontFamily.heading }}
-                      >
-                        {item.title}
-                      </Text>
-                      {unread || needsAck ? (
-                        <View
-                          className="h-2 w-2 rounded-pill"
-                          style={{ backgroundColor: needsAck ? '#C0392B' : Brand.accent }}
-                        />
-                      ) : null}
+                {isDark ? (
+                  <>
+                    <View
+                      className="h-10 w-10 items-center justify-center rounded-card"
+                      style={{ backgroundColor: pastels[meta.wash] }}
+                    >
+                      <meta.Icon color={meta.color} size={16} strokeWidth={1.5} />
                     </View>
-                    <Text className="mt-0.5 text-xs text-ink-muted" numberOfLines={1}>
-                      {meta.label}
-                      {needsAck ? ' · Ack required' : ''} · {formatNoticeDate(item.created_at)}
-                    </Text>
-                  </View>
-                  <ChevronRight color={Brand.inkMuted} size={16} strokeWidth={1.5} />
-                </AppCard>
+                    <View className="min-w-0 flex-1">
+                      <View className="flex-row items-center gap-2">
+                        <Text
+                          className="flex-1 text-[15px] text-ink"
+                          numberOfLines={1}
+                          style={{ fontFamily: FontFamily.heading }}
+                        >
+                          {item.title}
+                        </Text>
+                        {unread || needsAck ? (
+                          <View
+                            className="h-2 w-2 rounded-pill"
+                            style={{
+                              backgroundColor: needsAck ? '#E11D48' : primaryAccent,
+                            }}
+                          />
+                        ) : null}
+                      </View>
+                      <Text className="mt-0.5 text-xs text-ink-soft" numberOfLines={1}>
+                        {meta.label}
+                        {needsAck ? ' · Ack required' : ''} · {formatNoticeDate(item.created_at)}
+                      </Text>
+                    </View>
+                    <ChevronRight color={inkMuted} size={16} strokeWidth={1.5} />
+                  </>
+                ) : (
+                  <AppCard className="flex-row items-center gap-3 p-3.5">
+                    <View
+                      className="h-10 w-10 items-center justify-center rounded-card"
+                      style={{ backgroundColor: pastels[meta.wash] }}
+                    >
+                      <meta.Icon color={meta.color} size={16} strokeWidth={1.5} />
+                    </View>
+                    <View className="min-w-0 flex-1">
+                      <View className="flex-row items-center gap-2">
+                        <Text
+                          className="flex-1 text-[15px] text-ink"
+                          numberOfLines={1}
+                          style={{ fontFamily: FontFamily.heading }}
+                        >
+                          {item.title}
+                        </Text>
+                        {unread || needsAck ? (
+                          <View
+                            className="h-2 w-2 rounded-pill"
+                            style={{
+                              backgroundColor: needsAck ? '#E11D48' : Brand.accent,
+                            }}
+                          />
+                        ) : null}
+                      </View>
+                      <Text className="mt-0.5 text-xs text-ink-muted" numberOfLines={1}>
+                        {meta.label}
+                        {needsAck ? ' · Ack required' : ''} · {formatNoticeDate(item.created_at)}
+                      </Text>
+                    </View>
+                    <ChevronRight color={Brand.inkMuted} size={16} strokeWidth={1.5} />
+                  </AppCard>
+                )}
               </Pressable>
             );
           }}

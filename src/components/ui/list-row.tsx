@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { Pressable, Text, View, type ViewProps } from 'react-native';
 
-import { Brand, FontFamily } from '@/constants/theme';
+import { FontFamily } from '@/constants/theme';
+import { useThemePalette } from '@/hooks/use-theme';
 
 type Props = ViewProps & {
   title: string;
@@ -34,14 +35,17 @@ export function ListRow({
   style,
   ...rest
 }: Props) {
+  const { border, isDark } = useThemePalette();
+  const showDivider = !last && !isDark;
+
   const body = (
     <View
       {...rest}
       className="flex-row items-center gap-3 bg-surface px-4 py-3.5"
       style={[
         {
-          borderBottomWidth: last ? 0 : StyleSheetHairline,
-          borderBottomColor: Brand.border,
+          borderBottomWidth: showDivider ? StyleSheetHairline : 0,
+          borderBottomColor: border,
           borderLeftWidth: accentColor ? 3 : 0,
           borderLeftColor: accentColor ?? 'transparent',
         },
@@ -58,12 +62,12 @@ export function ListRow({
           {title}
         </Text>
         {subtitle ? (
-          <Text className="mt-0.5 text-xs text-ink-muted" numberOfLines={1}>
+          <Text className="mt-0.5 text-xs text-ink-soft" numberOfLines={1}>
             {subtitle}
           </Text>
         ) : null}
         {meta ? (
-          <Text className="mt-0.5 text-xs text-ink-soft" numberOfLines={1}>
+          <Text className="mt-0.5 text-xs text-ink-muted" numberOfLines={1}>
             {meta}
           </Text>
         ) : null}

@@ -28,6 +28,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { InitialsAvatar } from '@/components/ui/brand';
 import { Brand, FontFamily, Pastels, RoleTints } from '@/constants/theme';
+import { useModalBack } from '@/hooks/use-modal-back';
+import { useThemePalette } from '@/hooks/use-theme';
 import { useAuthStore } from '@/stores/authStore';
 import type { UserRole } from '@/types/database';
 
@@ -90,9 +92,13 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
   const role = profile?.role ?? null;
   const links = linksForRole(role);
   const tint = roleTint(role);
+  const { pastels, border, isDark } = useThemePalette();
 
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  useModalBack(confirmVisible, () => {
+    if (!signingOut) setConfirmVisible(false);
+  });
 
   const onConfirmSignOut = async () => {
     if (signingOut) return;
@@ -120,7 +126,7 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
         <View className="mb-5 px-4">
           <View
             className="rounded-panel px-4 py-4"
-            style={{ backgroundColor: Pastels.mint }}
+            style={{ backgroundColor: isDark ? pastels.rose : Pastels.mint }}
           >
             <InitialsAvatar
               name={profile?.full_name ?? 'You'}
@@ -161,7 +167,7 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
             >
               <View
                 className="h-9 w-9 items-center justify-center rounded-card"
-                style={{ backgroundColor: isProfile ? `${tint}22` : Pastels.sage }}
+                style={{ backgroundColor: isProfile ? `${tint}22` : pastels.sage }}
               >
                 <Icon color={isProfile ? tint : Brand.primary} size={16} strokeWidth={1.5} />
               </View>
@@ -179,7 +185,7 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
       <View
         className="border-t px-4 pt-3"
         style={{
-          borderTopColor: '#E5E8E4',
+          borderTopColor: isDark ? border : '#E5E8E4',
           paddingBottom: Math.max(insets.bottom, 16),
         }}
       >
@@ -188,17 +194,28 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
           accessibilityLabel="Sign out"
           onPress={() => setConfirmVisible(true)}
           className="flex-row items-center gap-3 rounded-card px-3 py-3"
-          style={{ backgroundColor: `${Brand.accent}12` }}
+          style={{
+            backgroundColor: isDark ? `${Brand.primary}12` : `${Brand.accent}12`,
+          }}
         >
           <View
             className="h-9 w-9 items-center justify-center rounded-card"
-            style={{ backgroundColor: `${Brand.accent}18` }}
+            style={{
+              backgroundColor: isDark ? `${Brand.primary}18` : `${Brand.accent}18`,
+            }}
           >
-            <LogOut color={Brand.accent} size={16} strokeWidth={1.5} />
+            <LogOut
+              color={isDark ? Brand.primary : Brand.accent}
+              size={16}
+              strokeWidth={1.5}
+            />
           </View>
           <Text
             className="flex-1 text-[15px]"
-            style={{ color: Brand.accent, fontFamily: FontFamily.heading }}
+            style={{
+              color: isDark ? Brand.primary : Brand.accent,
+              fontFamily: FontFamily.heading,
+            }}
           >
             Sign out
           </Text>
@@ -227,7 +244,7 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
             onPress={() => {}}
             className="w-full max-w-sm rounded-panel bg-surface-card px-5 py-5"
             style={{
-              shadowColor: '#101512',
+              shadowColor: '#0F172A',
               shadowOffset: { width: 0, height: 12 },
               shadowOpacity: 0.18,
               shadowRadius: 24,
@@ -236,9 +253,15 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
           >
             <View
               className="mb-4 h-12 w-12 items-center justify-center rounded-card"
-              style={{ backgroundColor: `${Brand.accent}18` }}
+              style={{
+                backgroundColor: isDark ? `${Brand.primary}18` : `${Brand.accent}18`,
+              }}
             >
-              <LogOut color={Brand.accent} size={22} strokeWidth={1.5} />
+              <LogOut
+                color={isDark ? Brand.primary : Brand.accent}
+                size={22}
+                strokeWidth={1.5}
+              />
             </View>
 
             <Text
@@ -257,7 +280,7 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
                 disabled={signingOut}
                 onPress={() => { void onConfirmSignOut(); }}
                 className="items-center rounded-card py-3.5"
-                style={{ backgroundColor: Brand.accent }}
+                style={{ backgroundColor: isDark ? Brand.primary : Brand.accent }}
               >
                 {signingOut ? (
                   <ActivityIndicator color="#FFFFFF" />
@@ -276,7 +299,7 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
                 disabled={signingOut}
                 onPress={() => setConfirmVisible(false)}
                 className="items-center rounded-card py-3.5"
-                style={{ backgroundColor: Pastels.sage }}
+                style={{ backgroundColor: isDark ? pastels.sage : Pastels.sage }}
               >
                 <Text
                   className="text-[15px] text-ink"

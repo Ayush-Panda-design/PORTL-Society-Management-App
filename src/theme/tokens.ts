@@ -1,37 +1,98 @@
 /**
- * README: How to consume this design tokens file
- * 
- * Usage:
- * This file acts as the single source of truth for the Portl visual overhaul (Phase 0).
- * Since the codebase currently uses direct imports from `@/constants/theme`, 
- * you can consume these new tokens via direct import:
- * 
- * import { Tokens } from '@/theme/tokens';
- * 
- * // Example:
- * <Text style={{ color: Tokens.color.textPrimary, ...Tokens.typography.body }}>Hello</Text>
- * 
- * Alternatively, these can be mapped into `tailwind.config.js` or a Context provider.
- * Existing theme files (like `src/constants/theme.ts`) will gradually be migrated to use this.
+ * Design tokens — white + red Portl brand (Phase 0 facade).
+ * Prefer getTokens(scheme) for theme-aware chrome (tabs, sheets).
+ *
+ * import { Tokens, getTokens } from '@/theme/tokens';
  */
 
-export const Tokens = {
+import { Brand, Palette } from '@/constants/theme';
+
+const light = {
   color: {
-    primary: '#2D6A4F',        // current brand green
-    primaryDark: '#1B4332',    // for gradients/header depth
-    primaryContainer: '#D8F3DC', // light green tint, selected/tonal states
-    accentGuard: '#EA580C',    // guard app identity, orange
-    accentGuardDark: '#C2410C',
-    danger: '#DC2626',         // reserve for destructive confirm dialogs only
+    primary: Brand.primary,
+    primaryDark: Brand.primaryDark,
+    primaryContainer: Brand.primarySoft,
+    accentGuard: Brand.primaryMid,
+    accentGuardDark: Brand.primary,
+    danger: Brand.primary,
     warning: '#F59E0B',
-    success: '#16A34A',        // distinct from primary green
-    background: '#FAF7F2',     // current cream
-    surface: '#FFFFFF',
-    textPrimary: '#1A1A1A',
-    textSecondary: '#6B7280',
-    textMuted: '#9CA3AF',
-    border: '#E5E7EB',
+    success: '#16A34A',
+    background: Palette.light.surface,
+    surface: Palette.light.card,
+    textPrimary: Palette.light.ink,
+    textSecondary: Palette.light.inkMuted,
+    textMuted: Palette.light.inkFaint,
+    border: Palette.light.border,
   },
+  elevation: {
+    level1: {
+      shadowColor: '#0F172A',
+      shadowOpacity: 0.06,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 2,
+    },
+    level2: {
+      shadowColor: '#0F172A',
+      shadowOpacity: 0.1,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 6,
+    },
+    level3: {
+      shadowColor: '#0F172A',
+      shadowOpacity: 0.14,
+      shadowRadius: 28,
+      shadowOffset: { width: 0, height: 10 },
+      elevation: 12,
+    },
+  },
+} as const;
+
+const dark = {
+  color: {
+    primary: Brand.primary,
+    primaryDark: Brand.primaryOnDark,
+    primaryContainer: Palette.dark.primarySoft,
+    accentGuard: Brand.primaryOnDark,
+    accentGuardDark: Brand.primary,
+    danger: Brand.primaryOnDark,
+    warning: '#FBBF24',
+    success: '#4ADE80',
+    background: Palette.dark.surface,
+    surface: Palette.dark.card,
+    textPrimary: Palette.dark.ink,
+    textSecondary: Palette.dark.inkMuted,
+    textMuted: Palette.dark.inkFaint,
+    border: Palette.dark.border,
+  },
+  elevation: {
+    // Comfort dark: soft lift + hairline feel — not punched-hole shadows
+    level1: {
+      shadowColor: '#000000',
+      shadowOpacity: 0.14,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 1 },
+      elevation: 1,
+    },
+    level2: {
+      shadowColor: '#000000',
+      shadowOpacity: 0.18,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 2,
+    },
+    level3: {
+      shadowColor: '#000000',
+      shadowOpacity: 0.22,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 3,
+    },
+  },
+} as const;
+
+const shared = {
   typography: {
     display: { fontSize: 28, fontFamily: 'Manrope_700Bold', fontWeight: 'bold' as const },
     h1: { fontSize: 24, fontFamily: 'Manrope_700Bold', fontWeight: 'bold' as const },
@@ -40,7 +101,13 @@ export const Tokens = {
     body: { fontSize: 15, fontFamily: 'Inter_400Regular', fontWeight: 'normal' as const },
     bodyMedium: { fontSize: 15, fontFamily: 'Inter_500Medium', fontWeight: '500' as const },
     caption: { fontSize: 13, fontFamily: 'Inter_400Regular', fontWeight: 'normal' as const },
-    label: { fontSize: 12, fontFamily: 'Inter_500Medium', fontWeight: '500' as const, textTransform: 'uppercase' as const, letterSpacing: 0.5 },
+    label: {
+      fontSize: 12,
+      fontFamily: 'Inter_500Medium',
+      fontWeight: '500' as const,
+      textTransform: 'uppercase' as const,
+      letterSpacing: 0.5,
+    },
   },
   spacing: {
     xs: 4,
@@ -51,13 +118,28 @@ export const Tokens = {
     xxl: 32,
   },
   radius: {
-    input: 8,
-    card: 12,
+    input: 12,
+    card: 20,
     pill: 999,
   },
-  elevation: {
-    level1: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-    level2: { shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
-    level3: { shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 24, shadowOffset: { width: 0, height: 8 }, elevation: 12 },
-  },
 } as const;
+
+/** Default light tokens (legacy static import). Prefer getTokens(scheme). */
+export const Tokens = {
+  color: light.color,
+  typography: shared.typography,
+  spacing: shared.spacing,
+  radius: shared.radius,
+  elevation: light.elevation,
+} as const;
+
+export function getTokens(scheme: 'light' | 'dark') {
+  const mode = scheme === 'dark' ? dark : light;
+  return {
+    color: mode.color,
+    typography: shared.typography,
+    spacing: shared.spacing,
+    radius: shared.radius,
+    elevation: mode.elevation,
+  };
+}

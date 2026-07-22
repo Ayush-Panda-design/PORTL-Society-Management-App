@@ -42,12 +42,12 @@ const ROLE_META: Record<
   string,
   { Icon: typeof ShieldCheck; color: string; bg: string; tab: Tab }
 > = {
-  Security: { Icon: ShieldCheck, color: '#C0392B', bg: Pastels.rose, tab: 'Security' },
-  Guard: { Icon: ShieldCheck, color: '#C0392B', bg: Pastels.rose, tab: 'Security' },
+  Security: { Icon: ShieldCheck, color: '#E11D48', bg: Pastels.rose, tab: 'Security' },
+  Guard: { Icon: ShieldCheck, color: '#E11D48', bg: Pastels.rose, tab: 'Security' },
   Housekeeping: { Icon: Wrench, color: Brand.primary, bg: Pastels.mint, tab: 'Staff' },
   Maintenance: { Icon: Wrench, color: Brand.primary, bg: Pastels.mint, tab: 'Staff' },
-  Emergency: { Icon: Stethoscope, color: '#C0392B', bg: Pastels.rose, tab: 'Emergency' },
-  Medical: { Icon: Stethoscope, color: '#C0392B', bg: Pastels.rose, tab: 'Emergency' },
+  Emergency: { Icon: Stethoscope, color: '#E11D48', bg: Pastels.rose, tab: 'Emergency' },
+  Medical: { Icon: Stethoscope, color: '#E11D48', bg: Pastels.rose, tab: 'Emergency' },
 };
 
 function getRoleMeta(role: string) {
@@ -223,7 +223,7 @@ export default function ResidentDirectoryScreen() {
           renderItem={({ item, index }) => {
             const name = item.full_name?.trim() || 'Unnamed';
             const isAdmin = item.role === 'admin';
-            const badgeColor = isAdmin ? '#1F3A6B' : '#6B5CC4';
+            const badgeColor = isAdmin ? '#BE123C' : '#F43F5E';
             return (
               <StaggeredListItem index={index} disabled={listRefetching}>
                 <ListRow

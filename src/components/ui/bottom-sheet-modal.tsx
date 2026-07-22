@@ -6,8 +6,9 @@ import {
   BottomSheetBackdrop,
   BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
-import { useColorScheme } from 'nativewind';
-import { Tokens } from '@/theme/tokens';
+
+import { useThemePalette } from '@/hooks/use-theme';
+import { getTokens } from '@/theme/tokens';
 
 interface Props {
   children: React.ReactNode;
@@ -18,8 +19,8 @@ interface Props {
 export const BottomSheetModal = forwardRef<GorhomBottomSheetModal, Props>(
   ({ children, snapPoints: providedSnapPoints }, ref) => {
     const snapPoints = useMemo(() => providedSnapPoints || ['50%', '90%'], [providedSnapPoints]);
-    const { colorScheme } = useColorScheme();
-    const isDark = colorScheme === 'dark';
+    const { scheme, card, border } = useThemePalette();
+    const tokens = getTokens(scheme);
 
     const renderBackdrop = (props: BottomSheetBackdropProps) => (
       <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.6} />
@@ -31,19 +32,17 @@ export const BottomSheetModal = forwardRef<GorhomBottomSheetModal, Props>(
         snapPoints={snapPoints}
         backdropComponent={renderBackdrop}
         backgroundStyle={{
-          backgroundColor: Tokens.color.surface,
-          ...Tokens.elevation.level2,
+          backgroundColor: card,
+          ...tokens.elevation.level2,
         }}
         handleIndicatorStyle={{
-          backgroundColor: Tokens.color.border,
+          backgroundColor: border,
         }}
       >
-        <BottomSheetView style={styles.contentContainer}>
-          {children}
-        </BottomSheetView>
+        <BottomSheetView style={styles.contentContainer}>{children}</BottomSheetView>
       </GorhomBottomSheetModal>
     );
-  }
+  },
 );
 
 BottomSheetModal.displayName = 'BottomSheetModal';

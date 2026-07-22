@@ -42,7 +42,7 @@ export function GlassCard({
           borderLeftColor: accentColor ?? 'transparent',
           shadowColor: colorScheme === 'dark' ? '#000' : '#1A2E28',
           shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: colorScheme === 'dark' ? 0.35 : 0.08,
+          shadowOpacity: colorScheme === 'dark' ? 0.14 : 0.08,
           shadowRadius: 16,
           elevation: 3,
         },
@@ -52,8 +52,8 @@ export function GlassCard({
       <View style={styles.inner}>
         <BlurView tint={tint} intensity={intensity} style={StyleSheet.absoluteFill} {...props} />
         <View
-          className={`z-10 w-full border border-white/40 ${contentClassName}`}
-          style={{ backgroundColor: colorScheme === 'dark' ? 'rgba(20,24,22,0.45)' : 'rgba(255,255,255,0.55)' }}
+          className={`z-10 w-full border ${colorScheme === 'dark' ? 'border-white/10' : 'border-white/40'} ${contentClassName}`}
+          style={{ backgroundColor: colorScheme === 'dark' ? 'rgba(26,24,28,0.72)' : 'rgba(255,255,255,0.55)' }}
         >
           {children}
         </View>

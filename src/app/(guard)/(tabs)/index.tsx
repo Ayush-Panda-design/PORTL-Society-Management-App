@@ -4,10 +4,11 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { Brand, FontFamily, Gradients, Pastels } from '@/constants/theme';
+import { Brand, FontFamily, Gradients } from '@/constants/theme';
 import { useAuthStore } from '@/stores/authStore';
 import { href } from '@/lib/href';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
+import { useThemePalette } from '@/hooks/use-theme';
 import { AnimatedPressable } from '@/components/ui/animated-pressable';
 
 /** Gate action card with left accent strip. */
@@ -59,7 +60,7 @@ function GateCard({
           {badge !== undefined && badge > 0 ? (
             <View
               className="h-7 min-w-[28px] items-center justify-center rounded-pill px-2"
-              style={{ backgroundColor: Brand.accent }}
+              style={{ backgroundColor: Brand.primary }}
             >
               <Text className="text-xs font-bold text-white" style={{ fontFamily: FontFamily.heading }}>
                 {badge > 99 ? '99+' : badge}
@@ -77,6 +78,8 @@ export default function GuardHomeRedirect() {
   const profile = useAuthStore((s) => s.profile);
   const signOut = useAuthStore((s) => s.signOut);
   const name = profile?.full_name?.split(' ')[0] ?? 'Guard';
+  const { surface, pastels, isDark, primaryAccent } = useThemePalette();
+  const signOutAccent = isDark ? primaryAccent : Brand.accent;
 
   // Live pending count for badge
   const { visitors } = useVisitorsRealtime({
@@ -90,7 +93,7 @@ export default function GuardHomeRedirect() {
   const shiftSince = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: Brand.surface }}>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: surface }}>
       {/* Guard-tinted hero header */}
       <LinearGradient
         colors={[...Gradients.guardHero]}
@@ -133,9 +136,9 @@ export default function GuardHomeRedirect() {
         <GateCard
           title="Pending approvals"
           subtitle="Waiting for resident decision"
-          icon={<ShieldCheck color="#C0392B" size={22} strokeWidth={1.5} />}
-          accentColor="#C0392B"
-          bg={Pastels.rose}
+          icon={<ShieldCheck color="#E11D48" size={22} strokeWidth={1.5} />}
+          accentColor="#E11D48"
+          bg={pastels.rose}
           onPress={() => router.push(href('/(guard)/dashboard'))}
           badge={pendingCount}
         />
@@ -144,7 +147,7 @@ export default function GuardHomeRedirect() {
           subtitle="Capture photo and flat details"
           icon={<UserPlus color={Brand.primary} size={22} strokeWidth={1.5} />}
           accentColor={Brand.primary}
-          bg={Pastels.mint}
+          bg={pastels.mint}
           onPress={() => router.push(href('/(guard)/register-visitor'))}
         />
         <GateCard
@@ -152,7 +155,7 @@ export default function GuardHomeRedirect() {
           subtitle="Check in approved visitors"
           icon={<ScanLine color="#2563EB" size={22} strokeWidth={1.5} />}
           accentColor="#2563EB"
-          bg={Pastels.sky}
+          bg={pastels.sky}
           onPress={() => router.push(href('/(guard)/verify'))}
         />
         <GateCard
@@ -160,7 +163,7 @@ export default function GuardHomeRedirect() {
           subtitle="Entry and exit history"
           icon={<ClipboardList color="#C4861A" size={22} strokeWidth={1.5} />}
           accentColor="#C4861A"
-          bg={Pastels.butter}
+          bg={pastels.butter}
           onPress={() => router.push(href('/(guard)/logs'))}
         />
 
@@ -170,10 +173,10 @@ export default function GuardHomeRedirect() {
             router.replace('/(auth)/login');
           }}
           className="mt-2 flex-row items-center justify-center gap-2 rounded-card py-3.5"
-          style={{ backgroundColor: `${Brand.accent}15` }}
+          style={{ backgroundColor: `${signOutAccent}15` }}
         >
-          <LogOut color={Brand.accent} size={16} strokeWidth={1.5} />
-          <Text className="font-semibold" style={{ color: Brand.accent, fontFamily: FontFamily.heading }}>
+          <LogOut color={signOutAccent} size={16} strokeWidth={1.5} />
+          <Text className="font-semibold" style={{ color: signOutAccent, fontFamily: FontFamily.heading }}>
             Sign out
           </Text>
         </Pressable>

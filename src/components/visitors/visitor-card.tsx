@@ -1,9 +1,10 @@
 import { Image } from 'expo-image';
 import { Check, CheckCircle2, Clock3, LogIn, LogOut, X, XCircle, QrCode } from 'lucide-react-native';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { VisitorSilhouette } from '@/components/illustrations';
 import { Brand, FontFamily } from '@/constants/theme';
+import { useThemePalette } from '@/hooks/use-theme';
 import {
   flatLabel,
   formatRelativeTime,
@@ -46,20 +47,30 @@ function StatusIcon({ status, color }: { status: VisitorStatus; color: string })
 
 export function VisitorCard({ visitor, actions, showStatus = true }: Props) {
   const colors = statusColor(visitor.status);
+  const { pastels, isDark } = useThemePalette();
 
   return (
     <View
-      className="rounded-2xl border border-surface-border bg-surface-card p-4"
+      className="overflow-hidden rounded-card bg-surface-card p-4"
       style={{
         shadowColor: '#0F172A',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
-        elevation: 2,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: isDark ? 0.16 : 0.08,
+        shadowRadius: isDark ? 10 : 16,
+        elevation: isDark ? 2 : 3,
+        ...(isDark
+          ? {
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: 'rgba(255,255,255,0.08)',
+            }
+          : null),
       }}
     >
       <View className="flex-row gap-3">
-        <View className="h-14 w-14 overflow-hidden rounded-xl bg-brand-50">
+        <View
+          className="h-14 w-14 overflow-hidden rounded-xl"
+          style={{ backgroundColor: pastels.rose }}
+        >
           {visitor.photo_url ? (
             <Image
               source={{ uri: visitor.photo_url }}
@@ -129,7 +140,7 @@ export function VisitorCard({ visitor, actions, showStatus = true }: Props) {
             const bg = isDanger
               ? 'bg-status-rejected'
               : isPrimary
-                ? 'bg-brand-700'
+                ? ''
                 : 'bg-surface-muted';
             const text = isDanger || isPrimary ? 'text-white' : 'text-ink';
 
@@ -141,6 +152,7 @@ export function VisitorCard({ visitor, actions, showStatus = true }: Props) {
                 className={`flex-1 flex-row items-center justify-center gap-1.5 rounded-xl py-2.5 ${bg} ${
                   action.loading ? 'opacity-70' : ''
                 }`}
+                style={isPrimary && !isDanger ? { backgroundColor: Brand.primary } : undefined}
               >
                 {action.loading ? (
                   <ActivityIndicator color={isDanger || isPrimary ? '#fff' : Brand.primary} />

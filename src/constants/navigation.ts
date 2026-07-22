@@ -1,5 +1,5 @@
 import type { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 import { Brand, getPalette, RoleTints } from '@/constants/theme';
 
@@ -11,26 +11,24 @@ type RoleTabOptionsInput = {
   scheme?: 'light' | 'dark';
   /** Safe-area bottom inset — required so the dock clears Android/iOS system nav. */
   bottomInset?: number;
-  /** Per-role active tint color. Defaults to resident (forest green). */
+  /** Per-role active tint color. Defaults to resident brand red. */
   roleTint?: string;
-  /** Whether to use a forest-green tab bar (instead of charcoal) for this role. */
+  /** Whether to use a light-tinted tab bar for this role. */
   lightTabBar?: boolean;
 };
-
-import { Tokens } from '@/theme/tokens';
 
 function buildTabOptions({
   scheme = 'light',
   bottomInset = 0,
-  roleTint = Tokens.color.primary,
-  lightTabBar = false,
+  roleTint = Brand.primary,
 }: RoleTabOptionsInput): BottomTabNavigationOptions {
   const isDark = scheme === 'dark';
+  const palette = getPalette(scheme);
   const safeBottom = Math.max(bottomInset, Platform.OS === 'android' ? 8 : 0);
 
-  const tabBarBg = Tokens.color.surface;
-  const activeTint = Tokens.color.primary;
-  const inactiveTint = Tokens.color.textMuted;
+  const tabBarBg = palette.card;
+  const activeTint = isDark ? Brand.primaryOnDark : roleTint;
+  const inactiveTint = isDark ? palette.inkMuted : palette.inkFaint;
 
   return {
     headerShown: false,
@@ -42,16 +40,16 @@ function buildTabOptions({
     tabBarShowLabel: false,
     tabBarStyle: {
       backgroundColor: tabBarBg,
-      borderTopWidth: 1,
-      borderTopColor: Tokens.color.border,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : palette.border,
       height: TAB_BAR_CONTENT_HEIGHT + safeBottom,
       paddingTop: 6,
       paddingBottom: safeBottom,
-      elevation: 14,
+      elevation: isDark ? 0 : 14,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: -4 },
-      shadowOpacity: isDark ? 0.45 : 0.08,
-      shadowRadius: 18,
+      shadowOpacity: isDark ? 0.12 : 0.08,
+      shadowRadius: isDark ? 8 : 18,
     },
     tabBarItemStyle: {
       minHeight: 44,
@@ -59,27 +57,30 @@ function buildTabOptions({
       justifyContent: 'center',
     },
     tabBarLabelStyle: {
-      ...Tokens.typography.label,
+      fontSize: 12,
+      fontFamily: 'Inter_500Medium',
+      fontWeight: '500',
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
       marginTop: 2,
     },
-    // Indicator dot for active tab (accent color)
     tabBarActiveBackgroundColor: 'transparent',
   };
 }
 
-/** Resident tab options — charcoal bar, forest-green tint in dark mode. */
+/** Resident tab options — surface card bar, brand-red active tint. */
 export function getResidentTabOptions(opts: Omit<RoleTabOptionsInput, 'roleTint' | 'lightTabBar'> = {}) {
   return buildTabOptions({ ...opts, roleTint: RoleTints.resident, lightTabBar: false });
 }
 
-/** Admin tab options — charcoal bar, deep blue tint in dark mode. */
+/** Admin tab options — surface card bar, deep red active tint. */
 export function getAdminTabOptions(opts: Omit<RoleTabOptionsInput, 'roleTint' | 'lightTabBar'> = {}) {
-  return buildTabOptions({ ...opts, roleTint: '#5B8DD9', lightTabBar: false });
+  return buildTabOptions({ ...opts, roleTint: RoleTints.admin, lightTabBar: false });
 }
 
-/** Guard tab options — forest-green bar (light mode), amber tint in dark mode. */
+/** Guard tab options — surface card bar, bright red active tint. */
 export function getGuardTabOptions(opts: Omit<RoleTabOptionsInput, 'roleTint' | 'lightTabBar'> = {}) {
-  return buildTabOptions({ ...opts, roleTint: '#E4A55B', lightTabBar: true });
+  return buildTabOptions({ ...opts, roleTint: RoleTints.guard, lightTabBar: false });
 }
 
 /** Shared generic options (fallback / legacy). */

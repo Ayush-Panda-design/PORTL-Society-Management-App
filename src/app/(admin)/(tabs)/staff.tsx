@@ -29,6 +29,7 @@ import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand } from '@/constants/theme';
+import { useModalBack } from '@/hooks/use-modal-back';
 import {
   deleteStaff,
   fetchStaff,
@@ -55,6 +56,7 @@ export default function AdminStaffScreen() {
 
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  useModalBack(modalOpen, () => setModalOpen(false));
   const [editing, setEditing] = useState<StaffMember | null>(null);
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
@@ -326,7 +328,7 @@ export default function AdminStaffScreen() {
                 <SwipeActionRow
                   actions={[
                     { key: 'edit', label: 'Edit', color: Brand.primary, onPress: () => openEdit(item) },
-                    { key: 'remove', label: 'Remove', color: '#C0392B', onPress: () => confirmDelete(item) },
+                    { key: 'remove', label: 'Remove', color: '#E11D48', onPress: () => confirmDelete(item) },
                   ]}
                 >
                   <ListRow
@@ -356,7 +358,12 @@ export default function AdminStaffScreen() {
         />
       )}
 
-      <Modal visible={modalOpen} animationType="slide" transparent>
+      <Modal
+        visible={modalOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setModalOpen(false)}
+      >
         <KeyboardAvoidingView
           behavior="padding"
           className="flex-1 justify-end bg-black/40"

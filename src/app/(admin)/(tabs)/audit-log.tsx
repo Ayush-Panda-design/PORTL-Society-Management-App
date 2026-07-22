@@ -27,7 +27,7 @@ function auditSeverity(action: string): Severity {
 }
 
 const SEVERITY_META: Record<Severity, { accent: string; bg: string }> = {
-  destructive: { accent: '#C0392B', bg: Pastels.rose },
+  destructive: { accent: '#E11D48', bg: Pastels.rose },
   warn: { accent: Brand.accent, bg: Pastels.peach },
   normal: { accent: Brand.primaryMid, bg: Pastels.mint },
 };

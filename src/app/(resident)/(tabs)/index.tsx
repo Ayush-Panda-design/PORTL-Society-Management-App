@@ -25,17 +25,20 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 import Toast from 'react-native-toast-message';
 
+import { GateAuthIllustration } from '@/components/illustrations';
 import { DrawerMenuButton } from '@/components/navigation/drawer-menu-button';
-import { HeroBanner, SoftPromoCard, InitialsAvatar } from '@/components/ui/brand';
+import { SoftPromoCard, InitialsAvatar } from '@/components/ui/brand';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { VisitorSwipeDeck } from '@/components/visitors/visitor-swipe-deck';
 import type { SwipeDecision } from '@/components/visitors/swipeable-visitor-card';
 import { AnimatedPressable } from '@/components/ui/animated-pressable';
-import { Brand, FontFamily, Pastels } from '@/constants/theme';
+import { Brand, FontFamily, SocietyImages, getPastels, type PastelTone } from '@/constants/theme';
+import { useThemePalette } from '@/hooks/use-theme';
 import { useUnreadNoticesCount } from '@/hooks/use-unread-notices-count';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { isPollExpired, isPollPublished } from '@/lib/community';
@@ -50,9 +53,6 @@ import { href } from '@/lib/href';
 import { formatRelativeTime, updateVisitorStatus } from '@/lib/visitors';
 import { useAuthStore } from '@/stores/authStore';
 import type { VisitorStatus, VisitorWithFlat } from '@/types/database';
-
-/** Status hero — cool slate, distinct from action green (buttons / FABs). */
-const HERO_STATUS_GRADIENT = ['#1A2F38', '#243F4A'] as const;
 
 function QuickAction({
   label,
@@ -74,7 +74,7 @@ function QuickAction({
           className="h-[56px] w-[56px] items-center justify-center rounded-[18px]"
           style={{
             backgroundColor: bg,
-            shadowColor: '#101512',
+            shadowColor: '#0F172A',
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.05,
             shadowRadius: 6,
@@ -85,7 +85,7 @@ function QuickAction({
           {badge !== undefined && badge > 0 ? (
             <View
               className="absolute -right-0.5 -top-0.5 min-w-[18px] items-center justify-center rounded-full px-1"
-              style={{ backgroundColor: Brand.accent, height: 18 }}
+              style={{ backgroundColor: Brand.primary, height: 18 }}
             >
               <Text className="text-[10px] font-bold text-white">{badge > 9 ? '9+' : badge}</Text>
             </View>
@@ -128,7 +128,7 @@ function activityTone(status: VisitorStatus): string {
     case 'checked_in':
       return Brand.primary;
     case 'rejected':
-      return '#C0392B';
+      return Brand.primary;
     default:
       return Brand.inkMuted;
   }
@@ -137,14 +137,20 @@ function activityTone(status: VisitorStatus): string {
 function GateActivityRow({
   visitor,
   onPress,
+  pastels,
+  iconAccent,
 }: {
   visitor: VisitorWithFlat;
   onPress: () => void;
+  pastels: ReturnType<typeof getPastels>;
+  iconAccent: string;
 }) {
   const typeLabel = visitor.type
     ? visitor.type.charAt(0).toUpperCase() + visitor.type.slice(1)
     : 'Guest';
   const stamp = visitor.responded_at || visitor.created_at;
+  const tone = activityTone(visitor.status);
+  const iconColor = tone === Brand.primary ? iconAccent : tone;
 
   return (
     <Pressable
@@ -154,9 +160,9 @@ function GateActivityRow({
     >
       <View
         className="h-9 w-9 items-center justify-center rounded-full"
-        style={{ backgroundColor: Pastels.sage }}
+        style={{ backgroundColor: pastels.rose }}
       >
-        <DoorOpen color={activityTone(visitor.status)} size={16} strokeWidth={1.5} />
+        <DoorOpen color={iconColor} size={16} strokeWidth={1.5} />
       </View>
       <View className="min-w-0 flex-1">
         <Text className="text-[14px] text-ink" style={{ fontFamily: FontFamily.heading }} numberOfLines={1}>
@@ -167,7 +173,7 @@ function GateActivityRow({
         </Text>
       </View>
       {visitor.status === 'pending' ? (
-        <View className="rounded-pill px-2 py-0.5" style={{ backgroundColor: Pastels.peach }}>
+        <View className="rounded-pill px-2 py-0.5" style={{ backgroundColor: pastels.peach }}>
           <Text className="text-[10px]" style={{ fontFamily: FontFamily.heading, color: Brand.accentDark }}>
             Act
           </Text>
@@ -181,13 +187,14 @@ type HubCard = {
   title: string;
   href: Href;
   Icon: typeof Vote;
-  wash: string;
+  wash: PastelTone;
   tint: string;
   preview: string;
 };
 
 export default function ResidentHome() {
   const router = useRouter();
+  const { pastels, isDark, primaryAccent } = useThemePalette();
   const profile = useAuthStore((s) => s.profile);
   const name = profile?.full_name?.split(' ')[0] ?? 'Resident';
   const societyId = profile?.society_id;
@@ -368,8 +375,8 @@ export default function ResidentHome() {
       title: 'Polls',
       href: href('/(resident)/polls'),
       Icon: Vote,
-      wash: Pastels.lilac,
-      tint: '#7C3AED',
+      wash: 'lilac',
+      tint: '#F43F5E',
       preview:
         livePolls > 0
           ? `${livePolls} live poll${livePolls === 1 ? '' : 's'}`
@@ -379,8 +386,8 @@ export default function ResidentHome() {
       title: 'Helpdesk',
       href: href('/(resident)/helpdesk'),
       Icon: MessageSquare,
-      wash: Pastels.rose,
-      tint: '#C0392B',
+      wash: 'rose',
+      tint: '#E11D48',
       preview:
         openTickets > 0
           ? `${openTickets} open ticket${openTickets === 1 ? '' : 's'}`
@@ -390,8 +397,8 @@ export default function ResidentHome() {
       title: 'Amenities',
       href: href('/(resident)/amenities'),
       Icon: Building2,
-      wash: Pastels.mint,
-      tint: Brand.primary,
+      wash: 'mint',
+      tint: primaryAccent,
       preview:
         amenityCount > 0
           ? `${amenityCount} facilit${amenityCount === 1 ? 'y' : 'ies'} · book today`
@@ -401,7 +408,7 @@ export default function ResidentHome() {
       title: 'Directory',
       href: href('/(resident)/directory'),
       Icon: ClipboardList,
-      wash: Pastels.butter,
+      wash: 'butter',
       tint: '#B08020',
       preview:
         securityContacts.length > 0
@@ -426,9 +433,9 @@ export default function ResidentHome() {
               accessibilityLabel="Emergency SOS"
               onPress={openSos}
               className="h-10 w-10 items-center justify-center rounded-full"
-              style={{ backgroundColor: Pastels.rose }}
+              style={{ backgroundColor: pastels.rose }}
             >
-              <AlertTriangle color="#C0392B" size={18} strokeWidth={1.5} />
+              <AlertTriangle color="#E11D48" size={18} strokeWidth={1.5} />
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -445,18 +452,71 @@ export default function ResidentHome() {
           </View>
         </View>
 
-        <HeroBanner
-          title={`Hi, ${name}`}
-          subtitle={greeting}
-          gradientColors={[...HERO_STATUS_GRADIENT]}
-        >
-          <View className="flex-row items-center self-start rounded-pill bg-white/15 px-3 py-1.5">
-            <View className="mr-2 h-2 w-2 rounded-pill" style={{ backgroundColor: statusDot }} />
-            <Text className="text-xs text-white/90" style={{ fontFamily: FontFamily.medium }}>
-              {statusChip}
-            </Text>
+        <View className="mb-3 overflow-hidden">
+          <View
+            className="overflow-hidden rounded-[24px]"
+            style={{
+              backgroundColor: isDark ? '#2C2C2C' : '#9F1239',
+              minHeight: 152,
+            }}
+          >
+            <Image
+              source={{ uri: SocietyImages.heroResidence }}
+              style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '56%' }}
+              contentFit="cover"
+              transition={280}
+            />
+            {isDark ? (
+              <LinearGradient
+                colors={['#2C2C2C', 'rgba(44,44,44,0.92)', 'rgba(44,44,44,0.5)', 'rgba(34,34,34,0.12)']}
+                locations={[0, 0.38, 0.68, 1]}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
+              />
+            ) : (
+              <LinearGradient
+                colors={['#9F1239', 'rgba(159,18,57,0.94)', 'rgba(190,18,60,0.42)', 'rgba(190,18,60,0.08)']}
+                locations={[0, 0.4, 0.68, 1]}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
+              />
+            )}
+            {isDark ? (
+              <LinearGradient
+                colors={['transparent', 'rgba(14,13,16,0.5)']}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
+              />
+            ) : (
+              <LinearGradient
+                colors={['rgba(255,241,245,0.12)', 'transparent']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
+              />
+            )}
+            <View className="justify-center px-4 py-4" style={{ minHeight: 152, maxWidth: '68%' }}>
+              <Text className="text-[12px] text-white/80" style={{ fontFamily: FontFamily.medium }}>
+                {greeting}
+              </Text>
+              <Text
+                className="mt-1 text-[22px] leading-7 text-white"
+                style={{ fontFamily: FontFamily.display }}
+              >
+                Hi, {name}
+              </Text>
+              <View className="mt-3 flex-row items-center self-start rounded-pill bg-white/15 px-3 py-1.5">
+                <View className="mr-2 h-2 w-2 rounded-pill" style={{ backgroundColor: statusDot }} />
+                <Text className="text-xs text-white/90" style={{ fontFamily: FontFamily.medium }}>
+                  {statusChip}
+                </Text>
+              </View>
+            </View>
           </View>
-        </HeroBanner>
+        </View>
 
         {(error || actionError) && (
           <View className="mt-1">
@@ -489,11 +549,11 @@ export default function ResidentHome() {
         <View
           className="mb-4 overflow-hidden rounded-[22px] bg-surface-card"
           style={{
-            shadowColor: '#101512',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.06,
-            shadowRadius: 10,
-            elevation: 2,
+            shadowColor: '#0F172A',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.08,
+            shadowRadius: 16,
+            elevation: 3,
           }}
         >
           <View className="flex-row items-center justify-between border-b border-surface-border px-4 py-3">
@@ -522,23 +582,21 @@ export default function ResidentHome() {
                 <ActivityIndicator color={Brand.primary} />
               </View>
             ) : recentActivity.length === 0 ? (
-              <Text className="py-3 text-sm text-ink-muted">
-                No recent visitors — pre-approve guests before they arrive.
-              </Text>
+              <View className="items-center py-4">
+                <GateAuthIllustration width={140} height={88} />
+                <Text className="mt-2 px-2 text-center text-sm text-ink-muted">
+                  No recent visitors — pre-approve guests before they arrive.
+                </Text>
+              </View>
             ) : (
-              recentActivity.map((v, i) => (
-                <View
+              recentActivity.map((v) => (
+                <GateActivityRow
                   key={v.id}
-                  style={{
-                    borderBottomWidth: i === recentActivity.length - 1 ? 0 : 1,
-                    borderBottomColor: '#F0F2F0',
-                  }}
-                >
-                  <GateActivityRow
-                    visitor={v}
-                    onPress={() => router.push(href('/(resident)/visitors'))}
-                  />
-                </View>
+                  visitor={v}
+                  pastels={pastels}
+                  iconAccent={primaryAccent}
+                  onPress={() => router.push(href('/(resident)/visitors'))}
+                />
               ))
             )}
           </View>
@@ -572,38 +630,86 @@ export default function ResidentHome() {
         >
           <QuickAction
             label="Visitors"
-            icon={<DoorOpen color={Brand.primary} size={22} strokeWidth={1.5} />}
-            bg={Pastels.sky}
+            icon={<DoorOpen color={primaryAccent} size={22} strokeWidth={1.5} />}
+            bg={pastels.sky}
             onPress={() => router.push(href('/(resident)/visitors'))}
             badge={pendingCount}
           />
           <QuickAction
             label="Invite"
             icon={<UserPlus color={Brand.accent} size={22} strokeWidth={1.5} />}
-            bg={Pastels.peach}
+            bg={pastels.peach}
             onPress={() => router.push(href('/(resident)/pre-approve'))}
           />
           <QuickAction
             label="Notices"
             icon={<Bell color="#7C6BA8" size={22} strokeWidth={1.5} />}
-            bg={Pastels.lilac}
+            bg={pastels.lilac}
             onPress={() => router.push(href('/(resident)/notices'))}
             badge={unreadNotices}
           />
           <QuickAction
             label="Requests"
             icon={<ClipboardList color="#B08020" size={22} strokeWidth={1.5} />}
-            bg={Pastels.butter}
+            bg={pastels.butter}
             onPress={() => router.push(href('/(resident)/helpdesk'))}
             badge={openTickets}
           />
           <QuickAction
             label="Book"
-            icon={<Building2 color={Brand.primary} size={22} strokeWidth={1.5} />}
-            bg={Pastels.mint}
+            icon={<Building2 color={primaryAccent} size={22} strokeWidth={1.5} />}
+            bg={pastels.mint}
             onPress={() => router.push(href('/(resident)/amenities'))}
           />
         </ScrollView>
+
+        <Pressable
+          onPress={() => router.push(href('/(resident)/amenities'))}
+          accessibilityRole="button"
+          accessibilityLabel="Book amenities"
+          className="mb-5 overflow-hidden rounded-[22px]"
+          style={{
+            shadowColor: '#0F172A',
+            shadowOpacity: 0.1,
+            shadowRadius: 16,
+            shadowOffset: { width: 0, height: 6 },
+            elevation: 4,
+          }}
+        >
+          <Image
+            source={{ uri: SocietyImages.communityBanner }}
+            style={{ width: '100%', height: 112 }}
+            contentFit="cover"
+            transition={280}
+          />
+          <LinearGradient
+            colors={
+              isDark
+                ? ['rgba(14,13,16,0.12)', 'rgba(14,13,16,0.65)', 'rgba(14,13,16,0.88)']
+                : ['rgba(15,23,42,0.1)', 'rgba(15,23,42,0.42)', 'rgba(15,23,42,0.68)']
+            }
+            locations={[0, 0.5, 1]}
+            style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
+          />
+          <View className="absolute bottom-0 left-0 right-0 flex-row items-end justify-between px-4 pb-3">
+            <View className="min-w-0 flex-1 pr-3">
+              <View
+                className="mb-1.5 self-start rounded-pill px-2.5 py-1"
+                style={{ backgroundColor: 'rgba(255,255,255,0.92)' }}
+              >
+                <Text className="text-[10px]" style={{ fontFamily: FontFamily.heading, color: Brand.primary }}>
+                  Amenities
+                </Text>
+              </View>
+              <Text className="text-[15px] text-white" style={{ fontFamily: FontFamily.display }} numberOfLines={1}>
+                {amenityCount > 0
+                  ? `${amenityCount} facilit${amenityCount === 1 ? 'y' : 'ies'} ready to book`
+                  : 'Explore society facilities'}
+              </Text>
+            </View>
+            <ChevronRight color="rgba(255,255,255,0.85)" size={18} strokeWidth={1.5} />
+          </View>
+        </Pressable>
 
         <Text className="mb-3 text-xl text-ink" style={{ fontFamily: FontFamily.display }}>
           Around your society
@@ -624,7 +730,7 @@ export default function ResidentHome() {
                 accessibilityLabel={`${card.title}. ${card.preview}`}
                 className="overflow-hidden rounded-[22px] active:opacity-90"
                 style={{
-                  backgroundColor: card.wash,
+                  backgroundColor: pastels[card.wash],
                   shadowColor: card.tint,
                   shadowOpacity: 0.08,
                   shadowRadius: 12,
@@ -633,7 +739,10 @@ export default function ResidentHome() {
                 }}
               >
                 <View className="p-3.5">
-                  <View className="mb-3 h-10 w-10 items-center justify-center rounded-2xl bg-white/85">
+                  <View
+                    className="mb-3 h-10 w-10 items-center justify-center rounded-2xl"
+                    style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.85)' }}
+                  >
                     <card.Icon color={card.tint} size={20} strokeWidth={1.5} />
                   </View>
                   <Text className="text-[15px] text-ink" style={{ fontFamily: FontFamily.heading }}>
@@ -654,7 +763,7 @@ export default function ResidentHome() {
           ))}
         </View>
 
-        {/* Action tip — terracotta, not status green */}
+        {/* Action tip — brand red */}
         <MotiView
           from={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -662,7 +771,7 @@ export default function ResidentHome() {
           className="mt-4 overflow-hidden rounded-[22px]"
         >
           <LinearGradient
-            colors={['#C2410C', '#EA580C']}
+            colors={['#BE123C', '#E11D48']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={{ padding: 16 }}
@@ -695,7 +804,7 @@ export default function ResidentHome() {
           accessibilityRole="button"
           className="mt-4 mb-1 flex-row items-center gap-3 rounded-[22px] bg-surface-card px-4 py-3.5"
           style={{
-            shadowColor: '#101512',
+            shadowColor: '#0F172A',
             shadowOffset: { width: 0, height: 1 },
             shadowOpacity: 0.05,
             shadowRadius: 6,
@@ -704,9 +813,9 @@ export default function ResidentHome() {
         >
           <View
             className="h-10 w-10 items-center justify-center rounded-card"
-            style={{ backgroundColor: Pastels.sage }}
+            style={{ backgroundColor: pastels.sage }}
           >
-            <Phone color={Brand.primary} size={17} strokeWidth={1.5} />
+            <Phone color={primaryAccent} size={17} strokeWidth={1.5} />
           </View>
           <View className="min-w-0 flex-1">
             <Text className="text-[15px] text-ink" style={{ fontFamily: FontFamily.heading }}>

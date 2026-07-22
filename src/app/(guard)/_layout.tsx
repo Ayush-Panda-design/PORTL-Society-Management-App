@@ -2,11 +2,11 @@ import { Drawer } from 'expo-router/drawer';
 
 import { AppDrawerContent } from '@/components/navigation/app-drawer-content';
 import { useResolvedColorScheme } from '@/hooks/use-resolved-color-scheme';
-import { Brand } from '@/constants/theme';
+import { getPalette } from '@/constants/theme';
 
 export default function GuardDrawerLayout() {
   const scheme = useResolvedColorScheme();
-  const isDark = scheme === 'dark';
+  const palette = getPalette(scheme);
 
   return (
     <Drawer
@@ -15,10 +15,10 @@ export default function GuardDrawerLayout() {
       screenOptions={{
         headerShown: false,
         drawerType: 'front',
-        overlayColor: 'rgba(16, 21, 18, 0.45)',
+        overlayColor: scheme === 'dark' ? 'rgba(0, 0, 0, 0.4)' : 'rgba(16, 21, 18, 0.45)',
         drawerStyle: {
           width: 300,
-          backgroundColor: isDark ? '#1A1F1D' : Brand.surface,
+          backgroundColor: palette.card,
         },
       }}
     >

@@ -12,7 +12,7 @@ import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import type { SwipeDecision } from '@/components/visitors/swipeable-visitor-card';
-import { FontFamily } from '@/constants/theme';
+import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { fetchResidents } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
 import { fetchPendingMembers, reviewJoinRequest } from '@/lib/society-api';
@@ -132,6 +132,25 @@ export default function AdminJoinRequestsScreen() {
           </View>
         ) : pending.length > 0 ? (
           <View className="mb-8">
+            <View
+              className="mb-3 flex-row items-center justify-between rounded-[16px] px-3.5 py-2.5"
+              style={{ backgroundColor: Pastels.rose }}
+            >
+              <Text
+                className="text-[13px] text-ink"
+                style={{ fontFamily: FontFamily.heading }}
+              >
+                Pending approval
+              </Text>
+              <View
+                className="min-w-[24px] items-center rounded-pill px-2 py-0.5"
+                style={{ backgroundColor: Brand.primary }}
+              >
+                <Text className="text-[11px] text-white" style={{ fontFamily: FontFamily.heading }}>
+                  {pending.length}
+                </Text>
+              </View>
+            </View>
             <MemberSwipeDeck
               members={pending}
               busy={busy}
@@ -141,7 +160,16 @@ export default function AdminJoinRequestsScreen() {
             />
           </View>
         ) : (
-          <View className="mb-8">
+          <View
+            className="mb-8 overflow-hidden rounded-[24px] bg-surface-card px-2 pt-2"
+            style={{
+              shadowColor: '#0F172A',
+              shadowOpacity: 0.06,
+              shadowRadius: 16,
+              shadowOffset: { width: 0, height: 6 },
+              elevation: 3,
+            }}
+          >
             <EmptyState
               visual="invites"
               title="No pending requests"
@@ -150,9 +178,24 @@ export default function AdminJoinRequestsScreen() {
           </View>
         )}
 
-        <Text className="mb-3 text-base text-ink" style={{ fontFamily: FontFamily.heading }}>
-          Active residents
-        </Text>
+        <View className="mb-3 flex-row items-center justify-between">
+          <Text className="text-[17px] text-ink" style={{ fontFamily: FontFamily.display }}>
+            Active residents
+          </Text>
+          {active.length > 0 ? (
+            <View
+              className="rounded-pill px-2.5 py-1"
+              style={{ backgroundColor: Brand.primary }}
+            >
+              <Text
+                className="text-[11px] text-white"
+                style={{ fontFamily: FontFamily.heading }}
+              >
+                {active.length}
+              </Text>
+            </View>
+          ) : null}
+        </View>
 
         {activeQuery.isLoading ? (
           <SkeletonList count={3} />
@@ -163,7 +206,16 @@ export default function AdminJoinRequestsScreen() {
             subtitle="Approved residents will show here. Assign flats from the Residents tab if needed."
           />
         ) : (
-          <View className="overflow-hidden rounded-card border border-surface-border">
+          <View
+            className="overflow-hidden rounded-[20px] bg-surface-card"
+            style={{
+              shadowColor: '#0F172A',
+              shadowOpacity: 0.06,
+              shadowRadius: 14,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: 2,
+            }}
+          >
             {active.map((member, index) => (
               <StaggeredListItem key={member.id} index={index}>
                 <ListRow

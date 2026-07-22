@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import type { ReactNode } from 'react';
-import { Pressable, Text, View, type ViewProps } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type ViewProps } from 'react-native';
 
 import { Brand, Elevation, FontFamily, Gradients, Pastels, Radii, getHeaderGradient } from '@/constants/theme';
 import { useResolvedColorScheme } from '@/hooks/use-resolved-color-scheme';
@@ -13,21 +13,26 @@ type CardProps = ViewProps & {
 };
 
 /**
- * AppCard — shadow-only elevation, no hairline border.
- * 12px radius per design spec.
+ * AppCard — soft shadow in light; Airbnb-style flat lift (tone + hairline) in dark.
  */
 export function AppCard({ children, className = '', style, ...rest }: CardProps) {
   const palette = useThemePalette();
-  const elev = palette.isDark ? Elevation.smDark : Elevation.sm;
+  const elev = palette.isDark ? Elevation.smDark : Elevation.md;
 
   return (
     <View
       {...rest}
-      className={`rounded-card bg-surface-card ${className}`}
+      className={`overflow-hidden rounded-card bg-surface-card ${className}`}
       style={[
         {
           shadowColor: palette.shadow,
           ...elev,
+          ...(palette.isDark
+            ? {
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: 'rgba(255,255,255,0.08)',
+              }
+            : null),
         },
         style,
       ]}
@@ -88,7 +93,7 @@ export function HeroBanner({ title, subtitle, illustration, children, gradientCo
 export function SoftPromoCard({
   title,
   subtitle,
-  tone = 'sky',
+  tone = 'rose',
   illustration,
   onPress,
 }: {
@@ -118,17 +123,19 @@ export function SoftPromoCard({
   const shadowStyle = {
     shadowColor: palette.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: palette.isDark ? 0.3 : 0.05,
+    shadowOpacity: palette.isDark ? 0.12 : 0.05,
     shadowRadius: 8,
     elevation: 2,
   };
+
+  const wash = palette.pastels[tone];
 
   if (onPress) {
     return (
       <Pressable
         onPress={onPress}
         className="mb-4 overflow-hidden rounded-panel px-5 py-5"
-        style={[{ backgroundColor: Pastels[tone] }, shadowStyle]}
+        style={[{ backgroundColor: wash }, shadowStyle]}
       >
         {body}
       </Pressable>
@@ -138,7 +145,7 @@ export function SoftPromoCard({
   return (
     <View
       className="mb-4 overflow-hidden rounded-panel px-5 py-5"
-      style={[{ backgroundColor: Pastels[tone] }, shadowStyle]}
+      style={[{ backgroundColor: wash }, shadowStyle]}
     >
       {body}
     </View>
@@ -162,10 +169,10 @@ export function HeaderWash({ children }: HeaderWashProps) {
 const AVATAR_TONES = [
   Brand.primary,
   Brand.primaryDark,
-  Brand.accent,
-  '#4FA094',
-  '#5B7EC4',
-  '#C4627A',
+  Brand.primaryMid,
+  '#FB7185',
+  '#64748B',
+  '#334155',
 ];
 
 const STATUS_DOT_COLORS: Record<'online' | 'pending' | 'offline', string> = {
@@ -326,7 +333,7 @@ export function FloatingActionBtn({
   onPress,
   icon,
   label,
-  tone = 'charcoal',
+  tone = 'primary',
 }: {
   onPress: () => void;
   icon: ReactNode;
@@ -364,15 +371,14 @@ export function FloatingActionBtn({
 }
 
 /**
- * PrimaryButton — terracotta accent CTA per design spec.
- * Use for the most important action on a screen.
+ * PrimaryButton — brand-red CTA for the most important action on a screen.
  */
 export function PrimaryButton({
   label,
   onPress,
   disabled,
   loading,
-  tone = 'accent',
+  tone = 'primary',
 }: {
   label: string;
   onPress: () => void;
@@ -381,11 +387,11 @@ export function PrimaryButton({
   tone?: 'accent' | 'primary' | 'charcoal';
 }) {
   const bgColor =
-    tone === 'primary'
-      ? Brand.primary
+    tone === 'accent'
+      ? Brand.accent
       : tone === 'charcoal'
         ? Brand.charcoal
-        : Brand.accent;
+        : Brand.primary;
 
   return (
     <Pressable
@@ -395,9 +401,9 @@ export function PrimaryButton({
       style={{
         backgroundColor: bgColor,
         shadowColor: bgColor,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.28,
+        shadowRadius: 14,
         elevation: 4,
       }}
     >
@@ -409,8 +415,7 @@ export function PrimaryButton({
 }
 
 /**
- * PressableActionTile — icon + title + subtitle row.
- * Shadow-only elevation, 12px radius.
+ * PressableActionTile — icon + title + subtitle row with soft elevation.
  */
 export function PressableActionTile({
   title,
@@ -428,7 +433,7 @@ export function PressableActionTile({
   badge?: number;
 }) {
   const palette = useThemePalette();
-  const elev = palette.isDark ? Elevation.smDark : Elevation.sm;
+  const elev = palette.isDark ? Elevation.smDark : Elevation.md;
 
   return (
     <Pressable
@@ -437,6 +442,12 @@ export function PressableActionTile({
       style={{
         shadowColor: palette.shadow,
         ...elev,
+        ...(palette.isDark
+          ? {
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: 'rgba(255,255,255,0.08)',
+            }
+          : null),
       }}
     >
       <View className="flex-row items-center gap-3.5 p-4">
@@ -455,7 +466,7 @@ export function PressableActionTile({
         {badge !== undefined && badge > 0 ? (
           <View
             className="h-6 min-w-[24px] items-center justify-center rounded-pill px-1.5"
-            style={{ backgroundColor: Brand.accent }}
+            style={{ backgroundColor: Brand.primary }}
           >
             <Text className="text-xs font-bold text-white" style={{ fontFamily: FontFamily.heading }}>
               {badge > 99 ? '99+' : badge}

@@ -29,6 +29,8 @@ import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand, FontFamily, Pastels, amenityCoverUri } from '@/constants/theme';
+import { useModalBack } from '@/hooks/use-modal-back';
+import { useThemePalette } from '@/hooks/use-theme';
 import {
   adminBookingFlatLabel,
   paymentStatusPillStyle,
@@ -54,16 +56,17 @@ import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
 import type { AdminAmenityBookingView, Amenity } from '@/types/database';
 import { DEFAULT_AMENITY_SLOTS } from '@/types/database';
-import { Tokens } from '@/theme/tokens';
 
 type AdminTab = 'facilities' | 'bookings';
 
 export default function AdminAmenitiesScreen() {
   const societyId = useAuthStore((s) => s.profile?.society_id);
   const queryClient = useQueryClient();
+  const palette = useThemePalette();
 
   const [tab, setTab] = useState<AdminTab>('facilities');
   const [modalOpen, setModalOpen] = useState(false);
+  useModalBack(modalOpen, () => setModalOpen(false));
   const [editing, setEditing] = useState<Amenity | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -613,20 +616,32 @@ export default function AdminAmenitiesScreen() {
               }
               renderItem={({ item }) => (
                 <Card style={{ padding: 0, overflow: 'hidden', marginBottom: 4 }}>
-                  <Image
-                    source={{ uri: amenityCoverUri(item) }}
-                    style={{ width: '100%', height: 110 }}
-                    contentFit="cover"
-                    transition={200}
-                  />
+                  <View>
+                    <Image
+                      source={{ uri: amenityCoverUri(item) }}
+                      style={{ width: '100%', height: 110 }}
+                      contentFit="cover"
+                      transition={200}
+                    />
+                    {palette.isDark ? (
+                      <View
+                        pointerEvents="none"
+                        style={{
+                          position: 'absolute',
+                          left: 0,
+                          right: 0,
+                          top: 0,
+                          bottom: 0,
+                          backgroundColor: 'rgba(14,13,16,0.28)',
+                        }}
+                      />
+                    ) : null}
+                  </View>
                   <View className="p-4">
                     <View className="mb-1 flex-row items-center gap-2">
                       <Text
-                        style={{
-                          ...Tokens.typography.h3,
-                          color: Tokens.color.textPrimary,
-                          flex: 1,
-                        }}
+                        className="flex-1 text-ink"
+                        style={{ fontFamily: FontFamily.heading, fontSize: 17 }}
                         numberOfLines={1}
                       >
                         {item.name}
@@ -636,11 +651,7 @@ export default function AdminAmenitiesScreen() {
                       ) : null}
                     </View>
                     <Text
-                      style={{
-                        ...Tokens.typography.body,
-                        color: Tokens.color.textSecondary,
-                        marginBottom: 8,
-                      }}
+                      className="mb-2 text-sm text-ink-soft"
                       numberOfLines={2}
                     >
                       {item.description || 'No description'}
@@ -652,19 +663,17 @@ export default function AdminAmenitiesScreen() {
                         alignItems: 'center',
                       }}
                     >
-                      <Text
-                        style={{ ...Tokens.typography.caption, color: Tokens.color.textMuted }}
-                      >
+                      <Text className="text-xs text-ink-muted">
                         {amenitySlotCapacity(item.capacity)} spots/slot ·{' '}
                         {item.booking_horizon_days ?? 7}d · max{' '}
                         {item.max_active_bookings_per_flat ?? 2}/flat
                       </Text>
                       <View style={{ flexDirection: 'row', gap: 8 }}>
                         <Pressable onPress={() => openEdit(item)} style={{ padding: 8 }}>
-                          <Edit2 color={Tokens.color.primary} size={18} />
+                          <Edit2 color={palette.primaryAccent} size={18} />
                         </Pressable>
                         <Pressable onPress={() => confirmDelete(item)} style={{ padding: 8 }}>
-                          <Trash2 color={Tokens.color.danger} size={18} />
+                          <Trash2 color={palette.primaryAccent} size={18} />
                         </Pressable>
                       </View>
                     </View>
@@ -682,43 +691,54 @@ export default function AdminAmenitiesScreen() {
         </>
       )}
 
-      <Modal visible={modalOpen} animationType="slide" transparent>
+      <Modal
+        visible={modalOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setModalOpen(false)}
+      >
         <KeyboardAvoidingView behavior="padding" className="flex-1 justify-end bg-black/40">
-          <View className="max-h-[92%] rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
+          <View className="max-h-[92%] rounded-t-[28px] bg-surface px-5 pb-10 pt-3">
+            <View className="mb-3 items-center">
+              <View className="h-1 w-10 rounded-full bg-surface-muted" />
+            </View>
             <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <Text
-                style={{
-                  ...Tokens.typography.h2,
-                  color: Tokens.color.textPrimary,
-                  marginBottom: 16,
-                }}
+                className="mb-1 text-[22px] text-ink"
+                style={{ fontFamily: FontFamily.display }}
               >
                 {editing ? 'Edit amenity' : 'New amenity'}
               </Text>
+              <Text className="mb-5 text-[13px] text-ink-muted">
+                Cover, booking rules, and slots residents will see.
+              </Text>
               {formError ? (
                 <Text
-                  style={{
-                    ...Tokens.typography.caption,
-                    color: Tokens.color.danger,
-                    marginBottom: 8,
-                  }}
+                  className="mb-3 text-[13px]"
+                  style={{ color: Brand.primary, fontFamily: FontFamily.heading }}
                 >
                   {formError}
                 </Text>
               ) : null}
 
-              <Text className="mb-2 text-sm font-medium text-ink-soft">Cover photo</Text>
+              {/* Media */}
+              <Text
+                className="mb-2 text-[11px] uppercase tracking-widest text-ink-muted"
+                style={{ fontFamily: FontFamily.heading }}
+              >
+                Cover
+              </Text>
               {coverUri ? (
-                <View className="mb-3 overflow-hidden rounded-2xl">
+                <View className="mb-2 overflow-hidden rounded-[20px]">
                   <Image
                     source={{ uri: coverUri }}
-                    style={{ width: '100%', height: 140 }}
+                    style={{ width: '100%', height: 148 }}
                     contentFit="cover"
                   />
                   <Pressable
                     onPress={() => setCoverUri(null)}
                     className="absolute right-3 top-3 rounded-pill px-2.5 py-1"
-                    style={{ backgroundColor: 'rgba(16,21,18,0.7)' }}
+                    style={{ backgroundColor: 'rgba(15,23,42,0.72)' }}
                   >
                     <Text className="text-xs font-semibold text-white">Remove</Text>
                   </Pressable>
@@ -728,17 +748,26 @@ export default function AdminAmenitiesScreen() {
                   onPress={() => {
                     void pickCover();
                   }}
-                  className="mb-3 items-center justify-center rounded-2xl border border-dashed border-surface-border py-8"
-                  style={{ backgroundColor: Pastels.sage }}
+                  className="mb-2 items-center justify-center rounded-[20px] border border-dashed py-9"
+                  style={{
+                    backgroundColor: Pastels.rose,
+                    borderColor: Brand.primary,
+                    borderWidth: 1.5,
+                  }}
                 >
-                  <ImagePlus color={Brand.primary} size={22} strokeWidth={1.5} />
+                  <View
+                    className="mb-2 h-11 w-11 items-center justify-center rounded-2xl"
+                      style={{ backgroundColor: palette.card }}
+                  >
+                    <ImagePlus color={Brand.primary} size={22} strokeWidth={1.5} />
+                  </View>
                   <Text
-                    className="mt-2 text-sm"
+                    className="text-[15px]"
                     style={{ fontFamily: FontFamily.heading, color: Brand.primary }}
                   >
                     Add cover photo
                   </Text>
-                  <Text className="mt-1 text-xs text-ink-muted">
+                  <Text className="mt-1 text-[12px] text-ink-muted">
                     Optional — stock image used if empty
                   </Text>
                 </Pressable>
@@ -748,82 +777,116 @@ export default function AdminAmenitiesScreen() {
                   onPress={() => {
                     void pickCover();
                   }}
-                  className="mb-3 items-center rounded-xl py-2.5"
-                  style={{ backgroundColor: Pastels.mint }}
+                  className="mb-4 items-center rounded-[16px] py-2.5"
+                  style={{ backgroundColor: Pastels.rose }}
                 >
                   <Text style={{ fontFamily: FontFamily.heading, color: Brand.primary }}>
                     Change cover
                   </Text>
                 </Pressable>
-              ) : null}
+              ) : (
+                <View className="mb-4" />
+              )}
+
+              {/* Basics */}
+              <Text
+                className="mb-2 text-[11px] uppercase tracking-widest text-ink-muted"
+                style={{ fontFamily: FontFamily.heading }}
+              >
+                Basics
+              </Text>
+              <View
+                className="mb-5 overflow-hidden rounded-[20px] bg-surface-card px-4 py-2"
+                style={{
+                  shadowColor: '#0F172A',
+                  shadowOpacity: 0.06,
+                  shadowRadius: 14,
+                  shadowOffset: { width: 0, height: 4 },
+                  elevation: 2,
+                }}
+              >
+                <AmenityField
+                  label="Name"
+                  placeholder="e.g. Clubhouse"
+                  value={name}
+                  onChangeText={setName}
+                />
+                <AmenityField
+                  label="Description"
+                  placeholder="What residents can expect"
+                  value={description}
+                  onChangeText={setDescription}
+                />
+                <AmenityField
+                  label="Location"
+                  placeholder="Tower A ground floor"
+                  value={location}
+                  onChangeText={setLocation}
+                  last
+                />
+              </View>
+
+              {/* Booking rules */}
+              <Text
+                className="mb-2 text-[11px] uppercase tracking-widest text-ink-muted"
+                style={{ fontFamily: FontFamily.heading }}
+              >
+                Booking rules
+              </Text>
+              <View
+                className="mb-5 overflow-hidden rounded-[20px] bg-surface-card px-4 py-2"
+                style={{
+                  shadowColor: '#0F172A',
+                  shadowOpacity: 0.06,
+                  shadowRadius: 14,
+                  shadowOffset: { width: 0, height: 4 },
+                  elevation: 2,
+                }}
+              >
+                <AmenityField
+                  label="Spots per time slot"
+                  helper="Shared use. Use 1 for exclusive clubhouse booking."
+                  placeholder="1"
+                  keyboardType="number-pad"
+                  value={capacity}
+                  onChangeText={setCapacity}
+                />
+                <AmenityField
+                  label="Booking window (days)"
+                  helper="How far ahead residents can book (1–14, including today)."
+                  placeholder="7"
+                  keyboardType="number-pad"
+                  value={horizonDays}
+                  onChangeText={setHorizonDays}
+                />
+                <AmenityField
+                  label="Max bookings per flat"
+                  helper="Active upcoming bookings one flat can hold."
+                  placeholder="2"
+                  keyboardType="number-pad"
+                  value={maxPerFlat}
+                  onChangeText={setMaxPerFlat}
+                />
+                <AmenityField
+                  label="Fee (₹)"
+                  helper="0 = free. Requires a verified Razorpay society account."
+                  placeholder="0"
+                  keyboardType="decimal-pad"
+                  value={feeRupees}
+                  onChangeText={setFeeRupees}
+                  last
+                />
+              </View>
 
               <TextInput
-                className="mb-3 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
-                placeholder="Name"
-                placeholderTextColor="#94A3B8"
-                value={name}
-                onChangeText={setName}
-              />
-              <TextInput
-                className="mb-3 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
-                placeholder="Description"
-                placeholderTextColor="#94A3B8"
-                value={description}
-                onChangeText={setDescription}
-              />
-              <TextInput
-                className="mb-3 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
-                placeholder="Location (e.g. Tower A ground floor)"
-                placeholderTextColor="#94A3B8"
-                value={location}
-                onChangeText={setLocation}
-              />
-              <Text className="mb-1 text-xs text-ink-muted">
-                Spots per time slot (shared use). Use 1 for exclusive clubhouse booking.
-              </Text>
-              <TextInput
-                className="mb-3 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
-                placeholder="Capacity / spots per slot"
-                placeholderTextColor="#94A3B8"
-                keyboardType="number-pad"
-                value={capacity}
-                onChangeText={setCapacity}
-              />
-              <Text className="mb-1 text-xs text-ink-muted">
-                How far ahead residents can book (1–14 days, including today).
-              </Text>
-              <TextInput
-                className="mb-3 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
-                placeholder="Booking window (days)"
-                placeholderTextColor="#94A3B8"
-                keyboardType="number-pad"
-                value={horizonDays}
-                onChangeText={setHorizonDays}
-              />
-              <Text className="mb-1 text-xs text-ink-muted">
-                Max active upcoming bookings one flat can hold for this amenity.
-              </Text>
-              <TextInput
-                className="mb-3 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
-                placeholder="Max bookings per flat"
-                placeholderTextColor="#94A3B8"
-                keyboardType="number-pad"
-                value={maxPerFlat}
-                onChangeText={setMaxPerFlat}
-              />
-              <Text className="mb-1 text-xs text-ink-muted">
-                Booking fee in ₹ (0 = free). Requires a verified Razorpay society account.
-              </Text>
-              <TextInput
-                className="mb-3 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
-                placeholder="Fee (₹)"
-                placeholderTextColor="#94A3B8"
-                keyboardType="decimal-pad"
-                value={feeRupees}
-                onChangeText={setFeeRupees}
-              />
-              <TextInput
-                className="mb-3 min-h-[80px] rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+                className="mb-4 min-h-[88px] rounded-[20px] bg-surface-card px-4 py-3.5 text-base text-ink"
+                style={{
+                  shadowColor: '#0F172A',
+                  shadowOpacity: 0.05,
+                  shadowRadius: 10,
+                  shadowOffset: { width: 0, height: 3 },
+                  elevation: 1,
+                }}
                 placeholder="Rules / notes for residents (optional)"
                 placeholderTextColor="#94A3B8"
                 multiline
@@ -833,8 +896,8 @@ export default function AdminAmenitiesScreen() {
               />
 
               <View
-                className="mb-4 flex-row items-center justify-between rounded-xl px-4 py-3"
-                style={{ backgroundColor: Pastels.butter }}
+                className="mb-5 flex-row items-center justify-between rounded-[20px] px-4 py-3.5"
+                style={{ backgroundColor: Pastels.rose }}
               >
                 <View className="mr-3 flex-1">
                   <Text style={{ fontFamily: FontFamily.heading }} className="text-[15px] text-ink">
@@ -852,9 +915,21 @@ export default function AdminAmenitiesScreen() {
                 />
               </View>
 
-              <Text className="mb-2 text-sm font-medium text-ink-soft">Slots (one per line)</Text>
+              <Text
+                className="mb-2 text-[11px] uppercase tracking-widest text-ink-muted"
+                style={{ fontFamily: FontFamily.heading }}
+              >
+                Time slots
+              </Text>
               <TextInput
-                className="mb-4 min-h-[120px] rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
+                className="mb-5 min-h-[120px] rounded-[20px] bg-surface-card px-4 py-3.5 text-base text-ink"
+                style={{
+                  shadowColor: '#0F172A',
+                  shadowOpacity: 0.05,
+                  shadowRadius: 10,
+                  shadowOffset: { width: 0, height: 3 },
+                  elevation: 1,
+                }}
                 placeholder={'06:00-07:00\n07:00-08:00'}
                 placeholderTextColor="#94A3B8"
                 multiline
@@ -863,30 +938,30 @@ export default function AdminAmenitiesScreen() {
                 onChangeText={setSlotsText}
               />
 
-              <View className="flex-row gap-2">
+              <View className="flex-row gap-2.5">
                 <Pressable
                   onPress={() => setModalOpen(false)}
-                  className="flex-1 items-center rounded-xl border border-surface-border py-3"
+                  className="flex-1 items-center rounded-[16px] border border-surface-border bg-surface-card py-3.5"
                 >
-                  <Text
-                    style={{
-                      ...Tokens.typography.bodyMedium,
-                      color: Tokens.color.textSecondary,
-                    }}
-                  >
-                    Cancel
-                  </Text>
+                  <Text className="font-semibold text-ink-soft">Cancel</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => saveMutation.mutate()}
                   disabled={saveMutation.isPending}
-                  className="flex-1 items-center rounded-bubbly py-3.5"
-                  style={{ backgroundColor: Tokens.color.primary }}
+                  className="flex-1 items-center rounded-[16px] py-3.5"
+                  style={{
+                    backgroundColor: Brand.primary,
+                    shadowColor: Brand.primary,
+                    shadowOpacity: 0.28,
+                    shadowRadius: 12,
+                    shadowOffset: { width: 0, height: 6 },
+                    elevation: 4,
+                  }}
                 >
                   {saveMutation.isPending ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={{ ...Tokens.typography.bodyMedium, color: '#fff' }}>Save</Text>
+                    <Text className="font-semibold text-white">Save</Text>
                   )}
                 </Pressable>
               </View>
@@ -897,3 +972,39 @@ export default function AdminAmenitiesScreen() {
     </ScreenHeader>
   );
 }
+
+function AmenityField({
+  label,
+  helper,
+  placeholder,
+  value,
+  onChangeText,
+  keyboardType,
+  last = false,
+}: {
+  label: string;
+  helper?: string;
+  placeholder: string;
+  value: string;
+  onChangeText: (v: string) => void;
+  keyboardType?: 'default' | 'number-pad' | 'decimal-pad';
+  last?: boolean;
+}) {
+  return (
+    <View className={last ? 'py-3' : 'border-b border-surface-border py-3'}>
+      <Text className="mb-1 text-[13px] text-ink" style={{ fontFamily: FontFamily.heading }}>
+        {label}
+      </Text>
+      {helper ? <Text className="mb-2 text-[12px] leading-4 text-ink-muted">{helper}</Text> : null}
+      <TextInput
+        className="rounded-[14px] bg-surface px-3.5 py-3 text-base text-ink"
+        placeholder={placeholder}
+        placeholderTextColor="#94A3B8"
+        keyboardType={keyboardType}
+        value={value}
+        onChangeText={onChangeText}
+      />
+    </View>
+  );
+}
+

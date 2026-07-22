@@ -11,9 +11,9 @@ import Svg, { Path, Rect } from 'react-native-svg';
 import { FontFamily, Radii, Spacing } from '@/constants/theme';
 import { appStorage } from '@/lib/app-storage';
 
-/** Amber-gold sampled from the hero sconces / sunset — not the generic brand orange. */
-const HERO_GOLD = '#E09A3C';
-const HERO_GOLD_DEEP = '#C47A28';
+/** Brand red sampled for welcome CTAs — matches Portl primary. */
+const HERO_GOLD = '#E11D48';
+const HERO_GOLD_DEEP = '#BE123C';
 
 const WELCOME_SEEN_KEY = 'portl_welcome_seen';
 
@@ -99,14 +99,14 @@ export default function WelcomeScreen() {
 
       {/* Top scrim — keeps status bar / notch icons legible over bright sky */}
       <LinearGradient
-        colors={['rgba(8, 14, 12, 0.72)', 'rgba(8, 14, 12, 0.28)', 'transparent']}
+        colors={['rgba(15, 23, 42, 0.72)', 'rgba(15, 23, 42, 0.28)', 'transparent']}
         locations={[0, 0.55, 1]}
         style={styles.topScrim}
       />
 
       {/* Bottom scrim — full dark plane under headline + both CTAs for ≥4.5:1 text */}
       <LinearGradient
-        colors={['transparent', 'rgba(8, 14, 12, 0.55)', 'rgba(8, 14, 12, 0.92)', 'rgba(8, 14, 12, 0.98)']}
+        colors={['transparent', 'rgba(15, 23, 42, 0.55)', 'rgba(15, 23, 42, 0.92)', 'rgba(15, 23, 42, 0.98)']}
         locations={[0, 0.22, 0.55, 1]}
         style={styles.bottomScrim}
       />
@@ -201,7 +201,7 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#080E0C',
+    backgroundColor: '#0F172A',
   },
   topScrim: {
     position: 'absolute',

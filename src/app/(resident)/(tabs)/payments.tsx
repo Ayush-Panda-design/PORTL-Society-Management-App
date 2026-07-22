@@ -78,7 +78,7 @@ function LedgerRow({ item, index }: { item: PaymentLedgerEntry; index: number })
               {formatPaise(item.amount_paise)}
             </Text>
             {outstanding > 0 ? (
-              <Text className="mt-0.5 text-xs" style={{ color: '#C0392B' }}>
+              <Text className="mt-0.5 text-xs" style={{ color: '#E11D48' }}>
                 Due {formatPaise(outstanding)}
               </Text>
             ) : (

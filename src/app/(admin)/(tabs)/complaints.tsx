@@ -25,7 +25,6 @@ import { AvatarStack } from '@/components/ui/avatar-stack';
 import { InitialsAvatar } from '@/components/ui/brand';
 import { ChipSelector } from '@/components/ui/chip-selector';
 import { GlassCard } from '@/components/ui/glass-card';
-import { ListRow } from '@/components/ui/list-row';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SearchField } from '@/components/ui/search-field';
 import { SegmentedControl } from '@/components/ui/segmented-control';
@@ -34,7 +33,15 @@ import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
-import { Brand, Elevation, FontFamily, Pastels } from '@/constants/theme';
+import {
+  Brand,
+  Elevation,
+  FontFamily,
+  getActiveColorScheme,
+  getPalette,
+  getPastels,
+  type PastelTone,
+} from '@/constants/theme';
 import { complaintCategoryMeta } from '@/lib/complaint-category';
 import { complaintStatusTone } from '@/lib/community';
 import {
@@ -72,36 +79,55 @@ const STATUS_STYLE: Record<
   open: { accent: '#D97706', bg: '#FFFBEB', text: '#B45309', label: 'Open' },
   in_progress: { accent: '#2563EB', bg: '#EFF6FF', text: '#1D4ED8', label: 'In progress' },
   resolved: { accent: '#059669', bg: '#ECFDF5', text: '#047857', label: 'Resolved' },
-  reopened: { accent: '#EA580C', bg: '#FFF7ED', text: '#C2410C', label: 'Reopened' },
+  reopened: { accent: '#E11D48', bg: '#FFE4E8', text: '#BE123C', label: 'Reopened' },
 };
 
 const STEP_ACCENT = ['#D97706', '#2563EB', '#059669'] as const;
 
-const PRIORITY_MARK: Record<
+const PRIORITY_MARK_DEF: Record<
   ComplaintPriority,
-  { accent: string; bg: string; label: string }
+  { accent: string; bgLight: string; bgDarkTone?: PastelTone; label: string }
 > = {
-  low: { accent: '#6B7280', bg: '#F3F4F6', label: 'Low priority' },
-  medium: { accent: '#CA8A04', bg: '#FEF9C3', label: 'Medium priority' },
-  high: { accent: '#EA580C', bg: '#FFEDD5', label: 'High priority' },
-  critical: { accent: '#DC2626', bg: '#FEE2E2', label: 'Critical priority' },
+  low: { accent: '#6B7280', bgLight: '#F3F4F6', label: 'Low priority' },
+  medium: { accent: '#CA8A04', bgLight: '#FEF9C3', label: 'Medium priority' },
+  high: { accent: '#E11D48', bgLight: '#FFE4E8', bgDarkTone: 'rose', label: 'High priority' },
+  critical: { accent: '#DC2626', bgLight: '#FEE2E2', bgDarkTone: 'peach', label: 'Critical priority' },
 };
 
-const TOWER_ACCENTS = [
-  { bg: Pastels.sky, text: '#1E40AF' },
-  { bg: Pastels.lilac, text: '#5B21B6' },
-  { bg: Pastels.peach, text: '#C2410C' },
-  { bg: Pastels.rose, text: '#BE123C' },
-  { bg: Pastels.butter, text: '#A16207' },
-  { bg: Pastels.coral, text: '#9A3412' },
-] as const;
+function priorityMark(priority: ComplaintPriority, scheme?: 'light' | 'dark') {
+  const def = PRIORITY_MARK_DEF[priority];
+  const resolvedScheme = scheme ?? getActiveColorScheme();
+  const palette = getPalette(resolvedScheme);
+  const pastels = getPastels(resolvedScheme);
+  let bg = def.bgLight;
+  if (resolvedScheme === 'dark') {
+    bg = def.bgDarkTone ? pastels[def.bgDarkTone] : palette.muted;
+  }
+  return { accent: def.accent, bg, label: def.label };
+}
 
-function towerAccent(towerName: string | null) {
-  if (!towerName?.trim()) return { bg: '#F3F4F6', text: Brand.inkSoft };
+const TOWER_ACCENT_DEFS: { bgTone: PastelTone; textLight: string; textDark: string }[] = [
+  { bgTone: 'sky', textLight: '#1E40AF', textDark: '#93C5FD' },
+  { bgTone: 'lilac', textLight: '#5B21B6', textDark: '#C4B5FD' },
+  { bgTone: 'peach', textLight: '#BE123C', textDark: '#FDA4AF' },
+  { bgTone: 'rose', textLight: '#BE123C', textDark: '#FDA4AF' },
+  { bgTone: 'butter', textLight: '#A16207', textDark: '#FCD34D' },
+  { bgTone: 'coral', textLight: '#9A3412', textDark: '#FDBA74' },
+];
+
+function towerAccent(towerName: string | null, scheme?: 'light' | 'dark') {
+  const resolvedScheme = scheme ?? getActiveColorScheme();
+  const palette = getPalette(resolvedScheme);
+  const pastels = getPastels(resolvedScheme);
+  if (!towerName?.trim()) return { bg: palette.muted, text: palette.inkSoft };
   const index =
     towerName.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) %
-    TOWER_ACCENTS.length;
-  return TOWER_ACCENTS[index];
+    TOWER_ACCENT_DEFS.length;
+  const def = TOWER_ACCENT_DEFS[index]!;
+  return {
+    bg: pastels[def.bgTone],
+    text: resolvedScheme === 'dark' ? def.textDark : def.textLight,
+  };
 }
 
 function flatLabel(item: ComplaintWithFlat): string {
@@ -443,7 +469,7 @@ export default function AdminComplaintsScreen() {
     const statusMeta = STATUS_STYLE[selected.status] ?? STATUS_STYLE.open;
     const statusLabel = complaintStatusTone(selected.status).label;
     const priority = selected.priority ?? 'medium';
-    const priorityMeta = PRIORITY_MARK[priority];
+    const priorityMeta = priorityMark(priority);
     const towerName = selected.flats ? flatTowerName(selected.flats.towers) : null;
     const towerTone = towerAccent(towerName ?? null);
     const assigneeName =
@@ -851,51 +877,69 @@ export default function AdminComplaintsScreen() {
             const cat = complaintCategoryMeta(section.title);
             const CatIcon = cat.Icon;
             return (
-              <View
-                className="mx-4 mb-1 mt-3 flex-row items-center justify-between px-1 py-2"
-                style={{ backgroundColor: Brand.surface }}
-              >
-                <View className="flex-row items-center gap-2">
-                  <View
-                    className="h-7 w-7 items-center justify-center rounded-full"
-                    style={{ backgroundColor: cat.bg }}
-                  >
-                    <CatIcon color={cat.color} size={14} strokeWidth={1.5} />
+              <View className="mx-4 mb-2 mt-4">
+                <View
+                  className="flex-row items-center justify-between rounded-[18px] px-3.5 py-3"
+                  style={{ backgroundColor: cat.bg }}
+                >
+                  <View className="flex-row items-center gap-2.5">
+                    <View
+                      className="h-9 w-9 items-center justify-center rounded-2xl bg-white"
+                      style={{
+                        shadowColor: '#0F172A',
+                        shadowOpacity: 0.06,
+                        shadowRadius: 8,
+                        shadowOffset: { width: 0, height: 2 },
+                        elevation: 1,
+                      }}
+                    >
+                      <CatIcon color={cat.color} size={16} strokeWidth={1.5} />
+                    </View>
+                    <Text
+                      className="text-[13px] font-bold uppercase tracking-widest text-ink"
+                      style={{ fontFamily: FontFamily.heading }}
+                    >
+                      {section.title}
+                    </Text>
                   </View>
-                  <Text
-                    className="text-xs font-bold uppercase tracking-widest text-ink"
-                    style={{ fontFamily: FontFamily.heading }}
-                  >
-                    {section.title}
-                  </Text>
+                  <View className="rounded-pill bg-white/80 px-2.5 py-1">
+                    <Text className="text-[11px] text-ink-muted" style={{ fontFamily: FontFamily.heading }}>
+                      {section.data.length} ticket{section.data.length === 1 ? '' : 's'}
+                    </Text>
+                  </View>
                 </View>
-                <Text className="text-xs text-ink-muted">
-                  {section.data.length} ticket{section.data.length === 1 ? '' : 's'}
-                </Text>
               </View>
             );
           }}
-          renderItem={({ item, index }) => {
+          renderItem={({ item, index, section }) => {
             const unread = isComplaintUnread(item.id);
             const name = reporterName(item);
             const statusMeta = STATUS_STYLE[item.status] ?? STATUS_STYLE.open;
             const cat = complaintCategoryMeta(item.category);
             const CatIcon = cat.Icon;
+            const isLast = index === section.data.length - 1;
             return (
               <StaggeredListItem index={index} disabled={listQuery.isRefetching}>
-                <ListRow
-                  title={name}
-                  subtitle={`${flatLabel(item)} · ${new Date(item.created_at).toLocaleDateString()}`}
-                  meta={item.description}
-                  accentColor={statusMeta.accent}
+                <Pressable
+                  accessibilityRole="button"
                   accessibilityLabel={`${item.category} from ${name}`}
                   onPress={() => {
                     markComplaintSeen(item.id);
                     setSelectedId(item.id);
                   }}
-                  leading={
+                  className="mx-4 mb-2 overflow-hidden rounded-[18px] bg-surface-card px-3.5 py-3.5"
+                  style={{
+                    shadowColor: '#0F172A',
+                    shadowOpacity: 0.06,
+                    shadowRadius: 12,
+                    shadowOffset: { width: 0, height: 4 },
+                    elevation: 2,
+                    marginBottom: isLast ? 8 : 8,
+                  }}
+                >
+                  <View className="flex-row items-start gap-3">
                     <View
-                      className="h-10 w-10 items-center justify-center rounded-full"
+                      className="h-11 w-11 items-center justify-center rounded-2xl"
                       style={{ backgroundColor: cat.bg }}
                     >
                       <CatIcon color={cat.color} size={18} strokeWidth={1.5} />
@@ -906,19 +950,37 @@ export default function AdminComplaintsScreen() {
                         />
                       ) : null}
                     </View>
-                  }
-                  trailing={
-                    <View className="items-end gap-1">
-                      <Text
-                        className="text-[11px] font-semibold"
-                        style={{ color: statusMeta.text }}
-                      >
-                        {complaintStatusTone(item.status).label}
+                    <View className="min-w-0 flex-1">
+                      <View className="flex-row items-start justify-between gap-2">
+                        <Text
+                          className="min-w-0 flex-1 text-[15px] text-ink"
+                          style={{ fontFamily: FontFamily.heading }}
+                          numberOfLines={1}
+                        >
+                          {name}
+                        </Text>
+                        <View
+                          className="rounded-pill px-2.5 py-1"
+                          style={{ backgroundColor: statusMeta.bg }}
+                        >
+                          <Text
+                            className="text-[11px]"
+                            style={{ color: statusMeta.text, fontFamily: FontFamily.heading }}
+                          >
+                            {complaintStatusTone(item.status).label}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text className="mt-1 text-[12px] text-ink-muted" numberOfLines={1}>
+                        {flatLabel(item)} · {new Date(item.created_at).toLocaleDateString()}
                       </Text>
-                      <ChevronRight color={Brand.inkMuted} size={14} strokeWidth={1.5} />
+                      <Text className="mt-1.5 text-[13px] leading-[18px] text-ink-soft" numberOfLines={2}>
+                        {item.description}
+                      </Text>
                     </View>
-                  }
-                />
+                    <ChevronRight color={Brand.inkMuted} size={16} strokeWidth={1.5} style={{ marginTop: 2 }} />
+                  </View>
+                </Pressable>
               </StaggeredListItem>
             );
           }}

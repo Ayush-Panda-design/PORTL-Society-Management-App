@@ -15,7 +15,8 @@ import {
   type LucideProps,
 } from 'lucide-react-native';
 
-import { Brand, Pastels } from '@/constants/theme';
+import { Brand, getPastels, type PastelTone } from '@/constants/theme';
+import { useThemePalette } from '@/hooks/use-theme';
 
 export type EmptyVisual =
   | 'default'
@@ -34,104 +35,104 @@ export type EmptyVisual =
 
 type LucideIcon = ComponentType<LucideProps>;
 
-type Scene = {
+type SceneDef = {
   Icon: LucideIcon;
   Accent: LucideIcon;
-  wash: string;
+  wash: PastelTone;
   accent: string;
   layout: 'stack' | 'orbit' | 'split' | 'badge';
 };
 
-const SCENES: Record<EmptyVisual, Scene> = {
+const SCENES: Record<EmptyVisual, SceneDef> = {
   default: {
     Icon: ClipboardList,
     Accent: Home,
-    wash: Pastels.sage,
+    wash: 'rose',
     accent: Brand.primary,
     layout: 'stack',
   },
   notices: {
     Icon: Bell,
     Accent: ClipboardList,
-    wash: Pastels.butter,
-    accent: Brand.accent,
+    wash: 'butter',
+    accent: Brand.primaryDark,
     layout: 'orbit',
   },
   visitors: {
     Icon: Users,
     Accent: UserRound,
-    wash: Pastels.sky,
-    accent: '#3B82F6',
+    wash: 'sky',
+    accent: Brand.primary,
     layout: 'split',
   },
   polls: {
     Icon: ClipboardList,
     Accent: Bell,
-    wash: Pastels.lilac,
-    accent: '#7C3AED',
+    wash: 'lilac',
+    accent: Brand.primaryMid,
     layout: 'badge',
   },
   helpdesk: {
     Icon: Headphones,
     Accent: ClipboardList,
-    wash: Pastels.rose,
-    accent: '#C0392B',
+    wash: 'coral',
+    accent: Brand.primaryDark,
     layout: 'orbit',
   },
   amenities: {
     Icon: CalendarDays,
     Accent: Building2,
-    wash: Pastels.mint,
+    wash: 'mint',
     accent: Brand.primary,
     layout: 'split',
   },
   gate: {
     Icon: ShieldCheck,
     Accent: UserRound,
-    wash: Pastels.peach,
-    accent: Brand.accentDark,
+    wash: 'peach',
+    accent: Brand.primaryDark,
     layout: 'badge',
   },
   disconnected: {
     Icon: WifiOff,
     Accent: Home,
-    wash: Pastels.coral,
-    accent: '#9CA3AF',
+    wash: 'coral',
+    accent: '#94A3B8',
     layout: 'stack',
   },
   residents: {
     Icon: Users,
     Accent: Home,
-    wash: Pastels.sky,
-    accent: '#1F3A6B',
+    wash: 'sky',
+    accent: Brand.primary,
     layout: 'orbit',
   },
   staff: {
     Icon: ShieldCheck,
     Accent: Users,
-    wash: Pastels.sage,
+    wash: 'sage',
     accent: Brand.primaryDark,
     layout: 'split',
   },
   towers: {
     Icon: Building2,
     Accent: Home,
-    wash: Pastels.mint,
+    wash: 'mint',
     accent: Brand.primary,
     layout: 'badge',
   },
   flats: {
     Icon: Home,
     Accent: Building2,
-    wash: Pastels.butter,
+    wash: 'butter',
     accent: Brand.primaryMid,
     layout: 'stack',
   },
   invites: {
     Icon: UserRound,
     Accent: ClipboardList,
-    wash: Pastels.lilac,
-    accent: '#5B8DD9',
+    wash: 'rose',
+    accent: Brand.primary,
     layout: 'orbit',
   },
 };
@@ -141,8 +142,11 @@ const SCENES: Record<EmptyVisual, Scene> = {
  * Soft wash + floating accent chip + hero icon — unique per segment.
  */
 export function EmptyIllustration({ kind }: { kind: EmptyVisual }) {
+  const { scheme, card } = useThemePalette();
+  const pastels = getPastels(scheme);
   const scene = SCENES[kind] ?? SCENES.default;
-  const { Icon, Accent, wash, accent, layout } = scene;
+  const { Icon, Accent, wash: washKey, accent, layout } = scene;
+  const wash = pastels[washKey];
 
   return (
     <View className="h-44 w-44 items-center justify-center">
@@ -179,14 +183,15 @@ export function EmptyIllustration({ kind }: { kind: EmptyVisual }) {
             opacity: { type: 'timing', duration: 400, delay: 120 },
             scale: { type: 'spring', damping: 12, delay: 120 },
           }}
-          className="absolute items-center justify-center rounded-2xl bg-white"
+          className="absolute items-center justify-center rounded-2xl"
           style={{
             width: 44,
             height: 44,
             top: 18,
             right: 22,
+            backgroundColor: card,
             shadowColor: '#000',
-            shadowOpacity: 0.08,
+            shadowOpacity: scheme === 'dark' ? 0.35 : 0.08,
             shadowRadius: 10,
             shadowOffset: { width: 0, height: 4 },
             elevation: 3,
@@ -209,12 +214,13 @@ export function EmptyIllustration({ kind }: { kind: EmptyVisual }) {
           opacity: { type: 'spring', damping: 13, delay: 60 },
           scale: { type: 'spring', damping: 13, delay: 60 },
         }}
-        className="items-center justify-center rounded-[28px] bg-white"
+        className="items-center justify-center rounded-[28px]"
         style={{
           width: layout === 'split' ? 96 : 108,
           height: layout === 'split' ? 96 : 108,
+          backgroundColor: card,
           shadowColor: '#000',
-          shadowOpacity: 0.1,
+          shadowOpacity: scheme === 'dark' ? 0.4 : 0.1,
           shadowRadius: 16,
           shadowOffset: { width: 0, height: 8 },
           elevation: 4,
@@ -228,14 +234,15 @@ export function EmptyIllustration({ kind }: { kind: EmptyVisual }) {
           from={{ opacity: 0, scale: 0.5, translateX: -8 }}
           animate={{ opacity: 1, scale: 1, translateX: 0 }}
           transition={{ type: 'spring', damping: 12, delay: 180 }}
-          className="absolute items-center justify-center rounded-full bg-white"
+          className="absolute items-center justify-center rounded-full"
           style={{
             width: 40,
             height: 40,
             bottom: 16,
             left: 18,
+            backgroundColor: card,
             shadowColor: '#000',
-            shadowOpacity: 0.08,
+            shadowOpacity: scheme === 'dark' ? 0.35 : 0.08,
             shadowRadius: 8,
             shadowOffset: { width: 0, height: 3 },
             elevation: 2,
