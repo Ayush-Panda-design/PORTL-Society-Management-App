@@ -67,24 +67,24 @@ const dark = {
     border: Palette.dark.border,
   },
   elevation: {
-    // Comfort dark: soft lift + hairline feel — not punched-hole shadows
+    // WhatsApp black: soft lift + hairline feel
     level1: {
       shadowColor: '#000000',
-      shadowOpacity: 0.14,
+      shadowOpacity: 0.28,
       shadowRadius: 6,
       shadowOffset: { width: 0, height: 1 },
       elevation: 1,
     },
     level2: {
       shadowColor: '#000000',
-      shadowOpacity: 0.18,
+      shadowOpacity: 0.36,
       shadowRadius: 10,
       shadowOffset: { width: 0, height: 2 },
       elevation: 2,
     },
     level3: {
       shadowColor: '#000000',
-      shadowOpacity: 0.22,
+      shadowOpacity: 0.44,
       shadowRadius: 16,
       shadowOffset: { width: 0, height: 4 },
       elevation: 3,

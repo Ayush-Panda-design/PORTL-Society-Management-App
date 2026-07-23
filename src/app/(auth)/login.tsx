@@ -1,9 +1,10 @@
 import type { User } from '@supabase/supabase-js';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   Text,
   TextInput,
@@ -18,6 +19,13 @@ import { Brand, FontFamily, Gradients } from '@/constants/theme';
 import { authErrorMessage } from '@/lib/auth-errors';
 import { destinationForProfile } from '@/lib/auth-routing';
 import { getAuthRedirectUrl } from '@/lib/auth-redirect';
+import {
+  biometricLabel,
+  enableBiometricLogin,
+  getBiometricEmail,
+  isBiometricEnabled,
+  isBiometricHardwareAvailable,
+} from '@/lib/biometric';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -33,8 +41,21 @@ export default function LoginScreen() {
   const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [bioAvailable, setBioAvailable] = useState(false);
+  const [bioLabel, setBioLabel] = useState('Biometrics');
 
   const trimmedEmail = email.trim();
+
+  useEffect(() => {
+    void (async () => {
+      const available = await isBiometricHardwareAvailable();
+      setBioAvailable(available);
+      if (available) setBioLabel(await biometricLabel());
+      const savedEmail = await getBiometricEmail();
+      if (savedEmail && !email) setEmail(savedEmail);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const finishSignIn = async (user: User) => {
     if (!user.email_confirmed_at) {
@@ -45,6 +66,26 @@ export default function LoginScreen() {
       return;
     }
     const profile = await fetchProfile(user.id);
+
+    if (bioAvailable) {
+      const already = await isBiometricEnabled();
+      if (!already) {
+        Alert.alert(
+          `Enable ${bioLabel}?`,
+          `Unlock Portl faster next time with ${bioLabel}.`,
+          [
+            { text: 'Not now', style: 'cancel' },
+            {
+              text: 'Enable',
+              onPress: () => {
+                void enableBiometricLogin(user.email ?? trimmedEmail).catch(() => undefined);
+              },
+            },
+          ],
+        );
+      }
+    }
+
     router.replace(destinationForProfile(profile, user));
   };
 

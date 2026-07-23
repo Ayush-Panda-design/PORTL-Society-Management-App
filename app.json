@@ -51,6 +51,12 @@
         {
           "cameraPermission": "Allow Portl to access your camera to scan passes and take visitor photos."
         }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Portl to use Face ID to unlock the app quickly and securely."
+        }
       ]
     ],
     "extra": {

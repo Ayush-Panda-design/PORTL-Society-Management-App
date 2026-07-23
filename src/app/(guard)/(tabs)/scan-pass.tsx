@@ -5,7 +5,9 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 
+import { GatePicker } from '@/components/visitors/gate-picker';
 import { useAppBack } from '@/hooks/use-app-back';
+import { getSelectedGateId } from '@/lib/gate-preference';
 import { supabase } from '@/lib/supabase';
 import { uploadLocalImage } from '@/lib/storage-upload';
 import { notifyFlatOfVisitorEntry } from '@/lib/visitors';
@@ -25,8 +27,16 @@ export default function ScanPassScreen() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [selectedGateId, setSelectedGateId] = useState<string | null>(null);
 
   const cameraRef = useRef<CameraView>(null);
+
+  useEffect(() => {
+    if (!profile?.society_id) return;
+    void getSelectedGateId(profile.society_id).then((id) => {
+      if (id) setSelectedGateId(id);
+    });
+  }, [profile?.society_id]);
 
   useEffect(() => {
     if (visitorId && permission?.granted) {
@@ -156,11 +166,12 @@ export default function ScanPassScreen() {
           .eq('id', visitorId);
       }
 
-      // Log entry
+      // Log entry (gate optional — use society default when not selected)
       await supabase.from('visitor_logs').insert({
         visitor_id: visitorId,
         entry_time: new Date().toISOString(),
         guard_id: profile.id,
+        entry_gate_id: selectedGateId,
       });
 
       if (profile.society_id && visitor?.flat_id) {

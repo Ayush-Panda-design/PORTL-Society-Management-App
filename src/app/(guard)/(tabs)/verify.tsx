@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
+import { GatePicker } from '@/components/visitors/gate-picker';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { VisitorCard } from '@/components/visitors/visitor-card';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
@@ -21,6 +22,7 @@ export default function GuardVerifyScreen() {
   const [actionId, setActionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [gateId, setGateId] = useState<string | null>(null);
 
   const { visitors, isLoading, error: loadError, refresh } = useVisitorsRealtime({
     societyId: profile?.society_id,
@@ -51,6 +53,7 @@ export default function GuardVerifyScreen() {
         visitor_id: visitor.id,
         entry_time: new Date().toISOString(),
         guard_id: profile.id,
+        entry_gate_id: gateId,
       });
 
       if (logError) {
@@ -95,7 +98,8 @@ export default function GuardVerifyScreen() {
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
       <View className="px-4 pb-2 pt-3">
         <Text className="text-2xl font-bold text-ink">Ready for entry</Text>
-        <Text className="text-sm text-ink-muted">Approved visitors · mark gate entry</Text>
+        <Text className="mb-2 text-sm text-ink-muted">Approved visitors · mark gate entry</Text>
+        <GatePicker societyId={profile.society_id} value={gateId} onChange={setGateId} />
       </View>
 
       {(error || loadError) && (

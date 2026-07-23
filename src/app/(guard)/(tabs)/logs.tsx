@@ -7,6 +7,7 @@ import { StaggeredListItem } from '@/components/ui/staggered-list-item';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
+import { GatePicker } from '@/components/visitors/gate-picker';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { VisitorCard } from '@/components/visitors/visitor-card';
 import { ChipSelector } from '@/components/ui/chip-selector';
@@ -45,7 +46,8 @@ export default function GuardLogsScreen() {
   useModalBack(notesModal !== null, () => setNotesModal(null));
   const [notesText, setNotesText] = useState('');
   const [flagged, setFlagged] = useState<Set<string>>(new Set());
-  const [logMeta, setLogMeta] = useState<Record<string, { logId: string; entry: string | null; exit: string | null; notes: string | null; isFlagged: boolean }>>({});
+  const [logMeta, setLogMeta] = useState<Record<string, { logId: string; entry: string | null; exit: string | null; notes: string | null; isFlagged: boolean; entryGate: string | null; exitGate: string | null }>>({});
+  const [gateId, setGateId] = useState<string | null>(null);
 
   const statuses = useMemo(
     () => (statusFilter === 'all' ? undefined : [statusFilter]),
@@ -76,19 +78,25 @@ export default function GuardLogsScreen() {
 
     const { data } = await supabase
       .from('visitor_logs')
-      .select('id, visitor_id, entry_time, exit_time, notes, is_flagged')
+      .select('id, visitor_id, entry_time, exit_time, notes, is_flagged, entry_gate_id, exit_gate_id, entry_gate:gates!entry_gate_id(name), exit_gate:gates!exit_gate_id(name)')
       .in('visitor_id', ids)
       .order('entry_time', { ascending: false });
 
-    const map: Record<string, { logId: string; entry: string | null; exit: string | null; notes: string | null; isFlagged: boolean }> = {};
+    const map: Record<string, { logId: string; entry: string | null; exit: string | null; notes: string | null; isFlagged: boolean; entryGate: string | null; exitGate: string | null }> = {};
     for (const row of data ?? []) {
       if (!map[row.visitor_id]) {
+        const entryGate = row.entry_gate as { name?: string } | { name?: string }[] | null;
+        const exitGate = row.exit_gate as { name?: string } | { name?: string }[] | null;
+        const entryGateName = Array.isArray(entryGate) ? entryGate[0]?.name : entryGate?.name;
+        const exitGateName = Array.isArray(exitGate) ? exitGate[0]?.name : exitGate?.name;
         map[row.visitor_id] = {
           logId: row.id,
           entry: row.entry_time,
           exit: row.exit_time,
           notes: row.notes ?? null,
           isFlagged: row.is_flagged ?? false,
+          entryGate: entryGateName ?? null,
+          exitGate: exitGateName ?? null,
         };
       }
     }
@@ -143,7 +151,10 @@ export default function GuardLogsScreen() {
       if (meta?.logId) {
         const { error: updateLogError } = await supabase
           .from('visitor_logs')
-          .update({ exit_time: new Date().toISOString() })
+          .update({
+            exit_time: new Date().toISOString(),
+            exit_gate_id: gateId,
+          })
           .eq('id', meta.logId);
 
         if (updateLogError) {
@@ -156,6 +167,7 @@ export default function GuardLogsScreen() {
           entry_time: null,
           exit_time: new Date().toISOString(),
           guard_id: profile?.id ?? null,
+          exit_gate_id: gateId,
         });
         if (insertLogError) {
           setActionError(insertLogError.message);
@@ -229,12 +241,14 @@ export default function GuardLogsScreen() {
         `"${v.status}"`,
         `"${flat}"`,
         `"${formatDateTime(meta?.entry ?? null)}"`,
+        `"${meta?.entryGate ?? ''}"`,
         `"${formatDateTime(meta?.exit ?? null)}"`,
+        `"${meta?.exitGate ?? ''}"`,
         `"${meta?.isFlagged ? 'YES' : 'no'}"`,
         `"${(meta?.notes ?? '').replace(/"/g, '""')}"`,
       ].join(',');
     });
-    const header = 'Name,Phone,Type,Status,Flat,Entry,Exit,Flagged,Notes';
+    const header = 'Name,Phone,Type,Status,Flat,Entry,EntryGate,Exit,ExitGate,Flagged,Notes';
     const csv = [header, ...rows].join('\n');
     await Share.share({ message: csv, title: 'Visitor Logs Export' });
   };
@@ -265,6 +279,10 @@ export default function GuardLogsScreen() {
             <Text className="text-xs font-semibold" style={{ color: Brand.primary }}>Export</Text>
           </Pressable>
         </View>
+
+        {profile.society_id ? (
+          <GatePicker societyId={profile.society_id} value={gateId} onChange={setGateId} />
+        ) : null}
 
         <View className="mb-3">
           <SegmentedControl
@@ -347,8 +365,11 @@ export default function GuardLogsScreen() {
                 {(meta?.entry || meta?.exit) && (
                   <View className="-mt-1 mb-1 rounded-b-card bg-surface-muted px-4 py-2" style={{ borderWidth: 1, borderColor: '#E5E8E4', borderTopWidth: 0 }}>
                     <Text className="text-xs text-ink-muted" style={{ fontFamily: FontFamily.heading }}>
-                      In {formatDateTime(meta.entry)} {meta?.exit ? `· Out ${formatDateTime(meta.exit)}` : ''}
-                      {meta?.notes ? ` · 📝 ${meta.notes}` : ''}
+                      In {formatDateTime(meta.entry)}
+                      {meta.entryGate ? ` @ ${meta.entryGate}` : ''}
+                      {meta?.exit ? ` · Out ${formatDateTime(meta.exit)}` : ''}
+                      {meta?.exitGate ? ` @ ${meta.exitGate}` : ''}
+                      {meta?.notes ? ` · ${meta.notes}` : ''}
                     </Text>
                   </View>
                 )}

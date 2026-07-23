@@ -11,9 +11,12 @@ enabled = true
 #   supabase functions deploy send-push
 #   supabase functions deploy create-razorpay-order
 #   supabase functions deploy razorpay-webhook
+#   supabase functions deploy ask-portl
+#   supabase functions deploy triage-complaint
 # Secrets:
 #   supabase secrets set RAZORPAY_KEY_ID=... RAZORPAY_KEY_SECRET=... RAZORPAY_WEBHOOK_SECRET=...
-# Optional: supabase secrets set EXPO_ACCESS_TOKEN=...
+#   supabase secrets set GEMINI_API_KEY=...
+# Optional: supabase secrets set EXPO_ACCESS_TOKEN=... GEMINI_MODEL=gemini-2.0-flash
 # Link project (once): supabase link --project-ref uopbehpstqycyrmrdcav
 
 [api]
@@ -27,3 +30,9 @@ verify_jwt = true
 
 [functions.razorpay-webhook]
 verify_jwt = false
+
+[functions.ask-portl]
+verify_jwt = true
+
+[functions.triage-complaint]
+verify_jwt = true

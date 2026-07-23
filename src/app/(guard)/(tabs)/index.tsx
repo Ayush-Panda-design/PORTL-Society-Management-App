@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Clock, ClipboardList, LogOut, QrCode, ScanLine, ShieldCheck, UserPlus } from 'lucide-react-native';
+import { Clock, ClipboardList, LogOut, QrCode, ScanLine, ShieldCheck, Sparkles, UserPlus } from 'lucide-react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -165,6 +165,14 @@ export default function GuardHomeRedirect() {
           accentColor="#C4861A"
           bg={pastels.butter}
           onPress={() => router.push(href('/(guard)/logs'))}
+        />
+        <GateCard
+          title="Ask Portl"
+          subtitle="Queue, guests, notices — AI assistant"
+          icon={<Sparkles color={Brand.primary} size={22} strokeWidth={1.5} />}
+          accentColor={Brand.primary}
+          bg={pastels.peach}
+          onPress={() => router.push(href('/(guard)/ask-portl'))}
         />
 
         <Pressable

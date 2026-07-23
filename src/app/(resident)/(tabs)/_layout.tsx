@@ -86,6 +86,7 @@ export default function ResidentLayout() {
       <Tabs.Screen name="amenities" options={{ href: null }} />
       <Tabs.Screen name="directory" options={{ href: null }} />
       <Tabs.Screen name="payments" options={{ href: null }} />
+      <Tabs.Screen name="ask-portl" options={{ href: null }} />
     </Tabs>
   );
 }

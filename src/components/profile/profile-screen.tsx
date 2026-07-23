@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera, ChevronDown, Lock, Trash2 } from 'lucide-react-native';
+import { Camera, ChevronDown, Fingerprint, Lock, Trash2 } from 'lucide-react-native';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
@@ -8,6 +8,7 @@ import {
   Platform,
   Pressable,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   UIManager,
@@ -22,6 +23,13 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { Brand, Elevation, FontFamily, Pastels, TypeScale } from '@/constants/theme';
+import {
+  biometricLabel,
+  disableBiometricLogin,
+  enableBiometricLogin,
+  isBiometricEnabled,
+  isBiometricHardwareAvailable,
+} from '@/lib/biometric';
 import {
   addProfileNote,
   deleteProfileNote,
@@ -295,6 +303,11 @@ export function ProfileScreen() {
   const [openEmergency, setOpenEmergency] = useState(true);
   const [openPrivate, setOpenPrivate] = useState(false);
   const [openNotes, setOpenNotes] = useState(false);
+  const [bioEnabled, setBioEnabled] = useState(false);
+  const [bioAvailable, setBioAvailable] = useState(false);
+  const [bioLabel, setBioLabel] = useState('Biometrics');
+  const [bioBusy, setBioBusy] = useState(false);
+  const sessionEmail = useAuthStore((s) => s.user?.email);
 
   const privateQuery = useQuery({
     queryKey: queryKeys.profilePrivate(userId ?? 'none'),
@@ -329,6 +342,17 @@ export function ProfileScreen() {
     setAllergies(row.allergies ?? '');
     setAddress(row.permanent_address ?? '');
   }, [privateQuery.data]);
+
+  useEffect(() => {
+    void (async () => {
+      const available = await isBiometricHardwareAvailable();
+      setBioAvailable(available);
+      if (available) {
+        setBioLabel(await biometricLabel());
+        setBioEnabled(await isBiometricEnabled());
+      }
+    })();
+  }, []);
 
   const emailError =
     touched.email && !isValidEmail(personalEmail) ? 'Enter a valid email address' : null;
@@ -775,6 +799,63 @@ export function ProfileScreen() {
             multiline
           />
         </ProfileCard>
+
+        {bioAvailable ? (
+          <View
+            className="mb-4 overflow-hidden rounded-card bg-surface-card"
+            style={{
+              shadowColor: '#0F172A',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: isDark ? 0.2 : 0.06,
+              shadowRadius: 10,
+              elevation: 2,
+            }}
+          >
+            <View className="flex-row items-center gap-3 px-4 py-4">
+              <View
+                className="h-10 w-10 items-center justify-center rounded-card"
+                style={{ backgroundColor: isDark ? muted : Pastels.mint }}
+              >
+                <Fingerprint color={Brand.primary} size={18} />
+              </View>
+              <View className="min-w-0 flex-1">
+                <Text className="text-base text-ink" style={{ fontFamily: FontFamily.heading }}>
+                  {bioLabel} unlock
+                </Text>
+                <Text className="text-xs text-ink-muted">
+                  Require {bioLabel} when returning to Portl
+                </Text>
+              </View>
+              <Switch
+                value={bioEnabled}
+                disabled={bioBusy}
+                onValueChange={(next) => {
+                  void (async () => {
+                    setBioBusy(true);
+                    try {
+                      if (next) {
+                        await enableBiometricLogin(sessionEmail ?? personalEmail ?? '');
+                        setBioEnabled(true);
+                        Toast.show({ type: 'success', text1: `${bioLabel} enabled` });
+                      } else {
+                        await disableBiometricLogin();
+                        setBioEnabled(false);
+                        Toast.show({ type: 'info', text1: `${bioLabel} disabled` });
+                      }
+                    } catch (e) {
+                      Toast.show({
+                        type: 'error',
+                        text1: e instanceof Error ? e.message : 'Could not update biometrics',
+                      });
+                    } finally {
+                      setBioBusy(false);
+                    }
+                  })();
+                }}
+              />
+            </View>
+          </View>
+        ) : null}
 
         <ProfileCard
           title="Personal notes"

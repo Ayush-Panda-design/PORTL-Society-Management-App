@@ -52,4 +52,6 @@ export const queryKeys = {
   noticeAcks: (userId: string, noticeIds: string[]) =>
     ['notice-acks', userId, ...noticeIds] as const,
   noticeAckStats: (noticeId: string) => ['notice-ack-stats', noticeId] as const,
+  gates: (societyId: string) => ['gates', societyId] as const,
+  broadcasts: (societyId: string) => ['broadcasts', societyId] as const,
 };

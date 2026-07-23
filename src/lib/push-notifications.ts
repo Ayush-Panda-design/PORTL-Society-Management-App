@@ -144,6 +144,12 @@ export async function configurePushPresentation(): Promise<void> {
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#0F766E',
       });
+      await Notifications.setNotificationChannelAsync('alerts', {
+        name: 'Society broadcasts',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 400, 200, 400],
+        lightColor: '#E11D48',
+      });
     } catch (e) {
       console.warn('[push] Channel setup skipped:', e);
     }

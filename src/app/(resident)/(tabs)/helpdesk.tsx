@@ -18,6 +18,7 @@ import {
   Clock,
   MessageSquarePlus,
   Plus,
+  Sparkles,
   Wrench,
   Image as ImageIcon,
   Send,
@@ -43,6 +44,7 @@ import { uploadLocalImage } from '@/lib/storage-upload';
 import { createComplaint, fetchComplaintsForFlat, fetchComplaintComments, addComplaintComment } from '@/lib/community-api';
 import { rateComplaint, reopenComplaint } from '@/lib/ops-api';
 import { queryKeys } from '@/lib/query-client';
+import { triageComplaint, type ComplaintTriage } from '@/lib/triage-complaint';
 import { useAuthStore } from '@/stores/authStore';
 import { COMPLAINT_CATEGORIES, type Complaint, type ComplaintPriority } from '@/types/database';
 
@@ -96,6 +98,8 @@ export default function ResidentHelpdeskScreen() {
   const [formError, setFormError] = useState<string | null>(null);
   const [successVisible, setSuccessVisible] = useState(false);
   const [commentText, setCommentText] = useState('');
+  const [triage, setTriage] = useState<ComplaintTriage | null>(null);
+  const [triaging, setTriaging] = useState(false);
 
   const listQuery = useQuery({
     queryKey: queryKeys.complaints(`flat:${flatId ?? 'none'}`),
@@ -142,6 +146,7 @@ export default function ResidentHelpdeskScreen() {
       setDescription('');
       setPhotos([]);
       setPriority('medium');
+      setTriage(null);
       setComposeOpen(false);
       setSuccessVisible(true);
       setFormError(null);
@@ -192,6 +197,25 @@ export default function ResidentHelpdeskScreen() {
     });
     if (!result.canceled && result.assets[0].uri) {
       setPhotos([...photos, result.assets[0].uri]);
+    }
+  };
+
+  const runTriage = async () => {
+    if (description.trim().length < 8) {
+      setFormError('Describe the issue first (at least a sentence).');
+      return;
+    }
+    setFormError(null);
+    setTriaging(true);
+    try {
+      const result = await triageComplaint(description.trim());
+      setTriage(result);
+      setCategory(result.category);
+      setPriority(result.priority);
+    } catch (e) {
+      setFormError(e instanceof Error ? e.message : 'Triage failed');
+    } finally {
+      setTriaging(false);
     }
   };
 
@@ -404,8 +428,8 @@ export default function ResidentHelpdeskScreen() {
                   : [
                       {
                         Icon: MessageSquarePlus,
-                        title: 'Raise an issue',
-                        body: 'Pick a category, describe the problem, and submit.',
+                        title: 'Describe freely',
+                        body: 'Type the problem — AI suggests category, priority, and routing.',
                         tint: '#E11D48',
                         wash: Pastels.rose,
                       },
@@ -462,6 +486,10 @@ export default function ResidentHelpdeskScreen() {
       <FloatingActionBtn
         onPress={() => {
           setFormError(null);
+          setTriage(null);
+          setDescription('');
+          setCategory(COMPLAINT_CATEGORIES[0]);
+          setPriority('medium');
           setComposeOpen(true);
         }}
         icon={<Plus color="#fff" size={24} />}
@@ -477,18 +505,70 @@ export default function ResidentHelpdeskScreen() {
         <KeyboardAvoidingView behavior="padding" className="flex-1 justify-end bg-black/40">
           <View className="max-h-[90%] rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
             <ScrollView keyboardShouldPersistTaps="handled">
-              <Text className="mb-4 text-xl text-ink" style={{ fontFamily: FontFamily.display }}>
+              <Text className="mb-1 text-xl text-ink" style={{ fontFamily: FontFamily.display }}>
                 Raise a complaint
+              </Text>
+              <Text className="mb-4 text-sm text-ink-muted">
+                Describe the issue — Portl suggests category, priority, and routing.
               </Text>
               {formError ? (
                 <Text className="mb-3 text-sm text-red-500">{formError}</Text>
+              ) : null}
+
+              <TextInput
+                className="mb-3 min-h-[100px] rounded-card bg-surface-muted px-4 py-3 text-base text-ink"
+                placeholder="e.g. Kitchen sink is leaking and water is pooling near the cabinet…"
+                placeholderTextColor={Brand.inkMuted}
+                multiline
+                textAlignVertical="top"
+                value={description}
+                onChangeText={(t) => {
+                  setDescription(t);
+                  setTriage(null);
+                }}
+              />
+
+              <Pressable
+                onPress={() => void runTriage()}
+                disabled={triaging}
+                className="mb-4 flex-row items-center justify-center gap-2 rounded-card py-3"
+                style={{ backgroundColor: Pastels.mint, opacity: triaging ? 0.7 : 1 }}
+              >
+                {triaging ? (
+                  <ActivityIndicator color={Brand.primary} />
+                ) : (
+                  <>
+                    <Sparkles color={Brand.primary} size={16} />
+                    <Text
+                      className="font-semibold"
+                      style={{ color: Brand.primary, fontFamily: FontFamily.heading }}
+                    >
+                      Auto-triage with AI
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+
+              {triage ? (
+                <View
+                  className="mb-4 rounded-card px-3 py-3"
+                  style={{ backgroundColor: Pastels.butter }}
+                >
+                  <Text className="text-xs text-ink-soft" style={{ fontFamily: FontFamily.body }}>
+                    {triage.rationale}
+                    {triage.routing_note ? ` · ${triage.routing_note}` : ''}
+                    {triage.suggested_assignee_name
+                      ? ` → ${triage.suggested_assignee_name}`
+                      : ''}
+                  </Text>
+                </View>
               ) : null}
 
               <Text
                 className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-muted"
                 style={{ fontFamily: FontFamily.heading }}
               >
-                Category
+                Category (editable)
               </Text>
               <View className="mb-4 flex-row flex-wrap gap-2">
                 {COMPLAINT_CATEGORIES.map((cat) => {
@@ -520,7 +600,7 @@ export default function ResidentHelpdeskScreen() {
                 className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-muted mt-2"
                 style={{ fontFamily: FontFamily.heading }}
               >
-                Priority
+                Priority (editable)
               </Text>
               <ChipSelector
                 className="mb-4"
@@ -532,17 +612,7 @@ export default function ResidentHelpdeskScreen() {
                   { value: 'critical', label: 'Critical' }
                 ]}
                 value={priority}
-                onChange={(v) => setPriority(v as any)}
-              />
-
-              <TextInput
-                className="mb-4 min-h-[100px] rounded-card bg-surface-muted px-4 py-3 text-base text-ink"
-                placeholder="Describe the issue in detail…"
-                placeholderTextColor={Brand.inkMuted}
-                multiline
-                textAlignVertical="top"
-                value={description}
-                onChangeText={setDescription}
+                onChange={(v) => setPriority(v as ComplaintPriority)}
               />
               
               <View className="mb-4">

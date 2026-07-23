@@ -4,6 +4,7 @@ import {
   ClipboardList,
   Phone,
   Receipt,
+  Sparkles,
   User,
   Users,
 } from 'lucide-react-native';
@@ -27,6 +28,12 @@ const SECTIONS: { title: string; links: SettingsLink[] }[] = [
   {
     title: 'Society',
     links: [
+      {
+        href: '/(resident)/ask-portl' as Href,
+        title: 'Ask Portl',
+        subtitle: 'Natural-language society assistant',
+        Icon: Sparkles,
+      },
       {
         href: '/(resident)/polls' as Href,
         title: 'Polls',

@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { Bell, QrCode, UserPlus } from 'lucide-react-native';
 
 import { DrawerMenuButton } from '@/components/navigation/drawer-menu-button';
+import { AskPortlFloatingFab } from '@/components/ask-portl/ask-portl-orb';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
@@ -50,6 +51,7 @@ export default function GuardDashboard() {
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
+      <View className="flex-1">
       {/* Header with live badge */}
       <View className="mb-1 flex-row items-center px-4 pt-4">
         <DrawerMenuButton />
@@ -121,7 +123,7 @@ export default function GuardDashboard() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{
             paddingHorizontal: 16,
-            paddingBottom: 24,
+            paddingBottom: 88,
             flexGrow: 1,
           }}
           ItemSeparatorComponent={() => <View className="h-3" />}
@@ -178,6 +180,8 @@ export default function GuardDashboard() {
           )}
         />
       )}
+      <AskPortlFloatingFab onPress={() => router.push(href('/(guard)/ask-portl'))} />
+      </View>
     </SafeAreaView>
   );
 }

@@ -202,6 +202,15 @@ export type VisitorWithFlat = Visitor & {
   } | null;
 };
 
+export type Gate = {
+  id: string;
+  society_id: string;
+  name: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+};
+
 export type VisitorLog = {
   id: string;
   visitor_id: string;
@@ -210,11 +219,33 @@ export type VisitorLog = {
   guard_id: string | null;
   notes?: string | null;
   is_flagged?: boolean;
+  entry_gate_id?: string | null;
+  exit_gate_id?: string | null;
 };
 
 export type VisitorLogWithVisitor = VisitorLog & {
   visitors: VisitorWithFlat | null;
+  entry_gate?: Pick<Gate, 'id' | 'name'> | null;
+  exit_gate?: Pick<Gate, 'id' | 'name'> | null;
 };
+
+export type BroadcastSeverity = 'info' | 'urgent' | 'critical';
+
+export type Broadcast = {
+  id: string;
+  society_id: string;
+  title: string;
+  body: string;
+  severity: BroadcastSeverity;
+  created_by: string | null;
+  created_at: string;
+};
+
+export const BROADCAST_SEVERITIES: { value: BroadcastSeverity; label: string }[] = [
+  { value: 'info', label: 'Info' },
+  { value: 'urgent', label: 'Urgent' },
+  { value: 'critical', label: 'Critical' },
+];
 
 export const VISITOR_TYPES: { value: VisitorType; label: string }[] = [
   { value: 'guest', label: 'Guest' },
