@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { History, UserPlus } from 'lucide-react-native';
+import { History, MapPin, UserPlus } from 'lucide-react-native';
 import { useCallback, useRef, useState } from 'react';
 import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import type { BottomSheetModal as GorhomBottomSheetModal } from '@gorhom/bottom-sheet';
@@ -18,6 +18,7 @@ import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { useThemePalette } from '@/hooks/use-theme';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { hapticConfirm, hapticWarning } from '@/lib/haptics';
+import { startNearHomeAlert } from '@/lib/near-home-alert';
 import { updateVisitorStatus } from '@/lib/visitors';
 import { href } from '@/lib/href';
 import { useAuthStore } from '@/stores/authStore';
@@ -129,6 +130,23 @@ export default function ResidentVisitorsScreen() {
                 ? 'You’re all clear — watching for new guests'
                 : 'Approve or reject · live updates'}
             </Text>
+            {profile.society_id ? (
+              <Pressable
+                onPress={() =>
+                  void startNearHomeAlert({
+                    societyId: profile.society_id!,
+                    visitorName: 'your delivery',
+                  })
+                }
+                className="mt-2.5 flex-row items-center gap-1.5 self-start rounded-pill px-3 py-1.5"
+                style={{ backgroundColor: '#E8F5F1' }}
+              >
+                <MapPin color={Brand.primary} size={13} />
+                <Text className="text-xs font-semibold text-brand-700">
+                  Alert me when near home
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
           <View className="flex-row gap-2">
             <Pressable

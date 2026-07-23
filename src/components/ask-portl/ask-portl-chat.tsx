@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowUp, ChevronLeft, RotateCcw, Sparkles } from 'lucide-react-native';
+import { ArrowUp, ChevronLeft, Mic, RotateCcw, Sparkles, Volume2 } from 'lucide-react-native';
 import { MotiView } from 'moti';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
@@ -12,12 +12,14 @@ import {
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
 import { AskPortlOrb } from '@/components/ask-portl/ask-portl-orb';
 import { Brand, FontFamily, Gradients } from '@/constants/theme';
 import { useAppBack } from '@/hooks/use-app-back';
 import { useThemePalette } from '@/hooks/use-theme';
 import { askPortl, type AskPortlMessage } from '@/lib/ask-portl';
+import { speakText, stopSpeaking } from '@/lib/speech';
 import { useAuthStore } from '@/stores/authStore';
 import type { UserRole } from '@/types/database';
 
@@ -137,13 +139,28 @@ export function AskPortlChat() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [speakReplies, setSpeakReplies] = useState(false);
+  const [listening, setListening] = useState(false);
   const listRef = useRef<FlatList<Bubble>>(null);
+  const inputRef = useRef<TextInput>(null);
 
   const suggestions = useMemo(
     () => SUGGESTIONS_BY_ROLE[role] ?? SUGGESTIONS_BY_ROLE.resident,
     [role],
   );
   const blurb = BLURB_BY_ROLE[role] ?? BLURB_BY_ROLE.resident;
+
+  const speak = useCallback((text: string) => {
+    void speakText(text).then((ok) => {
+      if (!ok) {
+        Toast.show({
+          type: 'info',
+          text1: 'Speech needs a rebuild',
+          text2: 'Run npx expo run:android to enable spoken replies.',
+        });
+      }
+    });
+  }, []);
 
   const send = useCallback(
     async (text: string) => {
@@ -167,6 +184,7 @@ export function AskPortlChat() {
           ...prev,
           { id: `a-${Date.now()}`, role: 'assistant', content: answer },
         ]);
+        if (speakReplies) speak(answer);
         requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Ask Portl failed');
@@ -174,11 +192,27 @@ export function AskPortlChat() {
         setSending(false);
       }
     },
-    [messages, sending],
+    [messages, sending, speakReplies, speak],
   );
+
+  const startVoice = useCallback(async () => {
+    if (sending || listening) return;
+    // Prefer device dictation: focus the field and guide the user.
+    // Full STT needs a custom native module; keyboard mic works on all builds.
+    setListening(true);
+    inputRef.current?.focus();
+    Toast.show({
+      type: 'info',
+      text1: 'Voice input',
+      text2: 'Use your keyboard microphone, then tap Send — or enable Speak for replies.',
+      visibilityTime: 3500,
+    });
+    setTimeout(() => setListening(false), 2500);
+  }, [sending, listening]);
 
   const resetChat = () => {
     if (sending) return;
+    void stopSpeaking();
     setMessages([]);
     setError(null);
     setInput('');
@@ -393,6 +427,40 @@ export function AskPortlChat() {
                 borderTopColor: isDark ? 'rgba(42,57,66,0.7)' : 'rgba(232,232,234,0.9)',
               }}
             >
+              <Pressable
+                onPress={() => {
+                  setSpeakReplies((v) => {
+                    const next = !v;
+                    Toast.show({
+                      type: 'info',
+                      text1: next ? 'Speak replies on' : 'Speak replies off',
+                    });
+                    if (!next) void stopSpeaking();
+                    return next;
+                  });
+                }}
+                accessibilityLabel="Toggle speak replies"
+                className="h-12 w-12 items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: speakReplies ? Brand.primary : isDark ? '#1F2C34' : muted,
+                  borderWidth: 1,
+                  borderColor: border,
+                }}
+              >
+                <Volume2 color={speakReplies ? '#fff' : inkMuted} size={18} />
+              </Pressable>
+              <Pressable
+                onPress={() => void startVoice()}
+                accessibilityLabel="Voice input"
+                className="h-12 w-12 items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: listening ? Brand.primary : isDark ? '#1F2C34' : muted,
+                  borderWidth: 1,
+                  borderColor: border,
+                }}
+              >
+                <Mic color={listening ? '#fff' : inkMuted} size={18} />
+              </Pressable>
               <View
                 className="max-h-28 min-h-[48px] flex-1 justify-center rounded-pill px-4 py-2"
                 style={{
@@ -402,6 +470,7 @@ export function AskPortlChat() {
                 }}
               >
                 <TextInput
+                  ref={inputRef}
                   className="max-h-24 py-1 text-[15px] text-ink"
                   placeholder="Ask Portl anything…"
                   placeholderTextColor={inkMuted}

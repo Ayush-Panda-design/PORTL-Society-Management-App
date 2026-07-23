@@ -209,6 +209,8 @@ export type Gate = {
   is_active: boolean;
   sort_order: number;
   created_at: string;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 export type VisitorLog = {

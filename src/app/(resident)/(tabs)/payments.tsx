@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { Receipt } from 'lucide-react-native';
-import { FlatList, Text, View } from 'react-native';
+import { FileDown, Receipt } from 'lucide-react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
 
 import { GlassCard } from '@/components/ui/glass-card';
 import { ListRow } from '@/components/ui/list-row';
@@ -12,6 +12,7 @@ import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
 import { fetchMyPaymentStatement, formatPaise } from '@/lib/ops-api';
+import { sharePaymentReceiptPdf } from '@/lib/print-docs';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
 import type { PaymentLedgerEntry } from '@/types/database';
@@ -65,6 +66,8 @@ function statusAccent(status: string): string {
 
 function LedgerRow({ item, index }: { item: PaymentLedgerEntry; index: number }) {
   const outstanding = item.outstanding_paise ?? 0;
+  const canReceipt =
+    item.status === 'confirmed' || item.status === 'partially_paid';
   return (
     <StaggeredListItem index={index}>
       <ListRow
@@ -72,6 +75,7 @@ function LedgerRow({ item, index }: { item: PaymentLedgerEntry; index: number })
         subtitle={`${new Date(item.created_at).toLocaleString()} · ${statusLabel(String(item.status))}`}
         meta={item.notes ?? undefined}
         accentColor={statusAccent(String(item.status))}
+        onPress={canReceipt ? () => void sharePaymentReceiptPdf(item) : undefined}
         trailing={
           <View className="items-end">
             <Text className="text-base text-ink" style={{ fontFamily: FontFamily.heading }}>
@@ -84,6 +88,16 @@ function LedgerRow({ item, index }: { item: PaymentLedgerEntry; index: number })
             ) : (
               <Text className="mt-0.5 text-xs text-brand-700">Settled</Text>
             )}
+            {canReceipt ? (
+              <Pressable
+                onPress={() => void sharePaymentReceiptPdf(item)}
+                className="mt-1.5 flex-row items-center gap-1"
+                hitSlop={8}
+              >
+                <FileDown color={Brand.primary} size={12} />
+                <Text className="text-[11px] font-semibold text-brand-700">PDF</Text>
+              </Pressable>
+            ) : null}
           </View>
         }
       />

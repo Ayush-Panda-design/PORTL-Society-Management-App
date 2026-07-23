@@ -9,6 +9,8 @@ type PushBody = {
   title: string;
   body: string;
   data?: Record<string, unknown>;
+  channelId?: string;
+  categoryId?: string;
 };
 
 type ExpoMessage = {
@@ -18,8 +20,25 @@ type ExpoMessage = {
   data?: Record<string, unknown>;
   sound: 'default';
   channelId?: string;
+  categoryId?: string;
   priority?: 'default' | 'normal' | 'high';
 };
+
+function resolveChannelId(payload: PushBody): string {
+  if (payload.channelId) return payload.channelId;
+  const type = typeof payload.data?.type === 'string' ? payload.data.type : '';
+  if (type.startsWith('visitor_')) return 'visitor';
+  if (type === 'broadcast') return 'alerts';
+  if (type === 'notice' || type.startsWith('poll_')) return 'notice';
+  if (type.includes('payment') || type.includes('complaint')) return 'default';
+  return 'default';
+}
+
+function resolveCategoryId(payload: PushBody): string | undefined {
+  if (payload.categoryId) return payload.categoryId;
+  if (payload.data?.type === 'visitor_pending') return 'visitor_pending';
+  return undefined;
+}
 
 const corsHeaders: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
@@ -123,15 +142,19 @@ Deno.serve(async (req) => {
       return jsonResponse(200, { sent: 0, skipped: userIds.length, detail: 'No push tokens found' });
     }
 
-    const messages: ExpoMessage[] = tokens.map((to) => ({
-      to,
-      title: payload.title,
-      body: payload.body,
-      data: payload.data ?? {},
-      sound: 'default',
-      channelId: payload.data?.type === 'broadcast' ? 'alerts' : 'default',
-      priority: 'high',
-    }));
+    const messages: ExpoMessage[] = tokens.map((to) => {
+      const categoryId = resolveCategoryId(payload);
+      return {
+        to,
+        title: payload.title,
+        body: payload.body,
+        data: payload.data ?? {},
+        sound: 'default',
+        channelId: resolveChannelId(payload),
+        ...(categoryId ? { categoryId } : {}),
+        priority: 'high',
+      };
+    });
 
     const expoAccessToken = Deno.env.get('EXPO_ACCESS_TOKEN');
     const headers: Record<string, string> = {

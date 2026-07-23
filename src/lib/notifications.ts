@@ -1,6 +1,7 @@
-import { invokeSendPush } from '@/lib/push-notifications';
+import { invokeSendPush, type PushChannelId } from '@/lib/push-notifications';
 import { supabase } from '@/lib/supabase';
 import type { ComplaintStatus, InviteRole, VisitorType } from '@/types/database';
+import { VISITOR_ACTION_CATEGORY } from '@/lib/visitor-notification-actions';
 
 function visitorTypeLabel(type: VisitorType): string {
   switch (type) {
@@ -16,6 +17,24 @@ function visitorTypeLabel(type: VisitorType): string {
       return 'Visitor';
   }
 }
+
+function channelForType(type: NotificationType): PushChannelId {
+  switch (type) {
+    case 'visitor_pending':
+    case 'visitor_decision':
+    case 'visitor_checked_in':
+      return 'visitor';
+    case 'notice':
+    case 'poll_new':
+    case 'poll_results':
+      return 'notice';
+    case 'broadcast':
+      return 'alerts';
+    default:
+      return 'default';
+  }
+}
+
 export type NotificationType =
   | 'visitor_pending'
   | 'visitor_decision'
@@ -34,6 +53,7 @@ export type NotificationData = {
   societyId?: string;
   flatId?: string;
   visitorId?: string;
+  visitorName?: string;
   noticeId?: string;
   pollId?: string;
   broadcastId?: string;
@@ -139,6 +159,8 @@ export async function notifyUsers(params: {
   body: string;
   data: NotificationData;
   excludeUserId?: string | null;
+  channelId?: PushChannelId;
+  categoryId?: string;
 }): Promise<void> {
   const userIds = uniqueIds(params.userIds, params.excludeUserId);
   if (userIds.length === 0) return;
@@ -150,6 +172,8 @@ export async function notifyUsers(params: {
         title: params.title,
         body: params.body,
         data: params.data as unknown as Record<string, unknown>,
+        channelId: params.channelId ?? channelForType(params.data.type),
+        categoryId: params.categoryId,
       });
     }
   } catch (e) {
@@ -172,13 +196,16 @@ export async function notifyVisitorPending(params: {
   await notifyUsers({
     userIds,
     title: 'Approve visitor',
-    body: `${params.visitorName} (${type}) is at the gate${where}. Tap to respond.`,
+    body: `${params.visitorName} (${type}) is at the gate${where}. Approve or reject from this alert.`,
     data: {
       type: 'visitor_pending',
       flatId: params.flatId,
       societyId: params.societyId,
       visitorId: params.visitorId,
+      visitorName: params.visitorName,
     },
+    channelId: 'visitor',
+    categoryId: VISITOR_ACTION_CATEGORY,
   });
 }
 

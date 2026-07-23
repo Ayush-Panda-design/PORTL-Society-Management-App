@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
-import { Plus } from 'lucide-react-native';
+import { Contact, Plus } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -30,6 +30,7 @@ import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand } from '@/constants/theme';
 import { useModalBack } from '@/hooks/use-modal-back';
+import { pickContact } from '@/lib/contacts-picker';
 import {
   deleteStaff,
   fetchStaff,
@@ -374,6 +375,27 @@ export default function AdminStaffScreen() {
               {editing ? 'Edit staff' : 'Add staff'}
             </Text>
             {formError ? <Text style={{ ...Tokens.typography.caption, color: Tokens.color.danger, marginBottom: 8 }}>{formError}</Text> : null}
+
+            <Pressable
+              onPress={async () => {
+                try {
+                  const contact = await pickContact();
+                  if (!contact) return;
+                  setName(contact.name);
+                  if (contact.phone) setPhone(contact.phone);
+                } catch (e) {
+                  Toast.show({
+                    type: 'error',
+                    text1: 'Could not open contacts',
+                    text2: e instanceof Error ? e.message : undefined,
+                  });
+                }
+              }}
+              className="mb-3 flex-row items-center justify-center gap-2 rounded-xl border border-surface-border py-2.5"
+            >
+              <Contact color={Brand.primary} size={16} />
+              <Text className="text-sm font-semibold text-brand-700">Import from contacts</Text>
+            </Pressable>
 
             <View className="mb-4 flex-row items-center gap-3">
               {photoUri ? (

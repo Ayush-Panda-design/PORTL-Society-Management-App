@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Text, Pressable } from 'react-native';
 import LottieView from 'lottie-react-native';
-import { FontFamily } from '@/constants/theme';
+import { FontFamily, Brand } from '@/constants/theme';
 import { MotiView } from 'moti';
 
 export type SuccessType = 'success' | 'payment';
@@ -11,6 +11,9 @@ type Props = {
   type?: SuccessType;
   message?: string;
   onDone?: () => void;
+  /** Optional secondary action (e.g. Add to calendar). */
+  actionLabel?: string;
+  onAction?: () => void;
 };
 
 const LOTTIE_FILES = {
@@ -18,19 +21,27 @@ const LOTTIE_FILES = {
   payment: require('@/assets/lottie/payment-success.json'),
 };
 
-export function SuccessOverlay({ visible, type = 'success', message, onDone }: Props) {
+export function SuccessOverlay({
+  visible,
+  type = 'success',
+  message,
+  onDone,
+  actionLabel,
+  onAction,
+}: Props) {
   const animation = useRef<LottieView>(null);
 
   useEffect(() => {
     if (visible) {
       animation.current?.play();
-      // Auto dismiss after a short delay so the animation finishes
+      // Keep open longer when there's an action the user may tap
+      const delay = actionLabel ? 4500 : 2500;
       const timer = setTimeout(() => {
         onDone?.();
-      }, 2500);
+      }, delay);
       return () => clearTimeout(timer);
     }
-  }, [visible, onDone]);
+  }, [visible, onDone, actionLabel]);
 
   if (!visible) return null;
 
@@ -58,6 +69,15 @@ export function SuccessOverlay({ visible, type = 'success', message, onDone }: P
           >
             {message}
           </Text>
+        ) : null}
+        {actionLabel && onAction ? (
+          <Pressable
+            onPress={onAction}
+            className="mt-4 rounded-bubbly px-4 py-2.5"
+            style={{ backgroundColor: Brand.primary }}
+          >
+            <Text className="font-semibold text-white">{actionLabel}</Text>
+          </Pressable>
         ) : null}
       </MotiView>
     </View>
