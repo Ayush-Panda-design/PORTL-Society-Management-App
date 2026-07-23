@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
       body: payload.body,
       data: payload.data ?? {},
       sound: 'default',
-      channelId: 'default',
+      channelId: payload.data?.type === 'broadcast' ? 'alerts' : 'default',
       priority: 'high',
     }));
 

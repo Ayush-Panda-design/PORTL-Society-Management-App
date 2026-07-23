@@ -60,43 +60,43 @@
 }
 
 .dark {
-  /* Airbnb-style comfort dark — soft #222 canvas, gentle lift */
-  --color-surface: #222222;
-  --color-surface-card: #2c2c2c;
-  --color-surface-muted: #333333;
-  --color-surface-border: #404040;
+  /* WhatsApp-style black — deep #0B141A canvas, elevated panels */
+  --color-surface: #0b141a;
+  --color-surface-card: #1f2c34;
+  --color-surface-muted: #182229;
+  --color-surface-border: #2a3942;
 
-  /* Soft off-white ink (not pure white — less glare) */
-  --color-ink: #ebebeb;
-  --color-ink-soft: #d6d6d6;
-  --color-ink-muted: #b0b0b0;
-  --color-ink-faint: #8c8c8c;
+  /* Soft off-white ink (WhatsApp chat hierarchy) */
+  --color-ink: #e9edef;
+  --color-ink-soft: #d1d7db;
+  --color-ink-muted: #8696a0;
+  --color-ink-faint: #667781;
 
   /* Soft rose fills near muted luminance */
-  --color-brand-soft-bg: #3a3034;
-  --color-brand-soft: #6b3a44;
-  --color-accent-soft: #383838;
+  --color-brand-soft-bg: #2a1f24;
+  --color-brand-soft: #5c3040;
+  --color-accent-soft: #1a242c;
 
   /* Charcoal stays dark (CTA / ticket surfaces) */
   --color-charcoal: #0f172a;
 
-  /* Low-chroma washes */
-  --color-pastel-mint: #2e3632;
-  --color-pastel-peach: #3a3234;
-  --color-pastel-sky: #30363c;
-  --color-pastel-rose: #3a3034;
-  --color-pastel-butter: #3a3630;
-  --color-pastel-lilac: #343038;
-  --color-pastel-sage: #343234;
-  --color-pastel-coral: #3a3232;
+  /* Low-chroma washes on black canvas */
+  --color-pastel-mint: #1a2a24;
+  --color-pastel-peach: #2a2226;
+  --color-pastel-sky: #1a242e;
+  --color-pastel-rose: #2a1f24;
+  --color-pastel-butter: #2a2620;
+  --color-pastel-lilac: #241e2a;
+  --color-pastel-sage: #222426;
+  --color-pastel-coral: #2a2224;
 
   /* Status — softened solids, calm softs */
-  --color-status-approved-soft: #2e3632;
-  --color-status-pending-soft: #3a3630;
-  --color-status-rejected-soft: #3a3034;
-  --color-status-info-soft: #30363c;
+  --color-status-approved-soft: #1a2a24;
+  --color-status-pending-soft: #2a2620;
+  --color-status-rejected-soft: #2a1f24;
+  --color-status-info-soft: #1a242e;
 
   /* Segment */
-  --color-segment-track: #383838;
-  --color-border: #404040;
+  --color-segment-track: #1a242c;
+  --color-border: #2a3942;
 }

@@ -1,8 +1,8 @@
 /**
- * Portl brand tokens — white + red light mode; Airbnb-style comfort dark.
+ * Portl brand tokens — white + red light mode; WhatsApp-style black dark.
  * Light: Primary #E11D48 · soft rose washes · clean white surfaces.
- * Dark: Soft #222 canvas, gentle elevation, off-white ink (not pure white) —
- *        low-chroma washes, hairline borders — less eye strain.
+ * Dark: Deep #0B141A canvas (WhatsApp black), elevated #1F2C34 cards,
+ *        soft #E9EDEF ink — calm hierarchy, hairline borders.
  * Type scale: 28 / 24 / 16 / 13px · soft elevation · Lucide stroke 1.5.
  */
 
@@ -18,7 +18,7 @@ export const Brand = {
   primaryDark: '#BE123C',
   primarySoft: '#FFE4E8',
   primaryMid: '#F43F5E',
-  /** Soft Rausch-like rose for icons/text on dark (Airbnb-style, less bloom). */
+  /** Soft rose for icons/text on dark (WhatsApp black, less bloom). */
   primaryOnDark: '#FF6B81',
 
   // Accent — deep charcoal for secondary CTAs / high-contrast actions
@@ -58,18 +58,17 @@ export const PastelsLight = {
 } as const;
 
 /**
- * Dark washes — stay near muted luminance with a whisper of hue (Airbnb-like).
- * Avoid deep crushed colors that feel like black holes on the canvas.
+ * Dark washes — slightly lifted from the WhatsApp black canvas with a whisper of hue.
  */
 export const PastelsDark = {
-  mint: '#2E3632',
-  peach: '#3A3234',
-  sky: '#30363C',
-  rose: '#3A3034',
-  butter: '#3A3630',
-  lilac: '#343038',
-  sage: '#343234',
-  coral: '#3A3232',
+  mint: '#1A2A24',
+  peach: '#2A2226',
+  sky: '#1A242E',
+  rose: '#2A1F24',
+  butter: '#2A2620',
+  lilac: '#241E2A',
+  sage: '#222426',
+  coral: '#2A2224',
 } as const;
 
 export type PastelTone = keyof typeof PastelsLight;
@@ -145,22 +144,22 @@ export const Elevation = {
     shadowRadius: 28,
     elevation: 6,
   },
-  /** Dark elevation is subtle — Airbnb separates layers with surface tone, not heavy shadows. */
+  /** Dark elevation is soft — WhatsApp black separates layers with surface tone. */
   smDark: {
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.32,
     shadowRadius: 6,
     elevation: 1,
   },
   mdDark: {
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.22,
+    shadowOpacity: 0.4,
     shadowRadius: 10,
     elevation: 2,
   },
   lgDark: {
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.28,
+    shadowOpacity: 0.48,
     shadowRadius: 16,
     elevation: 3,
   },
@@ -207,27 +206,26 @@ export const Palette = {
     charcoal: '#0F172A',
   },
   /**
-   * Airbnb-style comfort dark:
-   * - Canvas ~#222 (not OLED black, not purple-grey)
-   * - Cards only a step lighter — soft lift, not high-contrast slabs
-   * - Primary ink soft off-white (#EBEBEB) to reduce glare vs pure #FFF
-   * - Secondary ~#B0B0B0 (Hof Grey lineage) for calm hierarchy
+   * WhatsApp-style black dark:
+   * - Canvas #0B141A (deep blue-black, not flat grey)
+   * - Cards #1F2C34 — clear lift without loud borders
+   * - Ink #E9EDEF / secondary #8696A0 — WhatsApp chat hierarchy
    */
   dark: {
-    surface: '#222222',
-    card: '#2C2C2C',
-    muted: '#333333',
-    border: '#404040',
-    ink: '#EBEBEB',
-    inkSoft: '#D6D6D6',
-    inkMuted: '#B0B0B0',
-    inkFaint: '#8C8C8C',
-    brandSoft: '#6B3A44',
-    brandSoftBg: '#3A3034',
-    accentSoft: '#383838',
-    segmentTrack: '#383838',
+    surface: '#0B141A',
+    card: '#1F2C34',
+    muted: '#182229',
+    border: '#2A3942',
+    ink: '#E9EDEF',
+    inkSoft: '#D1D7DB',
+    inkMuted: '#8696A0',
+    inkFaint: '#667781',
+    brandSoft: '#5C3040',
+    brandSoftBg: '#2A1F24',
+    accentSoft: '#1A242C',
+    segmentTrack: '#1A242C',
     shadow: '#000000',
-    primarySoft: '#4A3438',
+    primarySoft: '#3A2428',
     primarySoftText: '#FFB3BE',
     /** Keep charcoal dark — used as `bg-charcoal` CTA surfaces in both modes. */
     charcoal: '#0F172A',
@@ -275,10 +273,10 @@ export const themeCssVars = {
     '--color-brand-soft-bg': Palette.dark.brandSoftBg,
     '--color-brand-soft': Palette.dark.brandSoft,
     '--color-accent-soft': Palette.dark.accentSoft,
-    '--color-status-approved-soft': '#2E3632',
-    '--color-status-pending-soft': '#3A3630',
-    '--color-status-rejected-soft': '#3A3034',
-    '--color-status-info-soft': '#30363C',
+    '--color-status-approved-soft': '#1A2A24',
+    '--color-status-pending-soft': '#2A2620',
+    '--color-status-rejected-soft': '#2A1F24',
+    '--color-status-info-soft': '#1A242E',
     '--color-segment-track': Palette.dark.segmentTrack,
     '--color-charcoal': Palette.dark.charcoal,
     '--color-pastel-mint': PastelsDark.mint,
@@ -312,17 +310,17 @@ export const StatusColors = {
 } as const;
 
 export const StatusColorsDark = {
-  approved: { solid: '#5ECF8A', soft: '#2E3632', text: '#A7E6C0' },
-  pending: { solid: '#E8B84A', soft: '#3A3630', text: '#F0D48A' },
-  rejected: { solid: '#FF6B81', soft: '#3A3034', text: '#FFB3BE' },
-  info: { solid: '#6BA3E8', soft: '#30363C', text: '#A8C8F0' },
-  entry: { solid: '#5ECF8A', soft: '#2E3632', text: '#A7E6C0' },
-  exit: { solid: '#FF6B81', soft: '#3A3034', text: '#FFB3BE' },
-  checked_in: { solid: '#6BA3E8', soft: '#30363C', text: '#A8C8F0' },
-  checked_out: { solid: '#8C8C8C', soft: '#333333', text: '#D6D6D6' },
-  open: { solid: '#E8B84A', soft: '#3A3630', text: '#F0D48A' },
-  in_progress: { solid: '#6BA3E8', soft: '#30363C', text: '#A8C8F0' },
-  resolved: { solid: '#5ECF8A', soft: '#2E3632', text: '#A7E6C0' },
+  approved: { solid: '#5ECF8A', soft: '#1A2A24', text: '#A7E6C0' },
+  pending: { solid: '#E8B84A', soft: '#2A2620', text: '#F0D48A' },
+  rejected: { solid: '#FF6B81', soft: '#2A1F24', text: '#FFB3BE' },
+  info: { solid: '#6BA3E8', soft: '#1A242E', text: '#A8C8F0' },
+  entry: { solid: '#5ECF8A', soft: '#1A2A24', text: '#A7E6C0' },
+  exit: { solid: '#FF6B81', soft: '#2A1F24', text: '#FFB3BE' },
+  checked_in: { solid: '#6BA3E8', soft: '#1A242E', text: '#A8C8F0' },
+  checked_out: { solid: '#8696A0', soft: '#182229', text: '#D1D7DB' },
+  open: { solid: '#E8B84A', soft: '#2A2620', text: '#F0D48A' },
+  in_progress: { solid: '#6BA3E8', soft: '#1A242E', text: '#A8C8F0' },
+  resolved: { solid: '#5ECF8A', soft: '#1A2A24', text: '#A7E6C0' },
 } as const;
 
 export function getStatusColors(scheme: 'light' | 'dark') {
@@ -333,14 +331,17 @@ export function getStatusColors(scheme: 'light' | 'dark') {
 export const Gradients = {
   hero: ['#F43F5E', '#E11D48'] as const,
   heroSoft: ['#FFF1F3', '#FFE4E8'] as const,
-  heroSoftDark: ['#3A3034', '#2C2C2C'] as const,
+  heroSoftDark: ['#2A1F24', '#1F2C34'] as const,
   heroWarm: ['#E11D48', '#BE123C', '#9F1239'] as const,
   adminHero: ['#BE123C', '#9F1239'] as const,
   guardHero: ['#F43F5E', '#E11D48'] as const,
   header: ['#FFFFFF', '#F7F7F8'] as const,
-  headerDark: ['#2C2C2C', '#222222'] as const,
+  headerDark: ['#1F2C34', '#0B141A'] as const,
   cardAccent: ['#FFFFFF', '#FFF1F3'] as const,
-  cardAccentDark: ['#2C2C2C', '#333333'] as const,
+  cardAccentDark: ['#1F2C34', '#182229'] as const,
+  /** Ask Portl chat canvas — deep black with soft rose depth. */
+  askPortlDark: ['#0B141A', '#121C24', '#1A1520', '#0B141A'] as const,
+  askPortlLight: ['#F7F7F8', '#FFF1F3', '#F0F0F2', '#F7F7F8'] as const,
   auth: ['#BE123C', '#E11D48', '#F43F5E'] as const,
   accentWarm: ['#E11D48', '#BE123C'] as const,
 } as const;

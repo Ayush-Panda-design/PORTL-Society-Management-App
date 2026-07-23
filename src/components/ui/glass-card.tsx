@@ -53,7 +53,7 @@ export function GlassCard({
         <BlurView tint={tint} intensity={intensity} style={StyleSheet.absoluteFill} {...props} />
         <View
           className={`z-10 w-full border ${colorScheme === 'dark' ? 'border-white/10' : 'border-white/40'} ${contentClassName}`}
-          style={{ backgroundColor: colorScheme === 'dark' ? 'rgba(26,24,28,0.72)' : 'rgba(255,255,255,0.55)' }}
+          style={{ backgroundColor: colorScheme === 'dark' ? 'rgba(31,44,52,0.78)' : 'rgba(255,255,255,0.55)' }}
         >
           {children}
         </View>

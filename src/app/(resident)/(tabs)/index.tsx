@@ -9,8 +9,8 @@ import {
   DoorOpen,
   MessageSquare,
   Phone,
-  Search,
   ShieldCheck,
+  Sparkles,
   UserPlus,
   Vote,
 } from 'lucide-react-native';
@@ -30,6 +30,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 import Toast from 'react-native-toast-message';
 
+import { AskPortlFloatingFab, AskPortlOrb } from '@/components/ask-portl/ask-portl-orb';
 import { GateAuthIllustration } from '@/components/illustrations';
 import { DrawerMenuButton } from '@/components/navigation/drawer-menu-button';
 import { SoftPromoCard, InitialsAvatar } from '@/components/ui/brand';
@@ -419,9 +420,10 @@ export default function ResidentHome() {
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
+      <View className="flex-1">
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 36 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 88 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -456,7 +458,7 @@ export default function ResidentHome() {
           <View
             className="overflow-hidden rounded-[24px]"
             style={{
-              backgroundColor: isDark ? '#2C2C2C' : '#9F1239',
+              backgroundColor: isDark ? '#1F2C34' : '#9F1239',
               minHeight: 152,
             }}
           >
@@ -468,7 +470,7 @@ export default function ResidentHome() {
             />
             {isDark ? (
               <LinearGradient
-                colors={['#2C2C2C', 'rgba(44,44,44,0.92)', 'rgba(44,44,44,0.5)', 'rgba(34,34,34,0.12)']}
+                colors={['#1F2C34', 'rgba(31,44,52,0.94)', 'rgba(31,44,52,0.48)', 'rgba(11,20,26,0.1)']}
                 locations={[0, 0.38, 0.68, 1]}
                 start={{ x: 0, y: 0.5 }}
                 end={{ x: 1, y: 0.5 }}
@@ -485,7 +487,7 @@ export default function ResidentHome() {
             )}
             {isDark ? (
               <LinearGradient
-                colors={['transparent', 'rgba(14,13,16,0.5)']}
+                colors={['transparent', 'rgba(11,20,26,0.55)']}
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
                 style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
@@ -517,6 +519,15 @@ export default function ResidentHome() {
             </View>
           </View>
         </View>
+
+        <MotiView
+          from={{ opacity: 0, translateY: 8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 380, delay: 120 }}
+          style={{ marginBottom: 16, marginTop: 12 }}
+        >
+          <AskPortlOrb onPress={() => router.push(href('/(resident)/ask-portl'))} />
+        </MotiView>
 
         {(error || actionError) && (
           <View className="mt-1">
@@ -615,11 +626,6 @@ export default function ResidentHome() {
           <Text className="text-xl text-ink" style={{ fontFamily: FontFamily.display }}>
             Quick actions
           </Text>
-          <AnimatedPressable onPress={() => Toast.show({ type: 'info', text1: 'Search opened' })}>
-            <View className="h-9 w-9 items-center justify-center rounded-full bg-surface-muted">
-              <Search color={Brand.primary} size={16} strokeWidth={1.5} />
-            </View>
-          </AnimatedPressable>
         </View>
 
         <ScrollView
@@ -628,6 +634,12 @@ export default function ResidentHome() {
           className="mb-6"
           contentContainerStyle={{ paddingRight: 8 }}
         >
+          <QuickAction
+            label="Ask Portl"
+            icon={<Sparkles color={Brand.primary} size={22} strokeWidth={1.5} />}
+            bg={pastels.rose}
+            onPress={() => router.push(href('/(resident)/ask-portl'))}
+          />
           <QuickAction
             label="Visitors"
             icon={<DoorOpen color={primaryAccent} size={22} strokeWidth={1.5} />}
@@ -685,7 +697,7 @@ export default function ResidentHome() {
           <LinearGradient
             colors={
               isDark
-                ? ['rgba(14,13,16,0.12)', 'rgba(14,13,16,0.65)', 'rgba(14,13,16,0.88)']
+                ? ['rgba(11,20,26,0.12)', 'rgba(11,20,26,0.68)', 'rgba(11,20,26,0.9)']
                 : ['rgba(15,23,42,0.1)', 'rgba(15,23,42,0.42)', 'rgba(15,23,42,0.68)']
             }
             locations={[0, 0.5, 1]}
@@ -826,6 +838,8 @@ export default function ResidentHome() {
           <ChevronRight color={Brand.inkMuted} size={16} strokeWidth={1.5} />
         </Pressable>
       </ScrollView>
+      <AskPortlFloatingFab onPress={() => router.push(href('/(resident)/ask-portl'))} />
+      </View>
     </SafeAreaView>
   );
 }

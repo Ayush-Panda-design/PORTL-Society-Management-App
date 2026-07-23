@@ -13,7 +13,7 @@ type CardProps = ViewProps & {
 };
 
 /**
- * AppCard — soft shadow in light; Airbnb-style flat lift (tone + hairline) in dark.
+ * AppCard — soft shadow in light; WhatsApp-black flat lift (tone + hairline) in dark.
  */
 export function AppCard({ children, className = '', style, ...rest }: CardProps) {
   const palette = useThemePalette();

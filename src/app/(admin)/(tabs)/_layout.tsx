@@ -90,6 +90,9 @@ export default function AdminLayout() {
       <Tabs.Screen name="join-requests" options={{ href: null }} />
       <Tabs.Screen name="audit-log" options={{ href: null }} />
       <Tabs.Screen name="roles" options={{ href: null }} />
+      <Tabs.Screen name="gates" options={{ href: null }} />
+      <Tabs.Screen name="broadcasts" options={{ href: null }} />
+      <Tabs.Screen name="ask-portl" options={{ href: null }} />
     </Tabs>
   );
 }

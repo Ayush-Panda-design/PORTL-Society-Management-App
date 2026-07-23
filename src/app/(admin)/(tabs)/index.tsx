@@ -38,6 +38,7 @@ import {
   TowersMiniIllustration,
 } from '@/components/illustrations';
 import { DrawerMenuButton } from '@/components/navigation/drawer-menu-button';
+import { AskPortlFloatingFab } from '@/components/ask-portl/ask-portl-orb';
 import { InitialsAvatar } from '@/components/ui/brand';
 import { BrandedRefreshMark, ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
@@ -53,6 +54,7 @@ import { useThemePalette } from '@/hooks/use-theme';
 import type { ProfileWithFlat } from '@/types/database';
 
 const SEARCHABLE_TOOLS: { title: string; subtitle: string; path: string; keywords: string }[] = [
+  { title: 'Ask Portl', subtitle: 'Society ops assistant', path: '/(admin)/ask-portl', keywords: 'ask portl ai assistant help chat' },
   { title: 'Towers', subtitle: 'Buildings & structure', path: '/(admin)/towers', keywords: 'towers buildings structure' },
   { title: 'Flats', subtitle: 'Map units to towers', path: '/(admin)/flats', keywords: 'flats units apartments' },
   { title: 'Invites', subtitle: 'Share join codes', path: '/(admin)/invites', keywords: 'invites invite links codes share' },
@@ -206,6 +208,7 @@ export default function AdminHome() {
 
   return (
     <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
+      <View className="flex-1">
       <View className="z-10 flex-row items-center justify-between px-5 pb-1 pt-2">
         <DrawerMenuButton />
         <Animated.View
@@ -231,7 +234,7 @@ export default function AdminHome() {
 
       <Animated.ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: 88 }}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
@@ -654,6 +657,8 @@ export default function AdminHome() {
           </Text>
         </View>
       </Animated.ScrollView>
+      <AskPortlFloatingFab onPress={() => go('/(admin)/ask-portl')} />
+      </View>
     </SafeAreaView>
   );
 }

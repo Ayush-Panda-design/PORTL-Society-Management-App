@@ -29,6 +29,10 @@ function hrefForNotification(
       return role === 'guard' ? ('/(guard)/dashboard' as Href) : null;
     case 'notice':
       return role === 'resident' ? ('/(resident)/notices' as Href) : null;
+    case 'broadcast':
+      if (role === 'resident') return '/(resident)/notices' as Href;
+      if (role === 'admin') return '/(admin)/broadcasts' as Href;
+      return null;
     case 'poll_new':
     case 'poll_results':
       if (role !== 'resident') return null;

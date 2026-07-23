@@ -21,6 +21,7 @@ export type NotificationType =
   | 'visitor_decision'
   | 'visitor_checked_in'
   | 'notice'
+  | 'broadcast'
   | 'poll_new'
   | 'poll_results'
   | 'join_request'
@@ -35,6 +36,7 @@ export type NotificationData = {
   visitorId?: string;
   noticeId?: string;
   pollId?: string;
+  broadcastId?: string;
   complaintId?: string;
   status?: string;
 };
@@ -97,6 +99,35 @@ export async function idsForSocietyAdmins(societyId: string): Promise<string[]> 
 
   if (error) {
     console.warn('[push] idsForSocietyAdmins:', error.message);
+    return [];
+  }
+  return (data ?? []).map((row) => row.id as string);
+}
+
+export async function idsForSocietyGuards(societyId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('society_id', societyId)
+    .eq('role', 'guard')
+    .eq('status', 'active');
+
+  if (error) {
+    console.warn('[push] idsForSocietyGuards:', error.message);
+    return [];
+  }
+  return (data ?? []).map((row) => row.id as string);
+}
+
+export async function idsForSocietyMembers(societyId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('society_id', societyId)
+    .eq('status', 'active');
+
+  if (error) {
+    console.warn('[push] idsForSocietyMembers:', error.message);
     return [];
   }
   return (data ?? []).map((row) => row.id as string);

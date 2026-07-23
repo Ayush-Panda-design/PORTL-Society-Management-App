@@ -54,15 +54,14 @@ export default function GuardLayout() {
             tabIcon(ClipboardList, color, focused),
         }}
       />
-      <Tabs.Screen
-        name="more"
-        options={{
+      <Tabs.Screen name="more" options={{
           title: 'More',
           tabBarIcon: ({ color, focused }) =>
             tabIcon(MoreHorizontal, color, focused),
         }}
       />
       <Tabs.Screen name="index" options={{ href: null }} />
+      <Tabs.Screen name="ask-portl" options={{ href: null }} />
     </Tabs>
   );
 }

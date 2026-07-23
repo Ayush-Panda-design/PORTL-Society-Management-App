@@ -1,4 +1,4 @@
-import { ClipboardList, ScanLine, ShieldCheck, User, UserPlus } from 'lucide-react-native';
+import { ClipboardList, ScanLine, ShieldCheck, Sparkles, User, UserPlus } from 'lucide-react-native';
 import { type Href } from 'expo-router';
 
 import { SettingsHub, type SettingsLink } from '@/components/ui/settings-hub';
@@ -13,6 +13,12 @@ const SECTIONS: { title: string; links: SettingsLink[] }[] = [
         title: 'My profile',
         subtitle: 'Bio, personal details, and private notes',
         Icon: User,
+      },
+      {
+        href: '/(guard)/ask-portl' as Href,
+        title: 'Ask Portl',
+        subtitle: 'Gate assistant — queue, guests, notices',
+        Icon: Sparkles,
       },
     ],
   },

@@ -2,10 +2,13 @@ import {
   BarChart3,
   Building2,
   ClipboardList,
+  DoorOpen,
   KeyRound,
   Layers,
+  Megaphone,
   Phone,
   Shield,
+  Sparkles,
   User,
   UserCog,
   UserPlus,
@@ -27,6 +30,12 @@ const SECTIONS = [
         subtitle: 'Bio, personal details, and private notes',
         Icon: User,
       },
+      {
+        href: '/(admin)/ask-portl' as Href,
+        title: 'Ask Portl',
+        subtitle: 'Society ops assistant — visitors, tickets, notices',
+        Icon: Sparkles,
+      },
     ] as SettingsLink[],
   },
   {
@@ -43,6 +52,12 @@ const SECTIONS = [
         title: 'Flats',
         subtitle: 'Map units to towers',
         Icon: Layers,
+      },
+      {
+        href: '/(admin)/gates' as Href,
+        title: 'Gates',
+        subtitle: 'Multi-entry points for visitor logs',
+        Icon: DoorOpen,
       },
       {
         href: '/(admin)/residents',
@@ -78,6 +93,12 @@ const SECTIONS = [
   {
     title: 'Operations',
     links: [
+      {
+        href: '/(admin)/broadcasts' as Href,
+        title: 'Broadcast alerts',
+        subtitle: 'Push-only urgent society alerts',
+        Icon: Megaphone,
+      },
       {
         href: '/(admin)/polls',
         title: 'Polls',

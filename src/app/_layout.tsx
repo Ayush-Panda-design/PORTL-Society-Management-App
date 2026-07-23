@@ -13,6 +13,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import Toast from 'react-native-toast-message';
 
 import { AppErrorBoundary } from '@/components/error-boundary';
+import { BiometricLock } from '@/components/auth/biometric-lock';
 import { HardwareBackHandler } from '@/components/navigation/hardware-back-handler';
 import { AppThemeProvider } from '@/components/theme/app-theme-provider';
 import { OfflineBanner } from '@/components/ui/offline-banner';
@@ -202,18 +203,20 @@ export default function RootLayout() {
           <KeyboardProvider preload={false}>
             <AppThemeProvider>
               <AuthGate>
-                <View className="flex-1">
-                  <HardwareBackHandler />
-                  <OfflineBanner />
-                  <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
-                    <Stack.Screen name="index" />
-                    <Stack.Screen name="(auth)" />
-                    <Stack.Screen name="(onboarding)" />
-                    <Stack.Screen name="(resident)" />
-                    <Stack.Screen name="(guard)" />
-                    <Stack.Screen name="(admin)" />
-                  </Stack>
-                </View>
+                <BiometricLock>
+                  <View className="flex-1">
+                    <HardwareBackHandler />
+                    <OfflineBanner />
+                    <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+                      <Stack.Screen name="index" />
+                      <Stack.Screen name="(auth)" />
+                      <Stack.Screen name="(onboarding)" />
+                      <Stack.Screen name="(resident)" />
+                      <Stack.Screen name="(guard)" />
+                      <Stack.Screen name="(admin)" />
+                    </Stack>
+                  </View>
+                </BiometricLock>
               </AuthGate>
             </AppThemeProvider>
           </KeyboardProvider>
