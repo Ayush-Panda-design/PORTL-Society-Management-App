@@ -8,7 +8,14 @@
     "scheme": "portl",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Portl uses your location to suggest the nearest gate, tag complaint spots, and alert you when you're near home.",
+        "NSContactsUsageDescription": "Portl uses contacts so you can pick guests and staff without typing.",
+        "NSCalendarsUsageDescription": "Portl adds amenity bookings to your calendar.",
+        "NSCalendarsFullAccessUsageDescription": "Portl adds amenity bookings to your calendar.",
+        "NSSpeechRecognitionUsageDescription": "Portl can speak Ask Portl replies aloud."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +26,14 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.ayush_panda.portl",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "READ_CONTACTS",
+        "READ_CALENDAR",
+        "WRITE_CALENDAR"
+      ]
     },
     "web": {
       "output": "static",
@@ -57,7 +71,27 @@
         {
           "faceIDPermission": "Allow Portl to use Face ID to unlock the app quickly and securely."
         }
-      ]
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Portl to use your location for nearest gate, near-home alerts, and complaint tagging."
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow Portl to access contacts to pre-approve guests and add staff."
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Allow Portl to add amenity bookings to your calendar."
+        }
+      ],
+      "expo-sharing",
+      "expo-quick-actions"
     ],
     "extra": {
       "eas": {

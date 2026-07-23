@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, CheckCircle2, Zap } from 'lucide-react-native';
+import { ArrowLeft, CheckCircle2, Contact, Zap } from 'lucide-react-native';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
 import { ChipSelector } from '@/components/ui/chip-selector';
 import { EmptyState } from '@/components/visitors/empty-state';
@@ -18,6 +19,7 @@ import { ErrorBanner } from '@/components/visitors/error-banner';
 import { QRCodeModal } from '@/components/visitors/qr-code-modal';
 import { useAppBack } from '@/hooks/use-app-back';
 import { useThemePalette } from '@/hooks/use-theme';
+import { pickContact } from '@/lib/contacts-picker';
 import {
   fetchFrequentVisitors,
   quickApproveFrequentVisitor,
@@ -223,7 +225,30 @@ export default function PreApproveGuestScreen() {
           </View>
         ) : null}
 
-        <Text className="mb-2 text-sm font-medium text-ink-soft">Guest name</Text>
+        <View className="mb-2 flex-row items-center justify-between">
+          <Text className="text-sm font-medium text-ink-soft">Guest name</Text>
+          <Pressable
+            onPress={async () => {
+              try {
+                const contact = await pickContact();
+                if (!contact) return;
+                setName(contact.name);
+                if (contact.phone) setPhone(contact.phone);
+              } catch (e) {
+                Toast.show({
+                  type: 'error',
+                  text1: 'Could not open contacts',
+                  text2: e instanceof Error ? e.message : undefined,
+                });
+              }
+            }}
+            className="flex-row items-center gap-1 rounded-pill px-2.5 py-1"
+            style={{ backgroundColor: '#E8F5F1' }}
+          >
+            <Contact color="#0F766E" size={14} />
+            <Text className="text-xs font-semibold text-brand-700">From contacts</Text>
+          </Pressable>
+        </View>
         <TextInput
           className="mb-4 rounded-xl border border-surface-border bg-surface-card px-4 py-3 text-base text-ink"
           placeholder="Alex Rivera"

@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import {
   ActivityIndicator,
   FlatList,
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -16,6 +17,7 @@ import {
   CheckCircle,
   ChevronRight,
   Clock,
+  MapPin,
   MessageSquarePlus,
   Plus,
   Sparkles,
@@ -24,6 +26,7 @@ import {
   Send,
 } from 'lucide-react-native';
 import { Image } from 'expo-image';
+import Toast from 'react-native-toast-message';
 
 import { FloatingActionBtn } from '@/components/ui/brand';
 import { ListRow } from '@/components/ui/list-row';
@@ -42,6 +45,7 @@ import { complaintCategoryMeta } from '@/lib/complaint-category';
 import { complaintStatusTone } from '@/lib/community';
 import { uploadLocalImage } from '@/lib/storage-upload';
 import { createComplaint, fetchComplaintsForFlat, fetchComplaintComments, addComplaintComment } from '@/lib/community-api';
+import { getCurrentCoords } from '@/lib/location-helpers';
 import { rateComplaint, reopenComplaint } from '@/lib/ops-api';
 import { queryKeys } from '@/lib/query-client';
 import { triageComplaint, type ComplaintTriage } from '@/lib/triage-complaint';
@@ -100,6 +104,10 @@ export default function ResidentHelpdeskScreen() {
   const [commentText, setCommentText] = useState('');
   const [triage, setTriage] = useState<ComplaintTriage | null>(null);
   const [triaging, setTriaging] = useState(false);
+  const [taggedLocation, setTaggedLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
 
   const listQuery = useQuery({
     queryKey: queryKeys.complaints(`flat:${flatId ?? 'none'}`),
@@ -133,10 +141,14 @@ export default function ResidentHelpdeskScreen() {
         }
       }
 
+      const locationNote = taggedLocation
+        ? `\n\n[Location: ${taggedLocation.latitude.toFixed(5)}, ${taggedLocation.longitude.toFixed(5)}]`
+        : '';
+
       await createComplaint({
         flatId,
         category,
-        description: description.trim(),
+        description: `${description.trim()}${locationNote}`,
         createdBy: userId,
         priority,
         photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
@@ -147,6 +159,7 @@ export default function ResidentHelpdeskScreen() {
       setPhotos([]);
       setPriority('medium');
       setTriage(null);
+      setTaggedLocation(null);
       setComposeOpen(false);
       setSuccessVisible(true);
       setFormError(null);
@@ -527,6 +540,43 @@ export default function ResidentHelpdeskScreen() {
                   setTriage(null);
                 }}
               />
+
+              <Pressable
+                onPress={async () => {
+                  const coords = await getCurrentCoords();
+                  if (!coords) {
+                    Toast.show({
+                      type: 'error',
+                      text1: 'Location needed',
+                      text2: 'Allow location to tag this complaint.',
+                    });
+                    return;
+                  }
+                  setTaggedLocation(coords);
+                  Toast.show({ type: 'success', text1: 'Location tagged' });
+                }}
+                className="mb-3 flex-row items-center gap-2 self-start rounded-pill px-3 py-2"
+                style={{ backgroundColor: taggedLocation ? Pastels.mint : '#F1F5F9' }}
+              >
+                <MapPin color={Brand.primary} size={14} />
+                <Text className="text-xs font-semibold text-brand-700">
+                  {taggedLocation
+                    ? `${taggedLocation.latitude.toFixed(4)}, ${taggedLocation.longitude.toFixed(4)}`
+                    : 'Tag current location'}
+                </Text>
+              </Pressable>
+
+              {taggedLocation ? (
+                <Pressable
+                  onPress={() => {
+                    const url = `https://maps.google.com/?q=${taggedLocation.latitude},${taggedLocation.longitude}`;
+                    void Linking.openURL(url);
+                  }}
+                  className="mb-3"
+                >
+                  <Text className="text-xs text-ink-muted underline">Open tagged spot in Maps</Text>
+                </Pressable>
+              ) : null}
 
               <Pressable
                 onPress={() => void runTriage()}

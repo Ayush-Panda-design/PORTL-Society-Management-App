@@ -4,6 +4,7 @@ import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { AppState, Platform } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 import type { NotificationData, NotificationType } from '@/lib/notifications';
 import {
@@ -11,6 +12,11 @@ import {
   configurePushPresentation,
   registerForPushNotifications,
 } from '@/lib/push-notifications';
+import {
+  handleVisitorNotificationAction,
+  VISITOR_ACTION_APPROVE,
+  VISITOR_ACTION_REJECT,
+} from '@/lib/visitor-notification-actions';
 import { useAuthStore } from '@/stores/authStore';
 import type { UserRole } from '@/types/database';
 
@@ -66,7 +72,7 @@ function parseData(raw: unknown): NotificationData | null {
 
 /**
  * Routes notification taps to the right screen based on payload + user role.
- * No-ops in Expo Go / web where expo-notifications is unavailable.
+ * Also handles Approve / Reject actions on visitor_pending notifications.
  */
 export function useNotificationRouting() {
   const router = useRouter();
@@ -75,7 +81,6 @@ export function useNotificationRouting() {
   const userId = session?.user?.id;
   const handledColdStart = useRef(false);
 
-  // Re-sync token when returning to the app (e.g. after enabling in system settings).
   useEffect(() => {
     if (!userId || Platform.OS === 'web') return;
     if (!canUseRemotePush()) return;
@@ -106,16 +111,56 @@ export function useNotificationRouting() {
           if (href) router.push(href);
         };
 
+        const handleResponse = async (response: {
+          actionIdentifier: string;
+          notification: { request: { content: { data?: unknown } } };
+        }) => {
+          const data = parseData(response.notification.request.content.data);
+          const actionId = response.actionIdentifier;
+
+          if (
+            actionId === VISITOR_ACTION_APPROVE ||
+            actionId === VISITOR_ACTION_REJECT
+          ) {
+            const result = await handleVisitorNotificationAction({
+              actionId,
+              visitorId: data?.visitorId,
+              flatId: data?.flatId,
+              visitorName: data?.visitorName,
+            });
+            if (result.handled) {
+              Toast.show({
+                type: result.error ? 'error' : 'success',
+                text1: result.error
+                  ? 'Could not update visitor'
+                  : actionId === VISITOR_ACTION_APPROVE
+                    ? 'Visitor approved'
+                    : 'Visitor rejected',
+                text2: result.error,
+              });
+            }
+            return;
+          }
+
+          // Default tap (not an action button)
+          if (
+            actionId === Notifications.DEFAULT_ACTION_IDENTIFIER ||
+            actionId === 'expo.modules.notifications.actions.DEFAULT'
+          ) {
+            navigate(data);
+          }
+        };
+
         if (!handledColdStart.current) {
           handledColdStart.current = true;
           const last = await Notifications.getLastNotificationResponseAsync();
           if (last) {
-            navigate(parseData(last.notification.request.content.data));
+            await handleResponse(last);
           }
         }
 
         subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-          navigate(parseData(response.notification.request.content.data));
+          void handleResponse(response);
         });
       } catch (e) {
         console.warn('[push] notification routing unavailable:', e);

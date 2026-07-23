@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Plus, Trash2 } from 'lucide-react-native';
+import { MapPin, Pencil, Plus, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import Toast from 'react-native-toast-message';
 
 import { FloatingActionBtn } from '@/components/ui/brand';
 import { ListRow } from '@/components/ui/list-row';
@@ -22,7 +23,7 @@ import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand, FontFamily } from '@/constants/theme';
 import { useModalBack } from '@/hooks/use-modal-back';
-import { deleteGate, fetchGates, upsertGate } from '@/lib/gates-api';
+import { deleteGate, fetchGates, setGateCoordsFromDevice, upsertGate } from '@/lib/gates-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
 import type { Gate } from '@/types/database';
@@ -71,6 +72,16 @@ export default function AdminGatesScreen() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteGate(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: gatesKey }),
+  });
+
+  const pinMutation = useMutation({
+    mutationFn: (id: string) => setGateCoordsFromDevice(id),
+    onSuccess: async (gate) => {
+      Toast.show({ type: 'success', text1: `Pinned ${gate.name}` });
+      await queryClient.invalidateQueries({ queryKey: gatesKey });
+    },
+    onError: (e: Error) =>
+      Toast.show({ type: 'error', text1: 'Could not pin gate', text2: e.message }),
   });
 
   const openCreate = () => {
@@ -123,11 +134,27 @@ export default function AdminGatesScreen() {
           renderItem={({ item, index }) => (
             <ListRow
               title={item.name}
-              subtitle={item.is_active ? 'Active' : 'Inactive'}
+              subtitle={
+                item.is_active
+                  ? item.latitude != null
+                    ? 'Active · location pinned'
+                    : 'Active'
+                  : 'Inactive'
+              }
               last={index === (listQuery.data?.length ?? 0) - 1}
               onPress={() => openEdit(item)}
               trailing={
                 <View className="flex-row items-center gap-1">
+                  <Pressable
+                    onPress={() => pinMutation.mutate(item.id)}
+                    accessibilityLabel="Pin gate to current location"
+                    className="h-10 w-10 items-center justify-center"
+                  >
+                    <MapPin
+                      color={item.latitude != null ? Brand.primary : Brand.inkMuted}
+                      size={18}
+                    />
+                  </Pressable>
                   <Pressable
                     onPress={() => openEdit(item)}
                     className="h-10 w-10 items-center justify-center"

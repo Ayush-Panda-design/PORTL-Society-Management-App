@@ -1,9 +1,11 @@
-import { X } from 'lucide-react-native';
+import { FileDown, X } from 'lucide-react-native';
 import { Modal, Pressable, Text, View, StyleSheet, useColorScheme } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import { BlurView } from 'expo-blur';
+
 import { Palette } from '@/constants/theme';
 import { useModalBack } from '@/hooks/use-modal-back';
-import { BlurView } from 'expo-blur';
+import { shareVisitorPassPdf } from '@/lib/print-docs';
 import { VisitorWithFlat } from '@/types/database';
 
 type Props = {
@@ -36,7 +38,6 @@ export function QRCodeModal({ visible, onClose, visitor }: Props) {
               elevation: 8,
             }}
           >
-            {/* Header */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: palette.border, padding: 16 }}>
               <Text style={{ fontSize: 18, fontWeight: 'bold', color: palette.ink }}>Visitor Pass</Text>
               <Pressable
@@ -47,7 +48,6 @@ export function QRCodeModal({ visible, onClose, visitor }: Props) {
               </Pressable>
             </View>
 
-            {/* QR Content */}
             <View style={{ alignItems: 'center', padding: 32 }}>
               <View style={{ height: 64, width: 64, alignItems: 'center', justifyContent: 'center', borderRadius: 32, backgroundColor: palette.brandSoftBg, marginBottom: 16 }}>
                 <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#0F766E' }}>
@@ -84,12 +84,28 @@ export function QRCodeModal({ visible, onClose, visitor }: Props) {
               <Text style={{ marginTop: 16, fontSize: 12, color: palette.inkFaint, textAlign: 'center', fontWeight: '500' }}>
                 PASS ID: {visitor.id.split('-')[0].toUpperCase()}
               </Text>
+
+              <Pressable
+                onPress={() => void shareVisitorPassPdf(visitor)}
+                style={{
+                  marginTop: 20,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  backgroundColor: '#0F766E',
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  borderRadius: 14,
+                }}
+              >
+                <FileDown color="#fff" size={16} />
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Share PDF pass</Text>
+              </Pressable>
             </View>
 
-            {/* Footer */}
             <View style={{ backgroundColor: palette.muted, padding: 16 }}>
               <Text style={{ textAlign: 'center', fontSize: 13, color: palette.inkMuted }}>
-                Take a screenshot and share it with your guest for instant entry.
+                Share the PDF or screenshot with your guest for instant entry.
               </Text>
             </View>
           </View>

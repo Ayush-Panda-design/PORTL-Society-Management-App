@@ -1,3 +1,4 @@
+import { requireOptionalNativeModule } from 'expo';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
@@ -18,6 +19,17 @@ async function loadLocalAuth(): Promise<LocalAuthModule | null> {
     localAuthModule = null;
     return null;
   }
+
+  // Probe without importing — importing throws a redbox when the native binary
+  // was built without expo-local-authentication.
+  if (!requireOptionalNativeModule('ExpoLocalAuthentication')) {
+    console.info(
+      '[biometric] ExpoLocalAuthentication not in this build — run npx expo run:android',
+    );
+    localAuthModule = null;
+    return null;
+  }
+
   try {
     localAuthModule = await import('expo-local-authentication');
     return localAuthModule;

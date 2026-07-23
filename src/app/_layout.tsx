@@ -20,6 +20,7 @@ import { OfflineBanner } from '@/components/ui/offline-banner';
 import { Brand } from '@/constants/theme';
 import { useNotificationRouting } from '@/hooks/use-notification-routing';
 import { usePortlFonts } from '@/hooks/use-portl-fonts';
+import { useQuickActions } from '@/hooks/use-quick-actions';
 import { destinationForProfile } from '@/lib/auth-routing';
 import { initObservability } from '@/lib/observability';
 import { configurePushPresentation } from '@/lib/push-notifications';
@@ -66,6 +67,7 @@ function AuthGate({ children }: { children: ReactNode }) {
   const segments = useSegments();
   const { session, user, profile, isLoading, isInitialized, initialize } = useAuthStore();
   useNotificationRouting();
+  useQuickActions();
 
   useEffect(() => {
     void initialize();

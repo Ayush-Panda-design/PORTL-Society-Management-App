@@ -10,6 +10,17 @@ import { supabase } from '@/lib/supabase';
 const DENIED_EXPLAINED_KEY = 'portl_push_denied_explained';
 const ANDROID_CHANNEL_ID = 'default';
 
+/** Android notification channels by domain (users can mute per category). */
+export const PUSH_CHANNELS = {
+  default: 'default',
+  visitor: 'visitor',
+  payment: 'payment',
+  notice: 'notice',
+  alerts: 'alerts',
+} as const;
+
+export type PushChannelId = (typeof PUSH_CHANNELS)[keyof typeof PUSH_CHANNELS];
+
 /** Prevents double registration from getSession + INITIAL_SESSION racing. */
 const inFlightByUser = new Map<string, Promise<string | null>>();
 
@@ -139,12 +150,30 @@ export async function configurePushPresentation(): Promise<void> {
     try {
       // Omit `sound` — the string "default" is treated as a missing custom sound file.
       await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
-        name: 'Portl alerts',
+        name: 'Portl general',
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#0F766E',
       });
-      await Notifications.setNotificationChannelAsync('alerts', {
+      await Notifications.setNotificationChannelAsync(PUSH_CHANNELS.visitor, {
+        name: 'Visitor & gate',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 300, 150, 300],
+        lightColor: '#0F766E',
+      });
+      await Notifications.setNotificationChannelAsync(PUSH_CHANNELS.payment, {
+        name: 'Payments',
+        importance: Notifications.AndroidImportance.DEFAULT,
+        vibrationPattern: [0, 200],
+        lightColor: '#0F766E',
+      });
+      await Notifications.setNotificationChannelAsync(PUSH_CHANNELS.notice, {
+        name: 'Notices & polls',
+        importance: Notifications.AndroidImportance.DEFAULT,
+        vibrationPattern: [0, 200, 100, 200],
+        lightColor: '#0F766E',
+      });
+      await Notifications.setNotificationChannelAsync(PUSH_CHANNELS.alerts, {
         name: 'Society broadcasts',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 400, 200, 400],
@@ -153,6 +182,32 @@ export async function configurePushPresentation(): Promise<void> {
     } catch (e) {
       console.warn('[push] Channel setup skipped:', e);
     }
+  }
+
+  try {
+    const {
+      VISITOR_ACTION_APPROVE,
+      VISITOR_ACTION_CATEGORY,
+      VISITOR_ACTION_REJECT,
+    } = await import('@/lib/visitor-notification-actions');
+
+    await Notifications.setNotificationCategoryAsync(VISITOR_ACTION_CATEGORY, [
+      {
+        identifier: VISITOR_ACTION_APPROVE,
+        buttonTitle: 'Approve',
+        options: { opensAppToForeground: false },
+      },
+      {
+        identifier: VISITOR_ACTION_REJECT,
+        buttonTitle: 'Reject',
+        options: {
+          opensAppToForeground: false,
+          isDestructive: true,
+        },
+      },
+    ]);
+  } catch (e) {
+    console.warn('[push] Notification categories skipped:', e);
   }
 }
 
@@ -343,6 +398,8 @@ export type SendPushPayload = {
   title: string;
   body: string;
   data?: Record<string, unknown>;
+  channelId?: PushChannelId;
+  categoryId?: string;
 };
 
 /** Invokes the send-push Edge Function. Failures are logged, never thrown. */
@@ -362,6 +419,8 @@ export async function invokeSendPush(payload: SendPushPayload): Promise<void> {
         title: payload.title,
         body: payload.body,
         data: payload.data ?? {},
+        channelId: payload.channelId,
+        categoryId: payload.categoryId,
       },
     });
 

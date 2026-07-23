@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { RefreshCw, Share2 } from 'lucide-react-native';
+import { Copy, RefreshCw, Share2 } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -20,6 +20,7 @@ import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand, FontFamily } from '@/constants/theme';
 import { useThemePalette } from '@/hooks/use-theme';
+import { copyToClipboard } from '@/lib/clipboard';
 import { hapticConfirm } from '@/lib/haptics';
 import { queryKeys } from '@/lib/query-client';
 import { listSocietyInviteCodes, regenerateInviteCode } from '@/lib/society-api';
@@ -104,10 +105,25 @@ function InviteCodeCard({
       </View>
 
       <View
-        className="flex-row items-center justify-between px-4 pb-4 pt-1"
+        className="flex-row items-center justify-end gap-2 px-4 pb-4 pt-1"
         style={{ backgroundColor: card }}
       >
-        <View />
+        <AnimatedPressable
+          onPress={() => void copyToClipboard(invite.code, 'Invite code copied')}
+        >
+          <View
+            className="flex-row items-center rounded-soft px-4 py-2.5"
+            style={{ backgroundColor: isDark ? '#334155' : '#E2E8F0' }}
+          >
+            <Copy color={isDark ? '#fff' : Brand.ink} size={16} className="mr-2" />
+            <Text
+              className="font-bold"
+              style={{ color: isDark ? '#fff' : Brand.ink }}
+            >
+              Copy
+            </Text>
+          </View>
+        </AnimatedPressable>
         <AnimatedPressable onPress={() => void share()}>
           <View
             className="flex-row items-center rounded-soft px-4 py-2.5"

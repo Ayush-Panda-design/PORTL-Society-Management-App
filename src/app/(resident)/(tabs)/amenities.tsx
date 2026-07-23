@@ -46,6 +46,7 @@ import {
   fetchBookingsForDate,
   fetchMyAmenityBookings,
 } from '@/lib/community-api';
+import { addAmenityBookingToCalendar } from '@/lib/calendar-helpers';
 import { joinAmenityWaitlist } from '@/lib/ops-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
@@ -150,6 +151,12 @@ export default function ResidentAmenitiesScreen() {
     amountPaise: number;
     label: string;
   } | null>(null);
+  const [calendarBooking, setCalendarBooking] = useState<{
+    amenityName: string;
+    dateISO: string;
+    slot: string;
+    location?: string | null;
+  } | null>(null);
 
   const amenitiesQuery = useQuery({
     queryKey: queryKeys.amenities(societyId ?? 'none'),
@@ -223,6 +230,12 @@ export default function ResidentAmenitiesScreen() {
       }
 
       setMessage(`Booked ${label}.`);
+      setCalendarBooking({
+        amenityName: selected?.name ?? 'Amenity',
+        dateISO: date,
+        slot: result.slot,
+        location: selected?.location,
+      });
       setSuccessVisible(true);
       await Promise.all([
         queryClient.invalidateQueries({
@@ -532,7 +545,18 @@ export default function ResidentAmenitiesScreen() {
           visible={successVisible}
           type="payment"
           message="Booking Confirmed"
-          onDone={() => setSuccessVisible(false)}
+          actionLabel={calendarBooking ? 'Add to calendar' : undefined}
+          onAction={
+            calendarBooking
+              ? () => {
+                  void addAmenityBookingToCalendar(calendarBooking);
+                }
+              : undefined
+          }
+          onDone={() => {
+            setSuccessVisible(false);
+            setCalendarBooking(null);
+          }}
         />
 
         {societyId && payBooking ? (
@@ -546,8 +570,15 @@ export default function ResidentAmenitiesScreen() {
             description={`Confirm ${selected?.name ?? 'amenity'} · ${payBooking.label}`}
             onConfirmed={async () => {
               const label = payBooking.label;
+              const slot = label.split(' on ')[0]?.trim() ?? '';
               setPayBooking(null);
               setMessage(`Paid & booked ${label}.`);
+              setCalendarBooking({
+                amenityName: selected?.name ?? 'Amenity',
+                dateISO: date,
+                slot,
+                location: selected?.location,
+              });
               setSuccessVisible(true);
               await refreshAfterPayment();
             }}
