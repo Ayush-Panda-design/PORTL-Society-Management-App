@@ -158,6 +158,13 @@ export default function ResidentAmenitiesScreen() {
     location?: string | null;
   } | null>(null);
 
+  // Android back on slot picker → amenity list (not Home dashboard)
+  useModalBack(Boolean(selectedAmenityId) && !pendingSlot, () => {
+    setPendingSlot(null);
+    setPayBooking(null);
+    setSelectedAmenityId(null);
+  });
+
   const amenitiesQuery = useQuery({
     queryKey: queryKeys.amenities(societyId ?? 'none'),
     queryFn: () => fetchAmenities(societyId!),
@@ -211,6 +218,7 @@ export default function ResidentAmenitiesScreen() {
     onSuccess: async (result) => {
       setPendingSlot(null);
       const label = `${result.slot} on ${formatAmenityBookingDate(date)}`;
+      const amenityId = selected!.id;
 
       if (result.feePaise > 0) {
         setPayBooking({
@@ -220,7 +228,7 @@ export default function ResidentAmenitiesScreen() {
         });
         await Promise.all([
           queryClient.invalidateQueries({
-            queryKey: queryKeys.amenityBookings(selected!.id, date),
+            queryKey: queryKeys.amenityBookings(amenityId, date),
           }),
           queryClient.invalidateQueries({
             queryKey: queryKeys.myAmenityBookings(flatId!),
@@ -239,7 +247,7 @@ export default function ResidentAmenitiesScreen() {
       setSuccessVisible(true);
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: queryKeys.amenityBookings(selected!.id, date),
+          queryKey: queryKeys.amenityBookings(amenityId, date),
         }),
         queryClient.invalidateQueries({
           queryKey: queryKeys.myAmenityBookings(flatId!),
@@ -280,6 +288,24 @@ export default function ResidentAmenitiesScreen() {
     setPendingSlot(null);
     setDate(todayISODate());
     setSelectedAmenityId(id);
+  };
+
+  const closeAmenityDetail = () => {
+    setPendingSlot(null);
+    setPayBooking(null);
+    setSelectedAmenityId(null);
+  };
+
+  /** Leave the slot picker and show the refreshed My Bookings list. */
+  const finishBookingToMyList = async () => {
+    setSuccessVisible(false);
+    setCalendarBooking(null);
+    setSelectedAmenityId(null);
+    setListTab('mine');
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.myAmenityBookings(flatId ?? 'none'),
+    });
+    await myBookingsQuery.refetch();
   };
 
   const confirmCancel = (bookingId: string, label: string) => {
@@ -326,8 +352,9 @@ export default function ResidentAmenitiesScreen() {
         title={selected.name}
         subtitle={selected.description ?? 'Pick a date and slot'}
         showBack
+        onBack={closeAmenityDetail}
         right={
-          <Pressable onPress={() => setSelectedAmenityId(null)}>
+          <Pressable onPress={closeAmenityDetail}>
             <Text className="font-semibold text-brand-700">List</Text>
           </Pressable>
         }
@@ -554,8 +581,7 @@ export default function ResidentAmenitiesScreen() {
               : undefined
           }
           onDone={() => {
-            setSuccessVisible(false);
-            setCalendarBooking(null);
+            void finishBookingToMyList();
           }}
         />
 

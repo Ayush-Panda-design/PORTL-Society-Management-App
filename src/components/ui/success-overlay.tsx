@@ -30,6 +30,8 @@ export function SuccessOverlay({
   onAction,
 }: Props) {
   const animation = useRef<LottieView>(null);
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
 
   useEffect(() => {
     if (visible) {
@@ -37,11 +39,11 @@ export function SuccessOverlay({
       // Keep open longer when there's an action the user may tap
       const delay = actionLabel ? 4500 : 2500;
       const timer = setTimeout(() => {
-        onDone?.();
+        onDoneRef.current?.();
       }, delay);
       return () => clearTimeout(timer);
     }
-  }, [visible, onDone, actionLabel]);
+  }, [visible, actionLabel]);
 
   if (!visible) return null;
 

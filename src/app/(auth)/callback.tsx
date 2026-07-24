@@ -1,7 +1,8 @@
+import type { EmailOtpType } from '@supabase/supabase-js';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,6 +10,17 @@ import { Brand, FontFamily } from '@/constants/theme';
 import { destinationForProfile } from '@/lib/auth-routing';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
+
+function isEmailOtpType(value: string | undefined): value is EmailOtpType {
+  return (
+    value === 'signup' ||
+    value === 'invite' ||
+    value === 'magiclink' ||
+    value === 'recovery' ||
+    value === 'email_change' ||
+    value === 'email'
+  );
+}
 
 async function createSessionFromUrl(url: string) {
   const { params, errorCode } = QueryParams.getQueryParams(url);
@@ -19,32 +31,50 @@ async function createSessionFromUrl(url: string) {
 
   const accessToken = params.access_token;
   const refreshToken = params.refresh_token;
-
-  if (!accessToken || !refreshToken) {
-    return null;
+  if (accessToken && refreshToken) {
+    const { data, error } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+    if (error) throw error;
+    return data.session;
   }
 
-  const { data, error } = await supabase.auth.setSession({
-    access_token: accessToken,
-    refresh_token: refreshToken,
-  });
-
-  if (error) {
-    throw error;
+  const code = params.code;
+  if (code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) throw error;
+    return data.session;
   }
 
-  return data.session;
+  const tokenHash = params.token_hash;
+  const type = params.type;
+  if (tokenHash && isEmailOtpType(type)) {
+    const { data, error } = await supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type,
+    });
+    if (error) throw error;
+    return data.session;
+  }
+
+  return null;
 }
 
 export default function AuthCallbackScreen() {
   const router = useRouter();
   const fetchProfile = useAuthStore((s) => s.fetchProfile);
+  const setSession = useAuthStore((s) => s.setSession);
   const [message, setMessage] = useState('Confirming your email…');
   const [isError, setIsError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const handledUrl = useRef<string | null>(null);
 
   const handleUrl = useCallback(
     async (url: string) => {
+      if (!url || handledUrl.current === url) return;
+      handledUrl.current = url;
+
       setIsLoading(true);
       setIsError(false);
       setMessage('Confirming your email…');
@@ -58,6 +88,7 @@ export default function AuthCallbackScreen() {
           return;
         }
 
+        setSession(session);
         await fetchProfile(session.user.id);
         const profile = useAuthStore.getState().profile;
         router.replace(destinationForProfile(profile, session.user));
@@ -68,7 +99,7 @@ export default function AuthCallbackScreen() {
         setIsLoading(false);
       }
     },
-    [fetchProfile, router],
+    [fetchProfile, router, setSession],
   );
 
   useEffect(() => {
@@ -92,9 +123,7 @@ export default function AuthCallbackScreen() {
   return (
     <SafeAreaView className="flex-1 bg-surface">
       <View className="flex-1 items-center justify-center px-6">
-        {isLoading ? (
-          <ActivityIndicator size="large" color={Brand.primary} />
-        ) : null}
+        {isLoading ? <ActivityIndicator size="large" color={Brand.primary} /> : null}
         <Text
           className={`mt-4 text-center text-base ${isError ? 'text-status-rejected' : 'text-ink-muted'}`}
           style={{ fontFamily: FontFamily.body }}
@@ -103,11 +132,11 @@ export default function AuthCallbackScreen() {
         </Text>
         {isError && !isLoading ? (
           <Pressable
-            onPress={() => router.replace('/(auth)/login')}
+            onPress={() => router.replace('/(auth)/verify-email')}
             className="mt-6 rounded-xl bg-brand-700 px-6 py-3"
           >
             <Text className="font-semibold text-white" style={{ fontFamily: FontFamily.heading }}>
-              Back to login
+              Back to verify email
             </Text>
           </Pressable>
         ) : null}

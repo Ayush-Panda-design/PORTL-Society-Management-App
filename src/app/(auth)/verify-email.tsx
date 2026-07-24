@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 import { Brand, FontFamily, Gradients } from '@/constants/theme';
+import { authErrorMessage } from '@/lib/auth-errors';
 import { destinationForProfile } from '@/lib/auth-routing';
 import { getAuthRedirectUrl } from '@/lib/auth-redirect';
 import { supabase } from '@/lib/supabase';
@@ -41,13 +42,15 @@ export default function VerifyEmailScreen() {
     setChecking(true);
     setMessage(null);
     try {
+      // Refresh so email_confirmed_at updates after the user opens the link
+      await supabase.auth.refreshSession();
       const { data, error } = await supabase.auth.getUser();
       if (error) throw error;
 
       const nextUser = data.user;
       if (!nextUser || !isEmailVerified(nextUser)) {
         setMessage(
-          'Email not confirmed yet. Open the link we sent, then tap “I’ve confirmed”.',
+          'Email not confirmed yet. Open the link we sent (or use Open in browser), then tap “I’ve confirmed”.',
         );
         return;
       }
@@ -97,19 +100,24 @@ export default function VerifyEmailScreen() {
     setResending(true);
     setMessage(null);
     try {
+      const redirectTo = getAuthRedirectUrl();
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: email.trim(),
-        options: { emailRedirectTo: getAuthRedirectUrl() },
+        options: { emailRedirectTo: redirectTo },
       });
       if (error) throw error;
       Toast.show({
         type: 'success',
         text1: 'Confirmation email sent',
-        text2: 'Check your inbox and spam folder.',
+        text2: 'Check inbox and spam. If the link does nothing, open it in Chrome/Safari, then return here.',
       });
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : 'Could not resend email');
+      const authLike =
+        e && typeof e === 'object' && 'message' in e
+          ? (e as { message?: string; code?: string; status?: number })
+          : null;
+      setMessage(authErrorMessage(authLike) || (e instanceof Error ? e.message : 'Could not resend email'));
     } finally {
       setResending(false);
     }

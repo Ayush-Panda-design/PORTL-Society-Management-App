@@ -15,6 +15,8 @@ type Props = {
   children: ReactNode;
   right?: ReactNode;
   showBack?: boolean;
+  /** Overrides default back navigation when showBack is true. */
+  onBack?: () => void;
   /** Opens the role drawer (menu). Ignored when showBack is true. */
   showMenu?: boolean;
   scrollOffset?: SharedValue<number>;
@@ -26,6 +28,7 @@ export function ScreenHeader({
   children,
   right,
   showBack,
+  onBack,
   showMenu,
   scrollOffset,
 }: Props) {
@@ -57,7 +60,10 @@ export function ScreenHeader({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Go back"
-              onPress={goBack}
+              onPress={() => {
+                if (onBack) onBack();
+                else goBack();
+              }}
               className="mt-0.5 h-11 w-11 items-center justify-center rounded-full bg-surface-card"
               style={{
                 shadowColor: palette.shadow,

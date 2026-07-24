@@ -103,6 +103,10 @@ function AuthGate({ children }: { children: ReactNode }) {
 
     // Signed in but email not confirmed yet
     if (!isEmailVerified(user)) {
+      // Must allow /callback so confirmation deep links can set the session
+      if (inAuthGroup && authScreen === 'callback') {
+        return;
+      }
       if (!inAuthGroup || authScreen !== 'verify-email') {
         router.replace('/(auth)/verify-email' as Href);
       }
