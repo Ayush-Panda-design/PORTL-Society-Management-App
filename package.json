@@ -12,6 +12,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
+    "typecheck:functions": "node ./scripts/typecheck-functions.js",
     "test": "jest",
     "test:db": "supabase test db"
   },

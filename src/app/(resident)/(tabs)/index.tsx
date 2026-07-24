@@ -9,6 +9,7 @@ import {
   DoorOpen,
   MessageSquare,
   Phone,
+  Receipt,
   ShieldCheck,
   Sparkles,
   UserPlus,
@@ -40,12 +41,11 @@ import type { SwipeDecision } from '@/components/visitors/swipeable-visitor-card
 import { AnimatedPressable } from '@/components/ui/animated-pressable';
 import { Brand, FontFamily, SocietyImages, getPastels, type PastelTone } from '@/constants/theme';
 import { useThemePalette } from '@/hooks/use-theme';
-import { useUnreadNoticesCount } from '@/hooks/use-unread-notices-count';
+import { useFeatureBadges } from '@/hooks/use-feature-badges';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
 import { isPollExpired, isPollPublished } from '@/lib/community';
 import {
   fetchAmenities,
-  fetchComplaintsForFlat,
   fetchPolls,
   fetchStaff,
 } from '@/lib/community-api';
@@ -222,12 +222,6 @@ export default function ResidentHome() {
     enabled: Boolean(societyId),
   });
 
-  const complaintsQuery = useQuery({
-    queryKey: queryKeys.complaints(flatId ?? 'none'),
-    queryFn: () => fetchComplaintsForFlat(flatId!),
-    enabled: Boolean(flatId),
-  });
-
   const amenitiesQuery = useQuery({
     queryKey: queryKeys.amenities(societyId ?? 'none'),
     queryFn: () => fetchAmenities(societyId!),
@@ -258,7 +252,9 @@ export default function ResidentHome() {
     [dismissedIds, visitors],
   );
   const pendingCount = pendingVisitors.length;
-  const unreadNotices = useUnreadNoticesCount();
+  const badges = useFeatureBadges();
+  const unreadNotices = badges.notices;
+  const openTickets = badges.helpdesk;
 
   const livePolls = useMemo(
     () =>
@@ -266,14 +262,6 @@ export default function ResidentHome() {
         (p) => !isPollExpired(p.expires_at) && !isPollPublished(p),
       ).length,
     [pollsQuery.data],
-  );
-
-  const openTickets = useMemo(
-    () =>
-      (complaintsQuery.data ?? []).filter((c) =>
-        c.status === 'open' || c.status === 'in_progress' || c.status === 'reopened',
-      ).length,
-    [complaintsQuery.data],
   );
 
   const amenityCount = amenitiesQuery.data?.length ?? 0;
@@ -645,7 +633,7 @@ export default function ResidentHome() {
             icon={<DoorOpen color={primaryAccent} size={22} strokeWidth={1.5} />}
             bg={pastels.sky}
             onPress={() => router.push(href('/(resident)/visitors'))}
-            badge={pendingCount}
+            badge={badges.visitors || pendingCount}
           />
           <QuickAction
             label="Invite"
@@ -666,6 +654,20 @@ export default function ResidentHome() {
             bg={pastels.butter}
             onPress={() => router.push(href('/(resident)/helpdesk'))}
             badge={openTickets}
+          />
+          <QuickAction
+            label="Polls"
+            icon={<Vote color="#7C6BA8" size={22} strokeWidth={1.5} />}
+            bg={pastels.lilac}
+            onPress={() => router.push(href('/(resident)/polls'))}
+            badge={badges.polls}
+          />
+          <QuickAction
+            label="Pay"
+            icon={<Receipt color="#059669" size={22} strokeWidth={1.5} />}
+            bg={pastels.mint}
+            onPress={() => router.push(href('/(resident)/payments'))}
+            badge={badges.payments}
           />
           <QuickAction
             label="Book"

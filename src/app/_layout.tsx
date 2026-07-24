@@ -22,9 +22,10 @@ import { useNotificationRouting } from '@/hooks/use-notification-routing';
 import { usePortlFonts } from '@/hooks/use-portl-fonts';
 import { useQuickActions } from '@/hooks/use-quick-actions';
 import { destinationForProfile } from '@/lib/auth-routing';
+import { canAccessAdminRoute, committeeHomeHref } from '@/lib/admin-access';
 import { initObservability } from '@/lib/observability';
 import { configurePushPresentation } from '@/lib/push-notifications';
-import { queryClient } from '@/lib/query-client';
+import { queryClient, setupQueryOnlineManager } from '@/lib/query-client';
 import {
   isEmailVerified,
   isMembershipActive,
@@ -65,7 +66,8 @@ async function hideExpoToolsFab() {
 function AuthGate({ children }: { children: ReactNode }) {
   const router = useRouter();
   const segments = useSegments();
-  const { session, user, profile, isLoading, isInitialized, initialize } = useAuthStore();
+  const { session, user, profile, permissions, isPlatformAdmin, isLoading, isInitialized, initialize } =
+    useAuthStore();
   useNotificationRouting();
   useQuickActions();
 
@@ -83,13 +85,22 @@ function AuthGate({ children }: { children: ReactNode }) {
     const root = segments[0];
     const inAuthGroup = root === '(auth)';
     const inOnboardingGroup = root === '(onboarding)';
+    // Typed routes may lag behind new groups — compare via String().
+    const inPlatformGroup = String(root ?? '') === '(platform)';
     const parts = segments as readonly string[];
     const authScreen = parts[1];
     const onboardingScreen = parts[1];
     const isRoot = !root;
 
     if (!session) {
-      const allowedAuthScreens = ['welcome', 'login', 'signup', 'callback', 'verify-email'];
+      const allowedAuthScreens = [
+        'welcome',
+        'login',
+        'signup',
+        'callback',
+        'verify-email',
+        'forgot-password',
+      ];
 
       if (!inAuthGroup) {
         router.replace('/(auth)/welcome' as Href);
@@ -98,6 +109,11 @@ function AuthGate({ children }: { children: ReactNode }) {
       } else if (!allowedAuthScreens.includes(authScreen)) {
         router.replace('/(auth)/welcome' as Href);
       }
+      return;
+    }
+
+    // Recovery deep link lands here with a session — stay until password is set.
+    if (inAuthGroup && authScreen === 'update-password') {
       return;
     }
 
@@ -113,7 +129,7 @@ function AuthGate({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Name + photo required before society / dashboard
+    // Name + photo required before society / dashboard / platform console
     if (needsProfileCompletion(profile)) {
       if (!inOnboardingGroup || onboardingScreen !== 'complete-profile') {
         router.replace('/(onboarding)/complete-profile' as Href);
@@ -121,7 +137,26 @@ function AuthGate({ children }: { children: ReactNode }) {
       return;
     }
 
-    const dest = destinationForProfile(profile, user);
+    const dest = destinationForProfile(profile, user, isPlatformAdmin);
+    const hasCommitteeAccess = (permissions?.length ?? 0) > 0;
+
+    // Platform operators: stay on /(platform) by default, but allow society
+    // dashboards when they also have an active society membership.
+    if (isPlatformAdmin) {
+      if (inAuthGroup || inOnboardingGroup || isRoot) {
+        router.replace(dest);
+        return;
+      }
+      if (inPlatformGroup) return;
+      if (
+        isMembershipActive(profile) &&
+        (root === '(resident)' || root === '(guard)' || root === '(admin)')
+      ) {
+        return;
+      }
+      router.replace(dest);
+      return;
+    }
 
     if (needsSocietyOnboarding(profile)) {
       const allowed = ['index', 'create', 'join', 'discover'];
@@ -143,7 +178,7 @@ function AuthGate({ children }: { children: ReactNode }) {
     }
 
     if (isMembershipActive(profile)) {
-      if (inAuthGroup || inOnboardingGroup || isRoot) {
+      if (inAuthGroup || inOnboardingGroup || isRoot || inPlatformGroup) {
         router.replace(dest);
         return;
       }
@@ -157,11 +192,40 @@ function AuthGate({ children }: { children: ReactNode }) {
               ? '(admin)'
               : null;
 
+      // Committee residents may open only admin routes they were granted.
+      if (
+        profile?.role === 'resident' &&
+        hasCommitteeAccess &&
+        root === '(admin)'
+      ) {
+        const routeName =
+          parts[1] === '(tabs)'
+            ? parts[2]
+            : parts[1] === 'profile'
+              ? 'profile'
+              : (parts[2] ?? parts[1]);
+        if (canAccessAdminRoute(routeName, profile.role, permissions)) {
+          return;
+        }
+        router.replace(committeeHomeHref(permissions ?? []));
+        return;
+      }
+
       if (expectedGroup && root !== expectedGroup) {
         router.replace(dest);
       }
     }
-  }, [session, user, profile, isLoading, isInitialized, segments, router]);
+  }, [
+    session,
+    user,
+    profile,
+    permissions,
+    isPlatformAdmin,
+    isLoading,
+    isInitialized,
+    segments,
+    router,
+  ]);
 
   if (!isInitialized || isLoading) {
     return (
@@ -184,7 +248,11 @@ export default function RootLayout() {
     const t = setTimeout(() => {
       void hideExpoToolsFab();
     }, 800);
-    return () => clearTimeout(t);
+    const teardownOnline = setupQueryOnlineManager();
+    return () => {
+      clearTimeout(t);
+      teardownOnline();
+    };
   }, []);
 
   useEffect(() => {
@@ -220,6 +288,7 @@ export default function RootLayout() {
                       <Stack.Screen name="(resident)" />
                       <Stack.Screen name="(guard)" />
                       <Stack.Screen name="(admin)" />
+                      <Stack.Screen name="(platform)" />
                     </Stack>
                   </View>
                 </BiometricLock>

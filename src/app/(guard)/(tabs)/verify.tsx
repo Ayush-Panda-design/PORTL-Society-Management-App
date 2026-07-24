@@ -1,7 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
@@ -10,10 +10,9 @@ import { GatePicker } from '@/components/visitors/gate-picker';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { VisitorCard } from '@/components/visitors/visitor-card';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
-import { supabase } from '@/lib/supabase';
-import { notifyFlatOfVisitorEntry } from '@/lib/visitors';
-import { useAuthStore } from '@/stores/authStore';
 import { href } from '@/lib/href';
+import { isVisitorPassExpired, markVisitorEntry } from '@/lib/mark-visitor-entry';
+import { useAuthStore } from '@/stores/authStore';
 import type { VisitorWithFlat } from '@/types/database';
 
 export default function GuardVerifyScreen() {
@@ -30,6 +29,11 @@ export default function GuardVerifyScreen() {
     enabled: Boolean(profile?.society_id),
   });
 
+  const entryReady = useMemo(
+    () => visitors.filter((v) => !isVisitorPassExpired(v.expires_at)),
+    [visitors],
+  );
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await refresh();
@@ -37,8 +41,13 @@ export default function GuardVerifyScreen() {
   }, [refresh]);
 
   const markEntry = async (visitor: VisitorWithFlat) => {
-    if (!profile?.id) return;
-    
+    if (!profile?.id || !profile.society_id) return;
+
+    if (isVisitorPassExpired(visitor.expires_at)) {
+      setError('This pass has expired.');
+      return;
+    }
+
     // Check if photo is missing (pre-approved visitor)
     if (!visitor.photo_url) {
       router.push(href(`/(guard)/scan-pass?visitorId=${visitor.id}`));
@@ -49,33 +58,15 @@ export default function GuardVerifyScreen() {
     setError(null);
 
     try {
-      const { error: logError } = await supabase.from('visitor_logs').insert({
-        visitor_id: visitor.id,
-        entry_time: new Date().toISOString(),
-        guard_id: profile.id,
-        entry_gate_id: gateId,
+      const { error: entryError } = await markVisitorEntry({
+        visitorId: visitor.id,
+        guardId: profile.id,
+        societyId: profile.society_id,
+        flatId: visitor.flat_id,
+        visitorName: visitor.name,
+        entryGateId: gateId,
       });
-
-      if (logError) {
-        setError(logError.message);
-        return;
-      }
-
-      const { error: updateError } = await supabase
-        .from('visitors')
-        .update({ status: 'checked_in' })
-        .eq('id', visitor.id);
-
-      if (updateError) {
-        setError(updateError.message);
-      } else if (profile.society_id && visitor.flat_id) {
-        void notifyFlatOfVisitorEntry({
-          flatId: visitor.flat_id,
-          societyId: profile.society_id,
-          visitorName: visitor.name,
-          visitorId: visitor.id,
-        });
-      }
+      if (entryError) setError(entryError);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to mark entry');
     } finally {
@@ -87,7 +78,8 @@ export default function GuardVerifyScreen() {
     return (
       <SafeAreaView className="flex-1 bg-surface">
         <EmptyState
-          visual="disconnected" title="No society linked"
+          visual="disconnected"
+          title="No society linked"
           subtitle="Assign a society to your guard profile to verify visitors."
         />
       </SafeAreaView>
@@ -106,11 +98,11 @@ export default function GuardVerifyScreen() {
         <ErrorBanner message={error ?? loadError ?? ''} onRetry={refresh} />
       )}
 
-      {isLoading && visitors.length === 0 ? (
+      {isLoading && entryReady.length === 0 ? (
         <SkeletonList count={3} />
       ) : (
         <FlatList
-          data={visitors}
+          data={entryReady}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
           ItemSeparatorComponent={() => <View className="h-3" />}
@@ -133,7 +125,7 @@ export default function GuardVerifyScreen() {
                   variant: 'primary',
                   icon: 'check',
                   loading: actionId === item.id,
-                  onPress: () => markEntry(item),
+                  onPress: () => void markEntry(item),
                 },
               ]}
             />

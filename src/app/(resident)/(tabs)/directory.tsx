@@ -28,11 +28,12 @@ import { flatTowerName } from '@/lib/visitors';
 import { useAuthStore } from '@/stores/authStore';
 import type { ProfileWithFlat, StaffMember } from '@/types/database';
 
-type Tab = 'Security' | 'Staff' | 'Emergency' | 'Residents' | 'Admins';
+type Tab = 'Security' | 'Staff' | 'Services' | 'Emergency' | 'Residents' | 'Admins';
 
 const TABS: { value: Tab; label: string }[] = [
   { value: 'Security', label: 'Security' },
   { value: 'Staff', label: 'Staff' },
+  { value: 'Services', label: 'Services' },
   { value: 'Emergency', label: 'Emergency' },
   { value: 'Residents', label: 'Residents' },
   { value: 'Admins', label: 'Admins' },
@@ -130,12 +131,24 @@ export default function ResidentDirectoryScreen() {
   const staffSections = useMemo(() => {
     if (isPeopleTab) return [];
     const matches = (staffQuery.data ?? []).filter((person) => matchesStaff(person, search));
-    const tabFiltered = matches.filter((p) => getRoleMeta(p.role).tab === activeTab);
+    const tabFiltered = matches.filter((p) => {
+      if (activeTab === 'Services') {
+        return p.staff_type === 'service_provider';
+      }
+      if (p.staff_type === 'service_provider') {
+        return false;
+      }
+      return getRoleMeta(p.role).tab === activeTab;
+    });
     const map = new Map<string, StaffMember[]>();
     for (const person of tabFiltered) {
-      const list = map.get(person.role) ?? [];
+      const key =
+        activeTab === 'Services'
+          ? person.service_category || person.role || 'Service'
+          : person.role;
+      const list = map.get(key) ?? [];
       list.push(person);
-      map.set(person.role, list);
+      map.set(key, list);
     }
     return Array.from(map.entries()).map(([role, data]) => ({ role, data }));
   }, [staffQuery.data, search, activeTab, isPeopleTab]);

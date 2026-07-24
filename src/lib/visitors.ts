@@ -1,5 +1,6 @@
 import {
   notifyVisitorCheckedIn,
+  notifyVisitorCheckedOut,
   notifyVisitorDecision,
   notifyVisitorPending,
 } from '@/lib/notifications';
@@ -148,6 +149,7 @@ export async function notifyResidentOfVisitor(params: {
   societyId: string;
   visitorId?: string;
   flatLabel?: string;
+  createdBy?: string | null;
 }): Promise<void> {
   await notifyVisitorPending(params);
 }
@@ -158,6 +160,9 @@ export async function notifyGuardOfVisitorDecision(params: {
   visitorName: string;
   status: 'approved' | 'rejected';
   rejectReason?: string;
+  visitorId?: string;
+  societyId?: string;
+  decidedBy?: 'resident' | 'committee' | 'admin';
 }): Promise<void> {
   await notifyVisitorDecision(params);
 }
@@ -172,6 +177,16 @@ export async function notifyFlatOfVisitorEntry(params: {
   await notifyVisitorCheckedIn(params);
 }
 
+/** Notify flat residents when a visitor exits the gate. */
+export async function notifyFlatOfVisitorExit(params: {
+  flatId: string;
+  societyId: string;
+  visitorName: string;
+  visitorId?: string;
+}): Promise<void> {
+  await notifyVisitorCheckedOut(params);
+}
+
 /** Approve or reject a pending visitor and notify the creating guard. */
 export async function updateVisitorStatus(params: {
   visitorId: string;
@@ -181,27 +196,42 @@ export async function updateVisitorStatus(params: {
   isMissed?: boolean;
   createdBy?: string | null;
   visitorName?: string;
+  societyId?: string;
+  decidedBy?: 'resident' | 'committee' | 'admin';
 }): Promise<{ error: string | null }> {
-  const { error } = await supabase
+  if (params.status !== 'approved' && params.status !== 'rejected') {
+    return { error: 'Invalid visitor status transition' };
+  }
+
+  const { data, error } = await supabase
     .from('visitors')
-    .update({ 
+    .update({
       status: params.status,
       reject_reason: params.rejectReason || null,
       responded_at: new Date().toISOString(),
       is_missed: params.isMissed || false,
     })
     .eq('id', params.visitorId)
-    .eq('flat_id', params.flatId);
+    .eq('flat_id', params.flatId)
+    .eq('status', 'pending')
+    .select('id, created_by, name, society_id')
+    .maybeSingle();
 
   if (error) {
     return { error: error.message };
   }
+  if (!data) {
+    return { error: 'Visitor is no longer pending' };
+  }
 
   void notifyGuardOfVisitorDecision({
-    createdBy: params.createdBy ?? null,
-    visitorName: params.visitorName ?? 'Visitor',
-    status: params.status as 'approved' | 'rejected',
+    createdBy: params.createdBy ?? (data.created_by as string | null) ?? null,
+    visitorName: params.visitorName ?? (data.name as string) ?? 'Visitor',
+    status: params.status,
     rejectReason: params.rejectReason,
+    visitorId: data.id as string,
+    societyId: params.societyId ?? (data.society_id as string | undefined),
+    decidedBy: params.decidedBy ?? 'resident',
   });
 
   return { error: null };

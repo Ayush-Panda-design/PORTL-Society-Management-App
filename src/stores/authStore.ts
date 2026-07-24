@@ -2,9 +2,15 @@ import type { Session, User } from '@supabase/supabase-js';
 import { create } from 'zustand';
 
 import { clearPushToken, registerForPushNotifications } from '@/lib/push-notifications';
+import { fetchIsPlatformAdmin } from '@/lib/platform-api';
 import { queryClient } from '@/lib/query-client';
 import { supabase } from '@/lib/supabase';
-import type { MembershipStatus, Profile, UserRole } from '@/types/database';
+import type {
+  MembershipStatus,
+  Profile,
+  SocietyPermission,
+  UserRole,
+} from '@/types/database';
 
 type AuthState = {
   session: Session | null;
@@ -12,6 +18,8 @@ type AuthState = {
   profile: Profile | null;
   role: UserRole | null;
   membershipStatus: MembershipStatus | null;
+  permissions: SocietyPermission[];
+  isPlatformAdmin: boolean;
   isLoading: boolean;
   isInitialized: boolean;
   setSession: (session: Session | null) => void;
@@ -20,6 +28,18 @@ type AuthState = {
   fetchProfile: (userId: string) => Promise<Profile | null>;
   signOut: () => Promise<void>;
 };
+
+async function loadPermissions(userId: string): Promise<SocietyPermission[]> {
+  const { data, error } = await supabase
+    .from('society_member_permissions')
+    .select('permission')
+    .eq('user_id', userId);
+  if (error) {
+    console.warn('Failed to fetch permissions:', error.message);
+    return [];
+  }
+  return ((data ?? []) as { permission: SocietyPermission }[]).map((r) => r.permission);
+}
 
 function isUserRole(value: unknown): value is UserRole {
   return value === 'resident' || value === 'guard' || value === 'admin';
@@ -72,6 +92,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   profile: null,
   role: null,
   membershipStatus: null,
+  permissions: [],
+  isPlatformAdmin: false,
   isLoading: true,
   isInitialized: false,
 
@@ -92,15 +114,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   fetchProfile: async (userId) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
+    const [{ data, error }, isPlatformAdmin, permissions] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
+      fetchIsPlatformAdmin(userId),
+      loadPermissions(userId),
+    ]);
 
     if (error) {
       console.warn('Failed to fetch profile:', error.message);
-      set({ profile: null, role: null, membershipStatus: null });
+      set({
+        profile: null,
+        role: null,
+        membershipStatus: null,
+        permissions: [],
+        isPlatformAdmin: false,
+      });
       return null;
     }
 
@@ -110,6 +138,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         profile,
         role: profile.role,
         membershipStatus: profile.status,
+        permissions,
+        isPlatformAdmin,
       });
       return profile;
     }
@@ -140,15 +170,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     if (createError || !created) {
       console.warn('Failed to create profile:', createError?.message ?? 'unknown');
-      set({ profile: null, role: null, membershipStatus: null });
+      set({
+        profile: null,
+        role: null,
+        membershipStatus: null,
+        permissions: [],
+        isPlatformAdmin: false,
+      });
       return null;
     }
 
+    // Re-check after insert — bootstrap trigger may have granted platform admin.
+    const platformAfterCreate = await fetchIsPlatformAdmin(userId);
     const profile = normalizeProfile(created as Profile);
     set({
       profile,
       role: profile.role,
       membershipStatus: profile.status,
+      permissions: [],
+      isPlatformAdmin: platformAfterCreate,
     });
     return profile;
   },
@@ -187,7 +227,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           }
         } else {
           queryClient.clear();
-          set({ profile: null, role: null, membershipStatus: null });
+          set({
+            profile: null,
+            role: null,
+            membershipStatus: null,
+            permissions: [],
+            isPlatformAdmin: false,
+          });
         }
       });
     } finally {
@@ -213,6 +259,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         profile: null,
         role: null,
         membershipStatus: null,
+        permissions: [],
+        isPlatformAdmin: false,
         isLoading: false,
       });
     }

@@ -4,6 +4,7 @@ import {
 } from '@react-navigation/drawer';
 import { useRouter, type Href } from 'expo-router';
 import {
+  AlertTriangle,
   BarChart3,
   Building2,
   ClipboardList,
@@ -16,7 +17,7 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -27,9 +28,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { InitialsAvatar } from '@/components/ui/brand';
+import { CountBadge } from '@/components/ui/count-badge';
 import { Brand, FontFamily, Pastels, RoleTints } from '@/constants/theme';
+import { badgeForHref, useFeatureBadges } from '@/hooks/use-feature-badges';
 import { useModalBack } from '@/hooks/use-modal-back';
 import { useThemePalette } from '@/hooks/use-theme';
+import { isCommitteeMember, isFullAdmin } from '@/lib/admin-access';
+import { committeeManageLinks } from '@/lib/auth-routing';
 import { useAuthStore } from '@/stores/authStore';
 import type { UserRole } from '@/types/database';
 
@@ -56,6 +61,7 @@ const GUARD_LINKS: DrawerLink[] = [
 
 const ADMIN_LINKS: DrawerLink[] = [
   { href: '/(admin)/profile' as Href, title: 'My profile', Icon: User },
+  { href: '/(admin)/escalated-visitors' as Href, title: 'Missed visitors', Icon: AlertTriangle },
   { href: '/(admin)/towers' as Href, title: 'Towers', Icon: Building2 },
   { href: '/(admin)/flats' as Href, title: 'Flats', Icon: Layers },
   { href: '/(admin)/invites' as Href, title: 'Invite links', Icon: KeyRound },
@@ -66,21 +72,51 @@ const ADMIN_LINKS: DrawerLink[] = [
   { href: '/(admin)/staff' as Href, title: 'Staff directory', Icon: Phone },
 ];
 
-function linksForRole(role: UserRole | null): DrawerLink[] {
-  if (role === 'admin') return ADMIN_LINKS;
+const COMMITTEE_ICONS: Record<string, LucideIcon> = {
+  '/(admin)/escalated-visitors': AlertTriangle,
+  '/(admin)/notices': ClipboardList,
+  '/(admin)/polls': BarChart3,
+  '/(admin)/complaints': ClipboardList,
+  '/(admin)/amenities': Building2,
+  '/(admin)/payments': Layers,
+  '/(admin)/join-requests': UserPlus,
+  '/(admin)/flats': Layers,
+  '/(admin)/partners': Phone,
+  '/(admin)/audit-log': KeyRound,
+};
+
+function linksForRole(
+  role: UserRole | null,
+  permissions: readonly string[],
+): DrawerLink[] {
+  if (isFullAdmin(role)) return ADMIN_LINKS;
   if (role === 'guard') return GUARD_LINKS;
+  if (isCommitteeMember(role, permissions)) {
+    const committee = committeeManageLinks([...permissions]).map((link) => ({
+      href: link.href,
+      title: link.title,
+      Icon: COMMITTEE_ICONS[String(link.href)] ?? ClipboardList,
+    }));
+    return [
+      { href: '/(resident)/profile' as Href, title: 'My profile', Icon: User },
+      ...committee,
+      ...RESIDENT_LINKS.filter((l) => String(l.href) !== '/(resident)/profile'),
+    ];
+  }
   return RESIDENT_LINKS;
 }
 
-function roleTint(role: UserRole | null): string {
-  if (role === 'admin') return RoleTints.admin;
+function roleTint(role: UserRole | null, permissions: readonly string[]): string {
+  if (isFullAdmin(role)) return RoleTints.admin;
   if (role === 'guard') return RoleTints.guard;
+  if (isCommitteeMember(role, permissions)) return RoleTints.admin;
   return RoleTints.resident;
 }
 
-function roleLabel(role: UserRole | null): string {
-  if (role === 'admin') return 'Admin';
+function roleLabel(role: UserRole | null, permissions: readonly string[]): string {
+  if (isFullAdmin(role)) return 'Admin';
   if (role === 'guard') return 'Security';
+  if (isCommitteeMember(role, permissions)) return 'Committee';
   return 'Resident';
 }
 
@@ -88,11 +124,16 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const profile = useAuthStore((s) => s.profile);
+  const permissions = useAuthStore((s) => s.permissions);
   const signOut = useAuthStore((s) => s.signOut);
   const role = profile?.role ?? null;
-  const links = linksForRole(role);
-  const tint = roleTint(role);
+  const links = useMemo(
+    () => linksForRole(role, permissions ?? []),
+    [role, permissions],
+  );
+  const tint = roleTint(role, permissions ?? []);
   const { pastels, border, isDark } = useThemePalette();
+  const badges = useFeatureBadges();
 
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -141,7 +182,7 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
             >
               {profile?.full_name ?? 'Portl member'}
             </Text>
-            <Text className="mt-0.5 text-sm text-ink-muted">{roleLabel(role)}</Text>
+            <Text className="mt-0.5 text-sm text-ink-muted">{roleLabel(role, permissions ?? [])}</Text>
           </View>
         </View>
 
@@ -154,10 +195,12 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
 
         {links.map(({ href, title, Icon }) => {
           const isProfile = title === 'My profile';
+          const badge = badgeForHref(String(href), badges);
           return (
             <Pressable
               key={String(href)}
               accessibilityRole="button"
+              accessibilityLabel={badge > 0 ? `${title}, ${badge} new` : title}
               onPress={() => {
                 props.navigation.closeDrawer();
                 router.push(href);
@@ -177,6 +220,7 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
               >
                 {title}
               </Text>
+              <CountBadge count={badge} size="sm" />
             </Pressable>
           );
         })}

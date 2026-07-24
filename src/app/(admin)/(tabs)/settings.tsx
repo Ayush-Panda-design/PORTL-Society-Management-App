@@ -1,4 +1,6 @@
+import { useMemo } from 'react';
 import {
+  AlertTriangle,
   BarChart3,
   Building2,
   ClipboardList,
@@ -18,6 +20,8 @@ import {
 import { type Href } from 'expo-router';
 
 import { SettingsHub, type SettingsLink } from '@/components/ui/settings-hub';
+import { attachBadgesToSections, useFeatureBadges } from '@/hooks/use-feature-badges';
+import { filterLinksByAdminAccess, isFullAdmin } from '@/lib/admin-access';
 import { useAuthStore } from '@/stores/authStore';
 
 const SECTIONS = [
@@ -60,7 +64,7 @@ const SECTIONS = [
         Icon: DoorOpen,
       },
       {
-        href: '/(admin)/residents',
+        href: '/(admin)/residents' as Href,
         title: 'Residents',
         subtitle: 'Assign members to flats',
         Icon: Users,
@@ -94,25 +98,31 @@ const SECTIONS = [
     title: 'Operations',
     links: [
       {
+        href: '/(admin)/escalated-visitors' as Href,
+        title: 'Missed visitors',
+        subtitle: 'Escalated gate requests for committee triage',
+        Icon: AlertTriangle,
+      },
+      {
         href: '/(admin)/broadcasts' as Href,
         title: 'Broadcast alerts',
         subtitle: 'Push-only urgent society alerts',
         Icon: Megaphone,
       },
       {
-        href: '/(admin)/polls',
+        href: '/(admin)/polls' as Href,
         title: 'Polls',
         subtitle: 'Create polls and view results',
         Icon: BarChart3,
       },
       {
-        href: '/(admin)/complaints',
+        href: '/(admin)/complaints' as Href,
         title: 'Complaints',
         subtitle: 'Triage society helpdesk tickets',
         Icon: ClipboardList,
       },
       {
-        href: '/(admin)/amenities',
+        href: '/(admin)/amenities' as Href,
         title: 'Amenities',
         subtitle: 'Manage facilities and booking slots',
         Icon: Building2,
@@ -124,7 +134,19 @@ const SECTIONS = [
         Icon: Wallet,
       },
       {
-        href: '/(admin)/staff',
+        href: '/(admin)/payments' as Href,
+        title: 'Payments & dues',
+        subtitle: 'Issue maintenance, fines, and charges',
+        Icon: Wallet,
+      },
+      {
+        href: '/(admin)/partners' as Href,
+        title: 'Gate partners',
+        subtitle: 'Delivery, cab & service auto-approve list',
+        Icon: Phone,
+      },
+      {
+        href: '/(admin)/staff' as Href,
         title: 'Staff directory',
         subtitle: 'Contacts residents can call',
         Icon: Phone,
@@ -141,13 +163,28 @@ const SECTIONS = [
 
 export default function AdminSettingsMore() {
   const profile = useAuthStore((s) => s.profile);
+  const permissions = useAuthStore((s) => s.permissions);
+  const role = profile?.role;
+  const badges = useFeatureBadges();
+
+  const sections = useMemo(() => {
+    const filtered = SECTIONS.map((section) => ({
+      ...section,
+      links: filterLinksByAdminAccess(section.links, role, permissions),
+    })).filter((section) => section.links.length > 0);
+    return attachBadgesToSections(filtered, badges);
+  }, [badges, permissions, role]);
+
+  const subtitle = isFullAdmin(role)
+    ? `${profile?.full_name ?? 'Admin'} · society tools`
+    : `${profile?.full_name ?? 'Committee'} · granted tools only`;
 
   return (
     <SettingsHub
       title="Manage"
-      subtitle={`${profile?.full_name ?? 'Admin'} · society tools`}
+      subtitle={subtitle}
       links={[]}
-      sections={SECTIONS}
+      sections={sections}
     />
   );
 }

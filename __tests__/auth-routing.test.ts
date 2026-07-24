@@ -1,6 +1,6 @@
 import type { User } from '@supabase/supabase-js';
 
-import { destinationForProfile, roleHome } from '@/lib/auth-routing';
+import { destinationForProfile, platformHome, roleHome } from '@/lib/auth-routing';
 import type { Profile } from '@/types/database';
 
 function profile(overrides: Partial<Profile> = {}): Profile {
@@ -41,6 +41,12 @@ describe('roleHome', () => {
   });
 });
 
+describe('platformHome', () => {
+  it('routes to the platform console', () => {
+    expect(platformHome()).toBe('/(platform)');
+  });
+});
+
 describe('destinationForProfile', () => {
   it('sends missing profile to login', () => {
     expect(destinationForProfile(null, user())).toBe('/(auth)/login');
@@ -58,6 +64,12 @@ describe('destinationForProfile', () => {
     ).toBe('/(onboarding)/complete-profile');
   });
 
+  it('routes platform operators to the platform console before society onboarding', () => {
+    expect(
+      destinationForProfile(profile({ society_id: null }), user(), true),
+    ).toBe('/(platform)');
+  });
+
   it('routes rejected / no-society users to onboarding', () => {
     expect(destinationForProfile(profile({ society_id: null }), user())).toBe('/(onboarding)');
     expect(destinationForProfile(profile({ status: 'rejected' }), user())).toBe('/(onboarding)');
@@ -73,5 +85,9 @@ describe('destinationForProfile', () => {
     expect(destinationForProfile(profile({ role: 'admin' }), user())).toBe('/(admin)');
     expect(destinationForProfile(profile({ role: 'guard' }), user())).toBe('/(guard)');
     expect(destinationForProfile(profile({ role: 'resident' }), user())).toBe('/(resident)');
+  });
+
+  it('prefers platform console over society role home', () => {
+    expect(destinationForProfile(profile({ role: 'admin' }), user(), true)).toBe('/(platform)');
   });
 });

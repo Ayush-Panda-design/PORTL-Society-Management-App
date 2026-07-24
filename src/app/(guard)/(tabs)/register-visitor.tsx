@@ -21,6 +21,8 @@ import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { hapticConfirm } from '@/lib/haptics';
 import { flatTowerName, notifyResidentOfVisitor } from '@/lib/visitors';
+import { notifyVisitorAutoApproved } from '@/lib/notifications';
+import { matchSocietyPartner } from '@/lib/ops-api';
 import { uploadLocalImage } from '@/lib/storage-upload';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
@@ -28,6 +30,8 @@ import type { FlatWithTower, VisitorType } from '@/types/database';
 import { VISITOR_TYPES } from '@/types/database';
 import { Brand, FontFamily } from '@/constants/theme';
 import { Tokens } from '@/theme/tokens';
+
+type FlatSearchResult = FlatWithTower & { residentLabel?: string };
 
 const STEPS = ['Photo', 'Details', 'Type & Submit'] as const;
 
@@ -83,10 +87,10 @@ export default function RegisterVisitorScreen() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [photoMimeType, setPhotoMimeType] = useState<string | null>(null);
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
-  const [selectedFlat, setSelectedFlat] = useState<FlatWithTower | null>(null);
+  const [selectedFlat, setSelectedFlat] = useState<FlatSearchResult | null>(null);
 
   const [flatQuery, setFlatQuery] = useState('');
-  const [flatResults, setFlatResults] = useState<FlatWithTower[]>([]);
+  const [flatResults, setFlatResults] = useState<FlatSearchResult[]>([]);
   const [searchingFlats, setSearchingFlats] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
@@ -106,7 +110,10 @@ export default function RegisterVisitorScreen() {
 
       setSearchingFlats(true);
       try {
-        const { data, error: searchError } = await supabase
+        const q = query.trim();
+        const looksLikeName = /[a-zA-Z]/.test(q);
+
+        const flatPromise = supabase
           .from('flats')
           .select(
             `
@@ -121,20 +128,82 @@ export default function RegisterVisitorScreen() {
           `,
           )
           .eq('towers.society_id', profile.society_id)
-          .ilike('number', `%${query.trim()}%`)
+          .ilike('number', `%${q}%`)
           .limit(12);
 
-        if (searchError) {
-          setError(searchError.message);
+        const namePromise = looksLikeName
+          ? supabase
+              .from('profiles')
+              .select(
+                `
+                id,
+                full_name,
+                flat_id,
+                flats!inner (
+                  id,
+                  tower_id,
+                  number,
+                  towers!inner (
+                    id,
+                    name,
+                    society_id
+                  )
+                )
+              `,
+              )
+              .eq('society_id', profile.society_id)
+              .eq('status', 'active')
+              .in('role', ['resident', 'admin'])
+              .not('flat_id', 'is', null)
+              .ilike('full_name', `%${q}%`)
+              .limit(12)
+          : Promise.resolve({ data: null, error: null });
+
+        const [flatRes, nameRes] = await Promise.all([flatPromise, namePromise]);
+
+        if (flatRes.error) {
+          setError(flatRes.error.message);
+          setFlatResults([]);
+          return;
+        }
+        if (nameRes.error) {
+          setError(nameRes.error.message);
           setFlatResults([]);
           return;
         }
 
-        const rows = (data ?? []).map((row) => {
+        const byId = new Map<string, FlatSearchResult>();
+
+        for (const row of flatRes.data ?? []) {
           const towers = Array.isArray(row.towers) ? row.towers[0] ?? null : row.towers;
-          return { ...row, towers } as FlatWithTower;
-        });
-        setFlatResults(rows);
+          byId.set(row.id, { ...row, towers } as FlatSearchResult);
+        }
+
+        for (const person of nameRes.data ?? []) {
+          const flatRaw = Array.isArray(person.flats) ? person.flats[0] : person.flats;
+          if (!flatRaw) continue;
+          const towers = Array.isArray(flatRaw.towers)
+            ? flatRaw.towers[0] ?? null
+            : flatRaw.towers;
+          const flat: FlatSearchResult = {
+            id: flatRaw.id,
+            tower_id: flatRaw.tower_id,
+            number: flatRaw.number,
+            towers,
+            residentLabel: person.full_name ?? undefined,
+          };
+          const existing = byId.get(flat.id);
+          if (existing) {
+            byId.set(flat.id, {
+              ...existing,
+              residentLabel: existing.residentLabel ?? flat.residentLabel,
+            });
+          } else {
+            byId.set(flat.id, flat);
+          }
+        }
+
+        setFlatResults(Array.from(byId.values()).slice(0, 12));
       } finally {
         setSearchingFlats(false);
       }
@@ -252,18 +321,25 @@ export default function RegisterVisitorScreen() {
         }
       }
 
+      const partner = await matchSocietyPartner(profile.society_id, phone.trim() || null, type);
+      const autoApproved = Boolean(partner?.auto_approve);
+      const status = autoApproved ? 'approved' : 'pending';
+
       const { data, error: insertError } = await supabase
         .from('visitors')
         .insert({
           name: name.trim(),
           phone: phone.trim() || null,
           photo_url: photoUrl,
-          purpose: purpose.trim() || null,
+          purpose:
+            purpose.trim() ||
+            (partner?.company_name ? `${partner.company_name} (approved partner)` : null),
           type,
-          status: 'pending',
+          status,
           flat_id: selectedFlat.id,
           created_by: user.id,
           society_id: profile.society_id,
+          responded_at: autoApproved ? new Date().toISOString() : null,
         })
         .select('id')
         .single();
@@ -273,17 +349,32 @@ export default function RegisterVisitorScreen() {
         return;
       }
 
-      await notifyResidentOfVisitor({
-        flatId: selectedFlat.id,
-        visitorName: name.trim(),
-        visitorType: type,
-        societyId: profile.society_id,
-        visitorId: data?.id,
-        flatLabel: `${flatTowerName(selectedFlat.towers) ? `${flatTowerName(selectedFlat.towers)} · ` : ''}${selectedFlat.number}`,
-      });
+      if (!autoApproved) {
+        await notifyResidentOfVisitor({
+          flatId: selectedFlat.id,
+          visitorName: name.trim(),
+          visitorType: type,
+          societyId: profile.society_id,
+          visitorId: data?.id,
+          flatLabel: `${flatTowerName(selectedFlat.towers) ? `${flatTowerName(selectedFlat.towers)} · ` : ''}${selectedFlat.number}`,
+          createdBy: user.id,
+        });
+      } else {
+        await notifyVisitorAutoApproved({
+          flatId: selectedFlat.id,
+          societyId: profile.society_id,
+          visitorName: name.trim(),
+          visitorId: data?.id,
+          partnerLabel: partner?.company_name ?? undefined,
+        });
+      }
 
       hapticConfirm();
-      setSuccessMessage(`Request sent for ${name.trim()}`);
+      setSuccessMessage(
+        autoApproved
+          ? `Whitelisted partner — auto-approved for ${name.trim()}`
+          : `Request sent for ${name.trim()}`,
+      );
       setSuccessVisible(true);
       resetForm();
     } catch (e) {
@@ -311,7 +402,7 @@ export default function RegisterVisitorScreen() {
       <View style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4 }}>
         <Text style={{ ...Tokens.typography.h2, color: Tokens.color.textPrimary }}>Register visitor</Text>
         <Text style={{ ...Tokens.typography.caption, color: Tokens.color.textMuted, marginTop: 2 }}>
-          Creates a pending request for the flat&apos;s resident.
+          Creates a pending request — whitelisted delivery/cab/service partners auto-approve.
         </Text>
       </View>
 
@@ -487,6 +578,9 @@ export default function RegisterVisitorScreen() {
                   borderColor: '#BBF7D0', backgroundColor: '#F0FDF4', paddingHorizontal: 16, paddingVertical: 12,
                 }}>
                   <Text style={{ fontWeight: '600', color: Tokens.color.textPrimary }}>
+                    {selectedFlat.residentLabel
+                      ? `${selectedFlat.residentLabel} · `
+                      : ''}
                     {flatTowerName(selectedFlat.towers) ? `${flatTowerName(selectedFlat.towers)} · ` : ''}
                     Flat {selectedFlat.number}
                   </Text>
@@ -504,11 +598,11 @@ export default function RegisterVisitorScreen() {
                     <Search color="#94A3B8" size={18} />
                     <TextInput
                       style={{ marginLeft: 8, flex: 1, paddingVertical: 12, fontSize: 15, color: Tokens.color.textPrimary }}
-                      placeholder="Search flat number…"
+                      placeholder="Search flat number or resident name…"
                       placeholderTextColor="#94A3B8"
                       value={flatQuery}
                       onChangeText={searchFlats}
-                      autoCapitalize="characters"
+                      autoCapitalize="none"
                     />
                     {searchingFlats ? <ActivityIndicator color={Brand.primary} /> : null}
                   </View>
@@ -523,7 +617,11 @@ export default function RegisterVisitorScreen() {
                             onPress={() => {
                               setSelectedFlat(item);
                               setFlatResults([]);
-                              setFlatQuery(item.number);
+                              setFlatQuery(
+                                item.residentLabel
+                                  ? `${item.residentLabel} · ${item.number}`
+                                  : item.number,
+                              );
                             }}
                             style={{
                               paddingHorizontal: 16, paddingVertical: 12,
@@ -532,6 +630,7 @@ export default function RegisterVisitorScreen() {
                             }}
                           >
                             <Text style={{ fontWeight: '500', color: Tokens.color.textPrimary }}>
+                              {item.residentLabel ? `${item.residentLabel} · ` : ''}
                               Flat {item.number}
                               {flatTowerName(item.towers) ? ` · ${flatTowerName(item.towers)}` : ''}
                             </Text>
@@ -541,7 +640,7 @@ export default function RegisterVisitorScreen() {
                     </View>
                   ) : flatQuery.trim().length > 0 && !searchingFlats ? (
                     <Text style={{ fontSize: 13, color: Tokens.color.textMuted }}>
-                      No flats match &ldquo;{flatQuery}&rdquo;.
+                      No flats or residents match &ldquo;{flatQuery}&rdquo;.
                     </Text>
                   ) : null}
                 </View>
