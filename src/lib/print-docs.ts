@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import Toast from 'react-native-toast-message';
 
+import { hasNativeModule } from '@/lib/native-module';
 import { formatPaise } from '@/lib/ops-api';
 import type { PaymentLedgerEntry, VisitorWithFlat } from '@/types/database';
 import { flatLabel } from '@/lib/visitors';
@@ -13,6 +14,11 @@ let sharingModule: SharingModule | null | undefined;
 
 async function loadPrint(): Promise<PrintModule | null> {
   if (printModule !== undefined) return printModule;
+  if (!hasNativeModule('ExpoPrint')) {
+    console.info('[print] ExpoPrint not in this build — run npx expo run:android');
+    printModule = null;
+    return null;
+  }
   try {
     printModule = await import('expo-print');
     return printModule;
@@ -25,6 +31,10 @@ async function loadPrint(): Promise<PrintModule | null> {
 
 async function loadSharing(): Promise<SharingModule | null> {
   if (sharingModule !== undefined) return sharingModule;
+  if (!hasNativeModule('ExpoSharing')) {
+    sharingModule = null;
+    return null;
+  }
   try {
     sharingModule = await import('expo-sharing');
     return sharingModule;

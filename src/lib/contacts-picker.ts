@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+import { hasNativeModule } from '@/lib/native-module';
+
 export type PickedContact = {
   name: string;
   phone: string | null;
@@ -11,7 +13,10 @@ let contactsModule: ContactsModule | null | undefined;
 
 async function loadContacts(): Promise<ContactsModule | null> {
   if (contactsModule !== undefined) return contactsModule;
-  if (Platform.OS === 'web') {
+  if (Platform.OS === 'web' || !hasNativeModule('ExpoContacts')) {
+    if (Platform.OS !== 'web') {
+      console.info('[contacts] ExpoContacts not in this build — run npx expo run:android');
+    }
     contactsModule = null;
     return null;
   }

@@ -1,6 +1,7 @@
-import { requireOptionalNativeModule } from 'expo';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+
+import { hasNativeModule } from '@/lib/native-module';
 
 const ENABLED_KEY = 'portl_biometric_enabled';
 const EMAIL_KEY = 'portl_biometric_email';
@@ -20,9 +21,7 @@ async function loadLocalAuth(): Promise<LocalAuthModule | null> {
     return null;
   }
 
-  // Probe without importing — importing throws a redbox when the native binary
-  // was built without expo-local-authentication.
-  if (!requireOptionalNativeModule('ExpoLocalAuthentication')) {
+  if (!hasNativeModule('ExpoLocalAuthentication')) {
     console.info(
       '[biometric] ExpoLocalAuthentication not in this build — run npx expo run:android',
     );

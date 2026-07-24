@@ -1,13 +1,18 @@
 import { Platform } from 'react-native';
 import Toast from 'react-native-toast-message';
 
+import { hasNativeModule } from '@/lib/native-module';
+
 type CalendarModule = typeof import('expo-calendar');
 
 let calendarModule: CalendarModule | null | undefined;
 
 async function loadCalendar(): Promise<CalendarModule | null> {
   if (calendarModule !== undefined) return calendarModule;
-  if (Platform.OS === 'web') {
+  if (Platform.OS === 'web' || !hasNativeModule('ExpoCalendar')) {
+    if (Platform.OS !== 'web') {
+      console.info('[calendar] ExpoCalendar not in this build — run npx expo run:android');
+    }
     calendarModule = null;
     return null;
   }

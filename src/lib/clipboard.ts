@@ -1,11 +1,18 @@
 import Toast from 'react-native-toast-message';
 
+import { hasNativeModule } from '@/lib/native-module';
+
 type ClipboardModule = typeof import('expo-clipboard');
 
 let clipboardModule: ClipboardModule | null | undefined;
 
 async function loadClipboard(): Promise<ClipboardModule | null> {
   if (clipboardModule !== undefined) return clipboardModule;
+  if (!hasNativeModule('ExpoClipboard')) {
+    console.info('[clipboard] ExpoClipboard not in this build — run npx expo run:android');
+    clipboardModule = null;
+    return null;
+  }
   try {
     clipboardModule = await import('expo-clipboard');
     return clipboardModule;
