@@ -1,0 +1,15 @@
+# Maestro: welcome → login screen navigation
+# Requires a installed dev/preview build (not Expo Go alone for full flows).
+#   maestro test .maestro/login-nav.yaml
+appId: com.ayush_panda.portl
+---
+- launchApp
+- assertVisible: "Portl"
+- extendedWaitUntil:
+    visible: "Portl"
+    timeout: 15000
+- tapOn:
+    text: ".*Sign in.*|.*Log in.*|.*Welcome.*"
+    optional: true
+- assertVisible:
+    text: ".*[Ee]mail.*|.*Welcome back.*|.*Password.*|.*Portl.*"

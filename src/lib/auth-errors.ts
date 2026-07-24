@@ -19,6 +19,10 @@ export function authErrorMessage(error: { message?: string; code?: string; statu
     return 'Could not send email. Check Supabase SMTP settings (sender address, host, and API key), then try again.';
   }
 
+  if (lower.includes('auth session missing') || code === 'session_not_found') {
+    return 'No active session on this device. Open the email link in Portl, or sign in after confirming.';
+  }
+
   if (lower.includes('signups not allowed') || lower.includes('user not found')) {
     return 'No account found for this email. Create an account first, or use password sign-in.';
   }

@@ -86,7 +86,7 @@ export default function LoginScreen() {
       }
     }
 
-    router.replace(destinationForProfile(profile, user));
+    router.replace(destinationForProfile(profile, user, useAuthStore.getState().isPlatformAdmin));
   };
 
   const onPasswordLogin = async () => {
@@ -292,6 +292,17 @@ export default function LoginScreen() {
                 value={password}
                 onChangeText={setPassword}
               />
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: '/(auth)/forgot-password',
+                    params: trimmedEmail ? { email: trimmedEmail } : undefined,
+                  })
+                }
+                className="self-end py-1"
+              >
+                <Text className="text-sm font-medium text-brand-700">Forgot password?</Text>
+              </Pressable>
             </View>
           ) : otpSent ? (
             <View className="mb-6 gap-2">

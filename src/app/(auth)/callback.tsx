@@ -1,5 +1,3 @@
-import type { EmailOtpType } from '@supabase/supabase-js';
-import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -7,59 +5,9 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Brand, FontFamily } from '@/constants/theme';
+import { createSessionFromUrl } from '@/lib/auth-callback';
 import { destinationForProfile } from '@/lib/auth-routing';
-import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
-
-function isEmailOtpType(value: string | undefined): value is EmailOtpType {
-  return (
-    value === 'signup' ||
-    value === 'invite' ||
-    value === 'magiclink' ||
-    value === 'recovery' ||
-    value === 'email_change' ||
-    value === 'email'
-  );
-}
-
-async function createSessionFromUrl(url: string) {
-  const { params, errorCode } = QueryParams.getQueryParams(url);
-
-  if (errorCode) {
-    throw new Error(errorCode);
-  }
-
-  const accessToken = params.access_token;
-  const refreshToken = params.refresh_token;
-  if (accessToken && refreshToken) {
-    const { data, error } = await supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    });
-    if (error) throw error;
-    return data.session;
-  }
-
-  const code = params.code;
-  if (code) {
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) throw error;
-    return data.session;
-  }
-
-  const tokenHash = params.token_hash;
-  const type = params.type;
-  if (tokenHash && isEmailOtpType(type)) {
-    const { data, error } = await supabase.auth.verifyOtp({
-      token_hash: tokenHash,
-      type,
-    });
-    if (error) throw error;
-    return data.session;
-  }
-
-  return null;
-}
 
 export default function AuthCallbackScreen() {
   const router = useRouter();
@@ -80,18 +28,27 @@ export default function AuthCallbackScreen() {
       setMessage('Confirming your email…');
 
       try {
-        const session = await createSessionFromUrl(url);
+        const { session, type, errorMessage } = await createSessionFromUrl(url);
 
         if (!session) {
           setIsError(true);
-          setMessage('This confirmation link is invalid or has expired.');
+          setMessage(
+            errorMessage ||
+              'This confirmation link is invalid or has expired. Resend from the verify screen.',
+          );
           return;
         }
 
         setSession(session);
         await fetchProfile(session.user.id);
-        const profile = useAuthStore.getState().profile;
-        router.replace(destinationForProfile(profile, session.user));
+
+        if (type === 'recovery') {
+          router.replace('/(auth)/update-password' as never);
+          return;
+        }
+
+        const { profile, isPlatformAdmin } = useAuthStore.getState();
+        router.replace(destinationForProfile(profile, session.user, isPlatformAdmin));
       } catch (error) {
         setIsError(true);
         setMessage(error instanceof Error ? error.message : 'Email confirmation failed.');
@@ -103,21 +60,38 @@ export default function AuthCallbackScreen() {
   );
 
   useEffect(() => {
-    void Linking.getInitialURL().then((url) => {
-      if (url) {
-        void handleUrl(url);
-      } else {
-        setIsLoading(false);
-        setIsError(true);
-        setMessage('No confirmation link found. Open the link from your email again.');
+    let active = true;
+
+    void (async () => {
+      const initial = await Linking.getInitialURL();
+      if (!active) return;
+      if (initial) {
+        await handleUrl(initial);
+        return;
       }
-    });
+      // Cold start sometimes delivers the URL a tick later on Android.
+      await new Promise((r) => setTimeout(r, 400));
+      const retry = await Linking.getInitialURL();
+      if (!active) return;
+      if (retry) {
+        await handleUrl(retry);
+        return;
+      }
+      setIsLoading(false);
+      setIsError(true);
+      setMessage(
+        'No confirmation link found. Open the email link on this phone (it should open Portl), or resend the email.',
+      );
+    })();
 
     const subscription = Linking.addEventListener('url', ({ url }) => {
       void handleUrl(url);
     });
 
-    return () => subscription.remove();
+    return () => {
+      active = false;
+      subscription.remove();
+    };
   }, [handleUrl]);
 
   return (
@@ -131,14 +105,24 @@ export default function AuthCallbackScreen() {
           {message}
         </Text>
         {isError && !isLoading ? (
-          <Pressable
-            onPress={() => router.replace('/(auth)/verify-email')}
-            className="mt-6 rounded-xl bg-brand-700 px-6 py-3"
-          >
-            <Text className="font-semibold text-white" style={{ fontFamily: FontFamily.heading }}>
-              Back to verify email
-            </Text>
-          </Pressable>
+          <View className="mt-6 w-full gap-3">
+            <Pressable
+              onPress={() => router.replace('/(auth)/verify-email')}
+              className="items-center rounded-xl bg-brand-700 px-6 py-3"
+            >
+              <Text className="font-semibold text-white" style={{ fontFamily: FontFamily.heading }}>
+                Back to verify email
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => router.replace('/(auth)/login')}
+              className="items-center rounded-xl border border-surface-border px-6 py-3"
+            >
+              <Text className="font-semibold text-ink" style={{ fontFamily: FontFamily.heading }}>
+                Sign in instead
+              </Text>
+            </Pressable>
+          </View>
         ) : null}
       </View>
     </SafeAreaView>

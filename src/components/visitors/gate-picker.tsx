@@ -29,16 +29,20 @@ export function GatePicker({ societyId, value, onChange }: Props) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const saved = await getSelectedGateId(societyId);
-      const gates = gatesQuery.data ?? [];
-      if (cancelled) return;
-      if (saved && gates.some((g) => g.id === saved)) {
-        onChange(saved);
-      } else if (!value && gates[0]) {
-        onChange(gates[0].id);
-        await setSelectedGateId(societyId, gates[0].id);
+      try {
+        if (!societyId) return;
+        const saved = await getSelectedGateId(societyId);
+        const gates = gatesQuery.data ?? [];
+        if (cancelled) return;
+        if (saved && gates.some((g) => g.id === saved)) {
+          onChange(saved);
+        } else if (gates[0] && (!value || !gates.some((g) => g.id === value))) {
+          onChange(gates[0].id);
+          await setSelectedGateId(societyId, gates[0].id);
+        }
+      } finally {
+        if (!cancelled) setReady(true);
       }
-      setReady(true);
     })();
     return () => {
       cancelled = true;
@@ -85,7 +89,26 @@ export function GatePicker({ societyId, value, onChange }: Props) {
   };
 
   const gates = gatesQuery.data ?? [];
-  if (!ready || gates.length <= 1) return null;
+  if (!ready) return null;
+
+  // Single gate: still hydrate selection, show a compact label.
+  if (gates.length <= 1) {
+    const only = gates[0];
+    if (!only) return null;
+    return (
+      <View className="mb-3">
+        <Text
+          className="text-xs font-semibold uppercase tracking-wider text-ink-muted"
+          style={{ fontFamily: FontFamily.heading }}
+        >
+          Gate
+        </Text>
+        <Text className="mt-1 text-sm text-ink" style={{ fontFamily: FontFamily.heading }}>
+          {only.name}
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View className="mb-3">

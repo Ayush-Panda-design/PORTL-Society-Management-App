@@ -29,6 +29,7 @@ export function useAppBack(options?: UseAppBackOptions) {
   const segments = useSegments();
   const profile = useAuthStore((s) => s.profile);
   const user = useAuthStore((s) => s.user);
+  const isPlatformAdmin = useAuthStore((s) => s.isPlatformAdmin);
   const allowRoleHomeFallback = options?.allowRoleHomeFallback !== false;
 
   return useCallback((): boolean => {
@@ -52,7 +53,7 @@ export function useAppBack(options?: UseAppBackOptions) {
     }
 
     if (allowRoleHomeFallback) {
-      router.replace(destinationForProfile(profile, user));
+      router.replace(destinationForProfile(profile, user, isPlatformAdmin));
       return true;
     }
 
@@ -64,5 +65,6 @@ export function useAppBack(options?: UseAppBackOptions) {
     segments,
     profile,
     user,
+    isPlatformAdmin,
   ]);
 }

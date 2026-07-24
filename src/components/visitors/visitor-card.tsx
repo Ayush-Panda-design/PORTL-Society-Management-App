@@ -122,6 +122,20 @@ export function VisitorCard({ visitor, actions, showStatus = true }: Props) {
             {formatRelativeTime(visitor.created_at)}
             {visitor.phone ? ` · ${visitor.phone}` : ''}
           </Text>
+          {visitor.entry_time || visitor.exit_time ? (
+            <Text className="mt-1 text-xs text-ink-muted">
+              {visitor.entry_time
+                ? `In ${new Date(visitor.entry_time).toLocaleString()}${
+                    visitor.entry_gate_name ? ` · ${visitor.entry_gate_name}` : ''
+                  }`
+                : 'Not checked in'}
+              {visitor.exit_time
+                ? `\nOut ${new Date(visitor.exit_time).toLocaleString()}${
+                    visitor.exit_gate_name ? ` · ${visitor.exit_gate_name}` : ''
+                  }`
+                : ''}
+            </Text>
+          ) : null}
           {visitor.status === 'pending' && (visitor.escalation_level ?? 0) > 0 ? (
             <Text className="mt-1 text-xs font-medium text-amber-700">
               {(visitor.escalation_level ?? 0) >= 2

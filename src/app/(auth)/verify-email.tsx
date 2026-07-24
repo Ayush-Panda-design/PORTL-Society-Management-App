@@ -1,4 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Linking from 'expo-linking';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -12,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 import { Brand, FontFamily, Gradients } from '@/constants/theme';
+import { createSessionFromUrl, isAuthSessionMissingError } from '@/lib/auth-callback';
 import { authErrorMessage } from '@/lib/auth-errors';
 import { destinationForProfile } from '@/lib/auth-routing';
 import { getAuthRedirectUrl } from '@/lib/auth-redirect';
@@ -37,56 +39,134 @@ export default function VerifyEmailScreen() {
   const [resending, setResending] = useState(false);
   const [checking, setChecking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const redirectHint = getAuthRedirectUrl();
 
-  const continueIfVerified = useCallback(async () => {
-    setChecking(true);
-    setMessage(null);
-    try {
-      // Refresh so email_confirmed_at updates after the user opens the link
-      await supabase.auth.refreshSession();
-      const { data, error } = await supabase.auth.getUser();
-      if (error) throw error;
+  const continueIfVerified = useCallback(
+    async (opts?: { fromAppState?: boolean; forceNavigateToLogin?: boolean }) => {
+      const fromAppState = opts?.fromAppState === true;
+      const forceNavigateToLogin = opts?.forceNavigateToLogin === true;
 
-      const nextUser = data.user;
-      if (!nextUser || !isEmailVerified(nextUser)) {
-        setMessage(
-          'Email not confirmed yet. Open the link we sent (or use Open in browser), then tap “I’ve confirmed”.',
-        );
-        return;
+      if (!fromAppState) {
+        setChecking(true);
+        setMessage(null);
       }
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData.session) {
-        setSession(sessionData.session);
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        let activeSession = sessionData.session;
+
+        // Only refresh when we already have a local session (avoids "Auth session missing").
+        if (activeSession) {
+          const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError && !isAuthSessionMissingError(refreshError)) {
+            throw refreshError;
+          }
+          if (refreshed.session) {
+            activeSession = refreshed.session;
+            setSession(refreshed.session);
+          }
+        }
+
+        if (!activeSession) {
+          // Returning from the email app often fires AppState before the deep link
+          // finishes — never bounce to login from that path.
+          if (fromAppState) return;
+
+          setMessage(
+            'No signed-in session on this device. Open the confirmation link so Portl launches, or sign in after confirming in the browser.',
+          );
+          if (forceNavigateToLogin) {
+            Toast.show({
+              type: 'info',
+              text1: 'Sign in to continue',
+              text2: 'Confirmation may have completed in the browser.',
+            });
+            router.replace({
+              pathname: '/(auth)/login',
+              params: email ? { email } : undefined,
+            });
+          }
+          return;
+        }
+
+        const { data, error } = await supabase.auth.getUser();
+        if (error) {
+          if (isAuthSessionMissingError(error)) {
+            if (!fromAppState) {
+              setMessage(
+                'Session expired on this device. Open the email link in Portl, or sign in after confirming.',
+              );
+            }
+            return;
+          }
+          throw error;
+        }
+
+        const nextUser = data.user;
+        if (!nextUser || !isEmailVerified(nextUser)) {
+          if (!fromAppState) {
+            setMessage(
+              'Email not confirmed yet. Open the link in the Portl app (not only in the browser), then tap continue.',
+            );
+          }
+          return;
+        }
+
+        setSession(activeSession);
         const nextProfile = await fetchProfile(nextUser.id);
-        router.replace(destinationForProfile(nextProfile, nextUser));
-        return;
+        router.replace(
+          destinationForProfile(nextProfile, nextUser, useAuthStore.getState().isPlatformAdmin),
+        );
+      } catch (e) {
+        if (fromAppState) return;
+        if (isAuthSessionMissingError(e)) {
+          setMessage(
+            'Session expired on this device. Sign in after confirming your email — or open the email link so it launches Portl.',
+          );
+          return;
+        }
+        setMessage(e instanceof Error ? e.message : 'Could not check confirmation status');
+      } finally {
+        if (!fromAppState) setChecking(false);
       }
-
-      // Confirmed but no session (signed up while confirm-email was on)
-      router.replace('/(auth)/login');
-      Toast.show({
-        type: 'success',
-        text1: 'Email confirmed',
-        text2: 'Sign in to continue.',
-      });
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : 'Could not check confirmation status');
-    } finally {
-      setChecking(false);
-    }
-  }, [fetchProfile, router, setSession]);
+    },
+    [email, fetchProfile, router, setSession],
+  );
 
   useEffect(() => {
     if (user && isEmailVerified(user) && profile) {
-      router.replace(destinationForProfile(profile, user));
+      router.replace(
+        destinationForProfile(profile, user, useAuthStore.getState().isPlatformAdmin),
+      );
     }
   }, [user, profile, router]);
+
+  // If the confirmation deep link opens while this screen is mounted, establish the session.
+  useEffect(() => {
+    const sub = Linking.addEventListener('url', ({ url }) => {
+      if (!url.includes('callback') && !url.includes('access_token') && !url.includes('token_hash')) {
+        return;
+      }
+      void (async () => {
+        const { session: next, errorMessage } = await createSessionFromUrl(url);
+        if (!next) {
+          if (errorMessage) setMessage(errorMessage);
+          return;
+        }
+        setSession(next);
+        await fetchProfile(next.user.id);
+        const { profile: p, isPlatformAdmin } = useAuthStore.getState();
+        router.replace(destinationForProfile(p, next.user, isPlatformAdmin));
+      })();
+    });
+    return () => sub.remove();
+  }, [fetchProfile, router, setSession]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
-        void continueIfVerified();
+        // Quiet check only — do not redirect away while waiting for the deep link.
+        void continueIfVerified({ fromAppState: true });
       }
     });
     return () => sub.remove();
@@ -106,18 +186,40 @@ export default function VerifyEmailScreen() {
         email: email.trim(),
         options: { emailRedirectTo: redirectTo },
       });
-      if (error) throw error;
+      if (error) {
+        // Some projects throw session-missing on resend; fall back to magic link OTP.
+        if (isAuthSessionMissingError(error)) {
+          const { error: otpError } = await supabase.auth.signInWithOtp({
+            email: email.trim(),
+            options: {
+              shouldCreateUser: false,
+              emailRedirectTo: redirectTo,
+            },
+          });
+          if (otpError) throw otpError;
+        } else {
+          throw error;
+        }
+      }
       Toast.show({
         type: 'success',
         text1: 'Confirmation email sent',
-        text2: 'Check inbox and spam. If the link does nothing, open it in Chrome/Safari, then return here.',
+        text2: `Open the link on this phone so Portl opens (${redirectTo}).`,
       });
     } catch (e) {
       const authLike =
         e && typeof e === 'object' && 'message' in e
           ? (e as { message?: string; code?: string; status?: number })
           : null;
-      setMessage(authErrorMessage(authLike) || (e instanceof Error ? e.message : 'Could not resend email'));
+      if (isAuthSessionMissingError(e)) {
+        setMessage(
+          'Could not resend while signed out. Go to Sign in and use “Forgot password” or OTP, or sign up again.',
+        );
+      } else {
+        setMessage(
+          authErrorMessage(authLike) || (e instanceof Error ? e.message : 'Could not resend email'),
+        );
+      }
     } finally {
       setResending(false);
     }
@@ -150,7 +252,7 @@ export default function VerifyEmailScreen() {
         <Text className="mb-2 text-2xl text-ink" style={{ fontFamily: FontFamily.display }}>
           Verify your email
         </Text>
-        <Text className="mb-6 text-sm leading-5 text-ink-muted">
+        <Text className="mb-4 text-sm leading-5 text-ink-muted">
           We sent a confirmation link
           {email ? (
             <>
@@ -158,7 +260,14 @@ export default function VerifyEmailScreen() {
               to <Text className="font-semibold text-ink">{email}</Text>
             </>
           ) : null}
-          . Building access accounts need a real inbox — open the link, then continue.
+          . Open it on this phone so Portl launches — confirming only in the browser leaves this
+          screen without a session.
+        </Text>
+
+        <Text className="mb-6 text-xs leading-4 text-ink-faint">
+          Redirect used for links: {redirectHint}
+          {'\n'}
+          Add this exact URL under Supabase → Authentication → URL Configuration → Redirect URLs.
         </Text>
 
         {message ? (
@@ -168,7 +277,7 @@ export default function VerifyEmailScreen() {
         <Pressable
           className={`mb-3 items-center rounded-bubbly py-4 ${checking ? 'opacity-70' : ''}`}
           disabled={checking}
-          onPress={() => void continueIfVerified()}
+          onPress={() => void continueIfVerified({ forceNavigateToLogin: true })}
           style={{
             backgroundColor: Brand.primary,
             shadowColor: Brand.primary,

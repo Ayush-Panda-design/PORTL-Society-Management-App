@@ -1,4 +1,5 @@
-import { QueryClient } from '@tanstack/react-query';
+import { onlineManager, QueryClient } from '@tanstack/react-query';
+import { AppState, NativeModules, Platform } from 'react-native';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -7,9 +8,64 @@ export const queryClient = new QueryClient({
       gcTime: 5 * 60_000,
       retry: 1,
       refetchOnWindowFocus: false,
+      // Keep last successful data visible while offline / reconnecting.
+      networkMode: 'offlineFirst',
+    },
+    mutations: {
+      networkMode: 'offlineFirst',
     },
   },
 });
+
+/**
+ * Pause TanStack Query when the device is offline so screens keep cached
+ * data and avoid noisy network errors. Wired lazily so missing NetInfo
+ * native modules (stale builds) do not crash startup.
+ */
+export function setupQueryOnlineManager(): () => void {
+  if (Platform.OS === 'web') {
+    return () => undefined;
+  }
+
+  let unsubscribeNet: (() => void) | undefined;
+  let cancelled = false;
+
+  const hasNetInfoNative = Boolean((NativeModules as { RNCNetInfo?: unknown }).RNCNetInfo);
+  if (hasNetInfoNative) {
+    void (async () => {
+      try {
+        const netinfoModule = await import('@react-native-community/netinfo');
+        const NetInfo = netinfoModule?.default ?? netinfoModule;
+        onlineManager.setEventListener((setOnline) => {
+          unsubscribeNet = NetInfo.addEventListener((state) => {
+            const online =
+              state.isConnected === true && state.isInternetReachable !== false;
+            setOnline(online);
+          });
+          return () => {
+            unsubscribeNet?.();
+            unsubscribeNet = undefined;
+          };
+        });
+      } catch {
+        // Native module missing until rebuild — stay online.
+      }
+    })();
+  }
+
+  const appSub = AppState.addEventListener('change', (status) => {
+    if (cancelled) return;
+    if (status === 'active') {
+      void queryClient.invalidateQueries({ refetchType: 'active' });
+    }
+  });
+
+  return () => {
+    cancelled = true;
+    unsubscribeNet?.();
+    appSub.remove();
+  };
+}
 
 export const queryKeys = {
   notices: (societyId: string) => ['notices', societyId] as const,
@@ -47,6 +103,10 @@ export const queryKeys = {
   profileNotes: (userId: string) => ['profile-notes', userId] as const,
   frequentVisitors: (flatId: string) => ['frequent-visitors', flatId] as const,
   paymentStatement: (userId: string) => ['payment-statement', userId] as const,
+  societyPaymentStatement: (societyId: string, purpose?: string) =>
+    ['society-payment-statement', societyId, purpose ?? 'all'] as const,
+  societyPartners: (societyId: string) => ['society-partners', societyId] as const,
+  escalatedVisitors: (societyId: string) => ['escalated-visitors', societyId] as const,
   auditLogs: (societyId: string) => ['audit-logs', societyId] as const,
   myPermissions: (userId: string) => ['my-permissions', userId] as const,
   noticeAcks: (userId: string, noticeIds: string[]) =>
@@ -54,4 +114,7 @@ export const queryKeys = {
   noticeAckStats: (noticeId: string) => ['notice-ack-stats', noticeId] as const,
   gates: (societyId: string) => ['gates', societyId] as const,
   broadcasts: (societyId: string) => ['broadcasts', societyId] as const,
+  platformStats: ['platform-stats'] as const,
+  platformUsers: ['platform-users'] as const,
+  platformSocieties: ['platform-societies'] as const,
 };

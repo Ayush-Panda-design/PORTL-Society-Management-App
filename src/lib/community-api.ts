@@ -33,12 +33,36 @@ import type {
   Tower,
 } from '@/types/database';
 
-export async function fetchNotices(societyId: string): Promise<Notice[]> {
-  const { data, error } = await supabase
+export async function fetchNotices(
+  societyId: string,
+  opts?: { publishedOnly?: boolean },
+): Promise<Notice[]> {
+  // Resident visibility: published window + tower targeting (migration 040).
+  if (opts?.publishedOnly) {
+    const { data, error } = await supabase.rpc('fetch_visible_notices', {
+      p_society_id: societyId,
+    });
+    if (!error) {
+      return (data as Notice[]) ?? [];
+    }
+    // Fallback before migration is applied.
+    console.warn('[notices] fetch_visible_notices unavailable:', error.message);
+  }
+
+  let query = supabase
     .from('notices')
     .select('*')
     .eq('society_id', societyId)
     .order('created_at', { ascending: false });
+
+  if (opts?.publishedOnly) {
+    const now = new Date().toISOString();
+    query = query
+      .or(`publish_at.is.null,publish_at.lte."${now}"`)
+      .or(`expires_at.is.null,expires_at.gt."${now}"`);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw new Error(error.message);
   return (data as Notice[]) ?? [];
@@ -107,6 +131,8 @@ export async function upsertNotice(input: {
     title: input.title,
     body: input.body,
     noticeId: data?.id,
+    targetAudience: input.targetAudience ?? 'all',
+    targetTowerId: input.targetTowerId ?? null,
   });
 }
 
@@ -776,6 +802,8 @@ export async function bookAmenitySlot(input: {
   flatId: string;
   date: string;
   slot: string;
+  amenityName?: string;
+  societyId?: string;
 }): Promise<AmenityBooking> {
   const { data, error } = await supabase.rpc('book_amenity_slot', {
     p_amenity_id: input.amenityId,
@@ -784,7 +812,25 @@ export async function bookAmenitySlot(input: {
     p_slot: input.slot,
   });
   if (error) throw new Error(error.message);
-  return data as AmenityBooking;
+  const booking = data as AmenityBooking;
+
+  if (input.societyId) {
+    const { notifyAmenityBooked } = await import('@/lib/notifications');
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    void notifyAmenityBooked({
+      flatId: input.flatId,
+      societyId: input.societyId,
+      amenityName: input.amenityName ?? 'Amenity',
+      date: input.date,
+      slot: input.slot,
+      amenityId: input.amenityId,
+      excludeUserId: user?.id,
+    });
+  }
+
+  return booking;
 }
 
 export async function cancelAmenityBooking(bookingId: string): Promise<void> {

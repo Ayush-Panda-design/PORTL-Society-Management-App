@@ -6,7 +6,7 @@ import { destinationForProfile } from '@/lib/auth-routing';
 import { useAuthStore } from '@/stores/authStore';
 
 export default function Index() {
-  const { session, user, profile, isLoading, isInitialized } = useAuthStore();
+  const { session, user, profile, isPlatformAdmin, isLoading, isInitialized } = useAuthStore();
 
   if (!isInitialized || isLoading) {
     return (
@@ -20,5 +20,5 @@ export default function Index() {
     return <Redirect href="/(auth)/welcome" />;
   }
 
-  return <Redirect href={destinationForProfile(profile, user)} />;
+  return <Redirect href={destinationForProfile(profile, user, isPlatformAdmin)} />;
 }
