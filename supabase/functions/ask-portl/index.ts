@@ -544,11 +544,15 @@ Deno.serve(async (req) => {
     const geminiKey = Deno.env.get('GEMINI_API_KEY');
 
     if (!supabaseUrl || !anonKey) {
-      return jsonResponse(500, { error: 'Missing Supabase env on function' });
+      console.error('[ask-portl] Missing SUPABASE_URL or SUPABASE_ANON_KEY');
+      return jsonResponse(500, {
+        error: 'Ask Portl is temporarily unavailable. Please try again later.',
+      });
     }
     if (!geminiKey) {
+      console.error('[ask-portl] GEMINI_API_KEY is not set');
       return jsonResponse(503, {
-        error: 'Ask Portl is not configured yet. Set GEMINI_API_KEY via supabase secrets.',
+        error: 'Ask Portl is temporarily unavailable. Please try again later.',
       });
     }
 
@@ -1180,12 +1184,13 @@ Deno.serve(async (req) => {
     }
 
     if (!reply) {
-      const hint =
-        lastGeminiError.includes('API_KEY') || /401|403|UNAUTHENTICATED/i.test(lastGeminiError)
-          ? ' Your GEMINI_API_KEY looks invalid for Google AI Studio — create a free key at https://aistudio.google.com/apikey (usually starts with AIza) and run: supabase secrets set GEMINI_API_KEY=...'
-          : '';
+      console.error('[ask-portl] Gemini unavailable:', lastGeminiError.slice(0, 800));
+      const busy =
+        /503|UNAVAILABLE|high demand|RESOURCE_EXHAUSTED|429|quota/i.test(lastGeminiError);
       return jsonResponse(502, {
-        error: `Ask Portl could not reach Gemini.${hint} Details: ${lastGeminiError.slice(0, 500)}`,
+        error: busy
+          ? 'Ask Portl is busy right now. Please try again in a moment.'
+          : 'Ask Portl could not answer right now. Please try again.',
       });
     }
 
@@ -1220,6 +1225,9 @@ Deno.serve(async (req) => {
     return jsonResponse(200, { answer, tools_used: rounds > 0, role });
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Unknown error';
-    return jsonResponse(500, { error: message });
+    console.error('[ask-portl] Unhandled error:', message);
+    return jsonResponse(500, {
+      error: 'Ask Portl could not answer right now. Please try again.',
+    });
   }
 });

@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
@@ -18,7 +18,7 @@ import { AskPortlOrb } from '@/components/ask-portl/ask-portl-orb';
 import { Brand, FontFamily, Gradients } from '@/constants/theme';
 import { useAppBack } from '@/hooks/use-app-back';
 import { useThemePalette } from '@/hooks/use-theme';
-import { askPortl, type AskPortlMessage } from '@/lib/ask-portl';
+import { askPortl, toUserFriendlyAskPortlMessage, type AskPortlMessage } from '@/lib/ask-portl';
 import { speakText, stopSpeaking } from '@/lib/speech';
 import { useAuthStore } from '@/stores/authStore';
 import type { UserRole } from '@/types/database';
@@ -187,7 +187,8 @@ export function AskPortlChat() {
         if (speakReplies) speak(answer);
         requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Ask Portl failed');
+        const raw = e instanceof Error ? e.message : 'Ask Portl failed';
+        setError(toUserFriendlyAskPortlMessage(raw));
       } finally {
         setSending(false);
       }
@@ -224,7 +225,7 @@ export function AskPortlChat() {
       edges={['top']}
       style={{ backgroundColor: isDark ? '#0B141A' : '#F7F7F8' }}
     >
-      <View className="flex-1 overflow-hidden">
+      <View className="flex-1">
         <ChatWallpaper isDark={isDark} />
 
         <View className="flex-row items-center gap-3 px-4 pb-3 pt-2">
@@ -278,151 +279,161 @@ export function AskPortlChat() {
           ) : null}
         </View>
 
-        <KeyboardAvoidingView behavior="padding" className="flex-1">
-          <SafeAreaView className="flex-1" edges={['bottom']}>
-            {messages.length === 0 ? (
-              <View className="flex-1 px-5 pt-2">
-                <MotiView
-                  from={{ opacity: 0, translateY: 10 }}
-                  animate={{ opacity: 1, translateY: 0 }}
-                  transition={{ type: 'timing', duration: 420 }}
-                  style={{ marginBottom: 24, alignItems: 'center', paddingTop: 24 }}
-                >
-                  <AskPortlOrb decorative compact size={72} />
-                  <Text
-                    className="mt-5 text-center text-[26px] text-ink"
-                    style={{ fontFamily: FontFamily.display }}
-                  >
-                    How can I help?
-                  </Text>
-                  <Text
-                    className="mt-2 max-w-[300px] text-center text-[14px] leading-5 text-ink-muted"
-                    style={{ fontFamily: FontFamily.body }}
-                  >
-                    {blurb}
-                  </Text>
-                </MotiView>
-
+        <View className="flex-1">
+          {messages.length === 0 ? (
+            <View className="flex-1 px-5 pt-2">
+              <MotiView
+                from={{ opacity: 0, translateY: 10 }}
+                animate={{ opacity: 1, translateY: 0 }}
+                transition={{ type: 'timing', duration: 420 }}
+                style={{ marginBottom: 24, alignItems: 'center', paddingTop: 24 }}
+              >
+                <AskPortlOrb decorative compact size={72} />
                 <Text
-                  className="mb-3 text-[11px] uppercase tracking-wider text-ink-muted"
-                  style={{ fontFamily: FontFamily.heading }}
+                  className="mt-5 text-center text-[26px] text-ink"
+                  style={{ fontFamily: FontFamily.display }}
                 >
-                  Try asking
+                  How can I help?
                 </Text>
-                <View className="flex-row flex-wrap gap-2">
-                  {suggestions.map((s, i) => (
-                    <MotiView
-                      key={s.title}
-                      from={{ opacity: 0, translateY: 6 }}
-                      animate={{ opacity: 1, translateY: 0 }}
-                      transition={{ type: 'timing', duration: 320, delay: 80 + i * 40 }}
+                <Text
+                  className="mt-2 max-w-[300px] text-center text-[14px] leading-5 text-ink-muted"
+                  style={{ fontFamily: FontFamily.body }}
+                >
+                  {blurb}
+                </Text>
+              </MotiView>
+
+              <Text
+                className="mb-3 text-[11px] uppercase tracking-wider text-ink-muted"
+                style={{ fontFamily: FontFamily.heading }}
+              >
+                Try asking
+              </Text>
+              <View className="flex-row flex-wrap gap-2">
+                {suggestions.map((s, i) => (
+                  <MotiView
+                    key={s.title}
+                    from={{ opacity: 0, translateY: 6 }}
+                    animate={{ opacity: 1, translateY: 0 }}
+                    transition={{ type: 'timing', duration: 320, delay: 80 + i * 40 }}
+                  >
+                    <Pressable
+                      onPress={() => void send(s.prompt)}
+                      disabled={sending}
+                      className="rounded-pill px-3.5 py-2.5 active:opacity-85"
+                      style={{
+                        backgroundColor: isDark
+                          ? 'rgba(31,44,52,0.88)'
+                          : 'rgba(255,255,255,0.92)',
+                        borderWidth: 1,
+                        borderColor: border,
+                      }}
                     >
-                      <Pressable
-                        onPress={() => void send(s.prompt)}
-                        disabled={sending}
-                        className="rounded-pill px-3.5 py-2.5 active:opacity-85"
-                        style={{
-                          backgroundColor: isDark
-                            ? 'rgba(31,44,52,0.88)'
-                            : 'rgba(255,255,255,0.92)',
-                          borderWidth: 1,
-                          borderColor: border,
-                        }}
-                      >
-                        <View className="flex-row items-center gap-1.5">
-                          <Sparkles color={primaryAccent} size={13} strokeWidth={1.5} />
-                          <Text
-                            className="text-[13px] text-ink"
-                            style={{ fontFamily: FontFamily.medium }}
-                          >
-                            {s.title}
-                          </Text>
-                        </View>
-                      </Pressable>
-                    </MotiView>
-                  ))}
-                </View>
-              </View>
-            ) : (
-              <FlatList
-                ref={listRef}
-                data={messages}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={{ padding: 16, paddingBottom: 20 }}
-                onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
-                ListFooterComponent={
-                  sending ? (
-                    <View className="mb-3 items-start">
-                      <View
-                        className="rounded-2xl px-4 py-3"
-                        style={{
-                          backgroundColor: isDark ? '#1F2C34' : card,
-                          borderWidth: 1,
-                          borderColor: border,
-                          borderTopLeftRadius: 6,
-                        }}
-                      >
-                        <TypingDots color={inkMuted} />
-                      </View>
-                    </View>
-                  ) : null
-                }
-                renderItem={({ item }) => {
-                  const mine = item.role === 'user';
-                  return (
-                    <View className={`mb-3 ${mine ? 'items-end' : 'items-start'}`}>
-                      {!mine ? (
-                        <View className="mb-1.5 ml-1 flex-row items-center gap-1.5">
-                          <Sparkles color={primaryAccent} size={12} strokeWidth={1.5} />
-                          <Text
-                            className="text-[11px] text-ink-muted"
-                            style={{ fontFamily: FontFamily.heading }}
-                          >
-                            Portl
-                          </Text>
-                        </View>
-                      ) : null}
-                      <View
-                        className="max-w-[88%] px-4 py-3"
-                        style={{
-                          backgroundColor: mine
-                            ? Brand.primary
-                            : isDark
-                              ? '#1F2C34'
-                              : '#FFFFFF',
-                          borderRadius: 18,
-                          borderTopRightRadius: mine ? 6 : 18,
-                          borderTopLeftRadius: mine ? 18 : 6,
-                          borderWidth: mine ? 0 : 1,
-                          borderColor: border,
-                        }}
-                      >
+                      <View className="flex-row items-center gap-1.5">
+                        <Sparkles color={primaryAccent} size={13} strokeWidth={1.5} />
                         <Text
-                          className="text-[15px] leading-[22px]"
-                          style={{
-                            fontFamily: FontFamily.body,
-                            color: mine ? '#FFFFFF' : ink,
-                          }}
+                          className="text-[13px] text-ink"
+                          style={{ fontFamily: FontFamily.medium }}
                         >
-                          {item.content}
+                          {s.title}
                         </Text>
                       </View>
+                    </Pressable>
+                  </MotiView>
+                ))}
+              </View>
+            </View>
+          ) : (
+            <FlatList
+              ref={listRef}
+              data={messages}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={{ padding: 16, paddingBottom: 20 }}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
+              ListFooterComponent={
+                sending ? (
+                  <View className="mb-3 items-start">
+                    <View
+                      className="rounded-2xl px-4 py-3"
+                      style={{
+                        backgroundColor: isDark ? '#1F2C34' : card,
+                        borderWidth: 1,
+                        borderColor: border,
+                        borderTopLeftRadius: 6,
+                      }}
+                    >
+                      <TypingDots color={inkMuted} />
                     </View>
-                  );
-                }}
-              />
-            )}
+                  </View>
+                ) : null
+              }
+              renderItem={({ item }) => {
+                const mine = item.role === 'user';
+                return (
+                  <View className={`mb-3 ${mine ? 'items-end' : 'items-start'}`}>
+                    {!mine ? (
+                      <View className="mb-1.5 ml-1 flex-row items-center gap-1.5">
+                        <Sparkles color={primaryAccent} size={12} strokeWidth={1.5} />
+                        <Text
+                          className="text-[11px] text-ink-muted"
+                          style={{ fontFamily: FontFamily.heading }}
+                        >
+                          Portl
+                        </Text>
+                      </View>
+                    ) : null}
+                    <View
+                      className="max-w-[88%] px-4 py-3"
+                      style={{
+                        backgroundColor: mine
+                          ? Brand.primary
+                          : isDark
+                            ? '#1F2C34'
+                            : '#FFFFFF',
+                        borderRadius: 18,
+                        borderTopRightRadius: mine ? 6 : 18,
+                        borderTopLeftRadius: mine ? 18 : 6,
+                        borderWidth: mine ? 0 : 1,
+                        borderColor: border,
+                      }}
+                    >
+                      <Text
+                        className="text-[15px] leading-[22px]"
+                        style={{
+                          fontFamily: FontFamily.body,
+                          color: mine ? '#FFFFFF' : ink,
+                        }}
+                      >
+                        {item.content}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              }}
+            />
+          )}
 
+          <KeyboardStickyView offset={{ closed: 0, opened: 0 }}>
             {error ? (
-              <Text className="px-4 pb-2 text-sm" style={{ color: Brand.primaryMid }}>
-                {error}
-              </Text>
+              <View
+                className="mx-3 mb-2 rounded-2xl px-3.5 py-2.5"
+                style={{ backgroundColor: 'rgba(225,29,72,0.1)' }}
+              >
+                <Text
+                  className="text-[13px] leading-5"
+                  style={{ color: Brand.primaryMid, fontFamily: FontFamily.body }}
+                >
+                  {error}
+                </Text>
+              </View>
             ) : null}
 
             <View
-              className="flex-row items-end gap-2 px-3 pb-3 pt-2"
+              className="flex-row items-end gap-2 px-3 pb-2 pt-2"
               style={{
-                backgroundColor: isDark ? 'rgba(11,20,26,0.72)' : 'rgba(247,247,248,0.82)',
+                backgroundColor: isDark ? 'rgba(11,20,26,0.92)' : 'rgba(247,247,248,0.96)',
                 borderTopWidth: 1,
                 borderTopColor: isDark ? 'rgba(42,57,66,0.7)' : 'rgba(232,232,234,0.9)',
               }}
@@ -504,8 +515,8 @@ export function AskPortlChat() {
                 )}
               </Pressable>
             </View>
-          </SafeAreaView>
-        </KeyboardAvoidingView>
+          </KeyboardStickyView>
+        </View>
       </View>
     </SafeAreaView>
   );

@@ -226,6 +226,9 @@ Use critical only for safety / outages; low for cosmetic/minor.`,
     return jsonResponse(200, triage);
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Unknown error';
-    return jsonResponse(500, { error: message });
+    console.error('[triage-complaint] Unhandled error:', message);
+    return jsonResponse(500, {
+      error: 'Could not suggest a category right now. Please try again or pick one manually.',
+    });
   }
 });

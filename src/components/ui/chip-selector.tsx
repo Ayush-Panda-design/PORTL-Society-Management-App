@@ -38,6 +38,8 @@ type Props<T extends string> = {
    * sheet → bottom-sheet radio list (categories, assignees).
    */
   presentation?: 'auto' | 'filter' | 'tiles' | 'sheet';
+  /** sheet trigger: full-width form field (default) or compact filter chip. */
+  sheetTrigger?: 'field' | 'chip';
   style?: StyleProp<ViewStyle>;
   className?: string;
   title?: string;
@@ -247,12 +249,13 @@ function ChoiceTile<T extends string>({
   );
 }
 
-/** Zomato/Swiggy-style list picker: field trigger + radio rows in a sheet. */
+/** Zomato/Swiggy-style list picker: field or chip trigger + radio rows in a sheet. */
 function RadioSheet<T extends string>({
   options,
   value,
   onChange,
   title,
+  trigger = 'field',
   style,
   className = '',
 }: {
@@ -260,6 +263,7 @@ function RadioSheet<T extends string>({
   value: T;
   onChange: (value: T) => void;
   title?: string;
+  trigger?: 'field' | 'chip';
   style?: StyleProp<ViewStyle>;
   className?: string;
 }) {
@@ -283,35 +287,60 @@ function RadioSheet<T extends string>({
           void Haptics.selectionAsync();
           setOpen(true);
         }}
-        className="flex-row items-center justify-between rounded-2xl border border-surface-border bg-surface-card px-4 py-3.5"
-        style={{
-          shadowColor: palette.shadow,
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: palette.isDark ? 0.35 : 0.04,
-          shadowRadius: 4,
-          elevation: 1,
-        }}
+        accessibilityRole="button"
+        accessibilityLabel={title ? `${title}: ${selectedLabel}` : selectedLabel}
+        className={
+          trigger === 'chip'
+            ? 'flex-row items-center gap-1.5 self-start rounded-pill border border-surface-border bg-surface-card px-3.5 py-2'
+            : 'flex-row items-center justify-between rounded-2xl border border-surface-border bg-surface-card px-4 py-3.5'
+        }
+        style={
+          trigger === 'field'
+            ? {
+                shadowColor: palette.shadow,
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: palette.isDark ? 0.35 : 0.04,
+                shadowRadius: 4,
+                elevation: 1,
+              }
+            : undefined
+        }
       >
-        <View className="min-w-0 flex-1">
-          {title ? (
+        {trigger === 'chip' ? (
+          <>
             <Text
-              className="mb-0.5 text-[11px] uppercase tracking-wide text-ink-muted"
-              style={{ fontFamily: FontFamily.medium }}
+              className="text-[13px] text-ink"
+              style={{ fontFamily: FontFamily.heading }}
+              numberOfLines={1}
             >
-              {title}
+              {selectedLabel}
             </Text>
-          ) : null}
-          <Text
-            className="text-base text-ink"
-            style={{ fontFamily: FontFamily.heading }}
-            numberOfLines={1}
-          >
-            {selectedLabel}
-          </Text>
-        </View>
-        <View className="h-8 w-8 items-center justify-center rounded-full bg-surface-muted">
-          <ChevronDown color={palette.inkMuted} size={18} />
-        </View>
+            <ChevronDown color={palette.inkMuted} size={16} />
+          </>
+        ) : (
+          <>
+            <View className="min-w-0 flex-1">
+              {title ? (
+                <Text
+                  className="mb-0.5 text-[11px] uppercase tracking-wide text-ink-muted"
+                  style={{ fontFamily: FontFamily.medium }}
+                >
+                  {title}
+                </Text>
+              ) : null}
+              <Text
+                className="text-base text-ink"
+                style={{ fontFamily: FontFamily.heading }}
+                numberOfLines={1}
+              >
+                {selectedLabel}
+              </Text>
+            </View>
+            <View className="h-8 w-8 items-center justify-center rounded-full bg-surface-muted">
+              <ChevronDown color={palette.inkMuted} size={18} />
+            </View>
+          </>
+        )}
       </Pressable>
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
@@ -374,6 +403,7 @@ export function ChipSelector<T extends string>({
   value,
   onChange,
   presentation = 'auto',
+  sheetTrigger = 'field',
   style,
   className,
   title,
@@ -401,6 +431,7 @@ export function ChipSelector<T extends string>({
         value={value}
         onChange={onChange}
         title={title}
+        trigger={sheetTrigger}
         style={style}
         className={className}
       />

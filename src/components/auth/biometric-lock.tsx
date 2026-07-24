@@ -14,7 +14,7 @@ import { useAuthStore } from '@/stores/authStore';
 
 /**
  * Soft app lock: when biometrics are enabled and a session exists,
- * require Face ID / fingerprint before showing the signed-in shell.
+ * require fingerprint / Face ID / face unlock before showing the signed-in shell.
  */
 export function BiometricLock({ children }: { children: ReactNode }) {
   const session = useAuthStore((s) => s.session);

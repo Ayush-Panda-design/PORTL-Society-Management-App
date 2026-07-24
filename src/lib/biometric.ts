@@ -56,11 +56,20 @@ export async function biometricLabel(): Promise<string> {
   if (!LocalAuthentication) return 'Biometrics';
   try {
     const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
-    if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
+    const hasFingerprint = types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT);
+    const hasFace = types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION);
+    const hasIris = types.includes(LocalAuthentication.AuthenticationType.IRIS);
+
+    // Prefer fingerprint when both are reported. Android often lists face as
+    // supported even when BiometricPrompt actually uses the fingerprint sensor.
+    if (hasFingerprint) {
+      return Platform.OS === 'ios' ? 'Touch ID' : 'Fingerprint';
+    }
+    if (hasFace) {
       return Platform.OS === 'ios' ? 'Face ID' : 'Face unlock';
     }
-    if (types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
-      return Platform.OS === 'ios' ? 'Touch ID' : 'Fingerprint';
+    if (hasIris) {
+      return 'Iris unlock';
     }
   } catch {
     // fall through
@@ -92,13 +101,14 @@ export async function enableBiometricLogin(email: string): Promise<void> {
   if (!LocalAuthentication) {
     throw new Error('Biometrics need a rebuilt app. Run: npx expo run:android');
   }
+  const label = await biometricLabel();
   const ok = await LocalAuthentication.authenticateAsync({
-    promptMessage: 'Enable biometric unlock for Portl',
+    promptMessage: `Enable ${label} unlock for Portl`,
     cancelLabel: 'Cancel',
     disableDeviceFallback: false,
   });
   if (!ok.success) {
-    throw new Error(ok.error === 'user_cancel' ? 'Cancelled' : 'Biometric authentication failed');
+    throw new Error(ok.error === 'user_cancel' ? 'Cancelled' : `${label} authentication failed`);
   }
   await SecureStore.setItemAsync(ENABLED_KEY, '1');
   await SecureStore.setItemAsync(EMAIL_KEY, email.trim().toLowerCase());
@@ -112,16 +122,17 @@ export async function disableBiometricLogin(): Promise<void> {
 
 /** Unlock an existing SecureStore session with biometrics (no password re-entry). */
 export async function authenticateWithBiometrics(
-  promptMessage = 'Unlock Portl',
+  promptMessage?: string,
 ): Promise<boolean> {
   const LocalAuthentication = await loadLocalAuth();
   if (!LocalAuthentication) return false;
   const enabled = await isBiometricEnabled();
   if (!enabled) return false;
   try {
+    const label = await biometricLabel();
     const result = await LocalAuthentication.authenticateAsync({
-      promptMessage,
-      cancelLabel: 'Use password',
+      promptMessage: promptMessage ?? `Unlock with ${label}`,
+      cancelLabel: 'Cancel',
       disableDeviceFallback: false,
     });
     return result.success;

@@ -39,13 +39,30 @@ export async function triageComplaint(description: string): Promise<ComplaintTri
   });
 
   if (error) {
-    throw new Error(await errorMessageFromFunctionsError(error));
+    throw new Error(toUserFriendlyTriageMessage(await errorMessageFromFunctionsError(error)));
   }
 
   const payload = data as (ComplaintTriage & { error?: string }) | null;
-  if (payload?.error) throw new Error(payload.error);
+  if (payload?.error) throw new Error(toUserFriendlyTriageMessage(payload.error));
   if (!payload?.category || !payload?.priority) {
-    throw new Error('Invalid triage response');
+    throw new Error('Could not suggest a category. Please pick one manually.');
   }
   return payload;
+}
+
+function toUserFriendlyTriageMessage(raw: string): string {
+  const text = raw.trim();
+  if (!text) return 'Could not suggest a category. Please try again or pick one manually.';
+  const lower = text.toLowerCase();
+  if (
+    text.startsWith('{') ||
+    lower.includes('gemini') ||
+    lower.includes('"error"') ||
+    lower.includes('503') ||
+    lower.includes('unavailable') ||
+    text.length > 160
+  ) {
+    return 'Could not suggest a category right now. Please try again or pick one manually.';
+  }
+  return text;
 }
