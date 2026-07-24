@@ -5,6 +5,73 @@ export type AskPortlMessage = {
   content: string;
 };
 
+/** Map backend / SDK text to short copy residents and staff can understand. */
+export function toUserFriendlyAskPortlMessage(raw: string): string {
+  const text = raw.trim();
+  if (!text) return 'Ask Portl could not answer right now. Please try again.';
+
+  const lower = text.toLowerCase();
+
+  if (
+    lower.includes('503') ||
+    lower.includes('unavailable') ||
+    lower.includes('high demand') ||
+    lower.includes('resource_exhausted') ||
+    lower.includes('429') ||
+    lower.includes('quota') ||
+    lower.includes('rate limit')
+  ) {
+    return 'Ask Portl is busy right now. Please try again in a moment.';
+  }
+
+  if (
+    lower.includes('gemini') ||
+    lower.includes('api_key') ||
+    lower.includes('aiza') ||
+    lower.includes('not configured') ||
+    lower.includes('gemini_api_key') ||
+    lower.includes('missing supabase env')
+  ) {
+    return 'Ask Portl is temporarily unavailable. Please try again later.';
+  }
+
+  if (
+    lower.includes('edge function returned a non-2xx') ||
+    lower.includes('failed to send a request') ||
+    lower.includes('network') ||
+    lower.includes('fetch') ||
+    lower.includes('timeout') ||
+    lower.includes('could not reach')
+  ) {
+    return 'Could not reach Ask Portl. Check your connection and try again.';
+  }
+
+  if (lower.includes('unauthorized') || lower.includes('missing authorization')) {
+    return 'Please sign in again to use Ask Portl.';
+  }
+
+  if (lower.includes('active society membership')) {
+    return 'Your account needs an active society membership to use Ask Portl.';
+  }
+
+  if (lower.includes('message is required') || lower.includes('empty response')) {
+    return 'Please type a question and try again.';
+  }
+
+  // Raw JSON / status dumps from model providers — never show to users.
+  if (
+    text.startsWith('{') ||
+    lower.includes('"error"') ||
+    lower.includes('"status"') ||
+    /gemini error\s*\(/i.test(text) ||
+    text.length > 160
+  ) {
+    return 'Ask Portl could not answer right now. Please try again.';
+  }
+
+  return text;
+}
+
 async function readFunctionsError(error: unknown, data: unknown): Promise<string> {
   // Newer supabase-js may put the body on `data` even when `error` is set.
   if (data && typeof data === 'object' && data !== null && 'error' in data) {
@@ -32,9 +99,6 @@ async function readFunctionsError(error: unknown, data: unknown): Promise<string
   }
 
   if (error instanceof Error && error.message) {
-    if (error.message.includes('non-2xx')) {
-      return 'Ask Portl backend error. Check GEMINI_API_KEY is a Google AI Studio key (AIza…) and the ask-portl function is deployed.';
-    }
     return error.message;
   }
   return 'Ask Portl failed';
@@ -49,12 +113,14 @@ export async function askPortl(
   });
 
   if (error) {
-    throw new Error(await readFunctionsError(error, data));
+    throw new Error(toUserFriendlyAskPortlMessage(await readFunctionsError(error, data)));
   }
 
   const payload = data as { answer?: string; error?: string } | null;
-  if (payload?.error) throw new Error(payload.error);
-  if (!payload?.answer) throw new Error('Empty response from Ask Portl');
+  if (payload?.error) throw new Error(toUserFriendlyAskPortlMessage(payload.error));
+  if (!payload?.answer) {
+    throw new Error(toUserFriendlyAskPortlMessage('Empty response from Ask Portl'));
+  }
   return payload.answer;
 }
 

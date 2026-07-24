@@ -25,10 +25,9 @@ import { AvatarStack } from '@/components/ui/avatar-stack';
 import { InitialsAvatar } from '@/components/ui/brand';
 import { ChipSelector } from '@/components/ui/chip-selector';
 import { GlassCard } from '@/components/ui/glass-card';
+import { ListRow } from '@/components/ui/list-row';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SearchField } from '@/components/ui/search-field';
-import { SegmentedControl } from '@/components/ui/segmented-control';
-import { StaggeredListItem } from '@/components/ui/staggered-list-item';
 import { ThemedRefreshControl } from '@/components/ui/themed-refresh-control';
 import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
@@ -42,6 +41,7 @@ import {
   getPastels,
   type PastelTone,
 } from '@/constants/theme';
+import { useThemePalette } from '@/hooks/use-theme';
 import { complaintCategoryMeta } from '@/lib/complaint-category';
 import { complaintStatusTone } from '@/lib/community';
 import {
@@ -803,15 +803,16 @@ export default function AdminComplaintsScreen() {
   }
 
   return (
-    <ScreenHeader title="Complaints" subtitle="Grouped by category · who filed each" showBack>
-      <View className="mb-2 gap-3 px-4">
+    <ScreenHeader title="Complaints" subtitle="Resident tickets · filter by status" showBack>
+      <View className="mb-1 gap-2.5 px-4 pb-2">
         <SearchField
           value={search}
           onChangeText={setSearch}
           placeholder="Search name, flat, category…"
           accessibilityLabel="Search complaints"
         />
-        <SegmentedControl
+        <ChipSelector
+          presentation="filter"
           options={[
             { value: 'all', label: 'All' },
             ...COMPLAINT_STATUSES.map((s) => ({ value: s.value, label: s.label })),
@@ -822,6 +823,7 @@ export default function AdminComplaintsScreen() {
         <ChipSelector
           title="Category"
           presentation="sheet"
+          sheetTrigger="chip"
           options={[
             { value: 'all', label: 'All categories' },
             ...COMPLAINT_CATEGORIES.map((c) => ({ value: c, label: c })),
@@ -832,10 +834,13 @@ export default function AdminComplaintsScreen() {
       </View>
 
       {listQuery.error ? (
-        <ErrorBanner message={listQuery.error.message} onRetry={() => void listQuery.refetch()} />
+        <ErrorBanner
+          message="Could not load complaints. Pull to refresh or try again."
+          onRetry={() => void listQuery.refetch()}
+        />
       ) : null}
       {updateMutation.error ? (
-        <ErrorBanner message={(updateMutation.error as Error).message} />
+        <ErrorBanner message="Could not update that ticket. Please try again." />
       ) : null}
 
       {listQuery.isLoading && !listQuery.data ? (
@@ -844,18 +849,18 @@ export default function AdminComplaintsScreen() {
         <SectionList
           sections={sections}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}
-          stickySectionHeadersEnabled
+          contentContainerStyle={{ paddingBottom: 28, flexGrow: 1 }}
+          stickySectionHeadersEnabled={categoryFilter === 'all'}
           refreshControl={
             <ThemedRefreshControl
               refreshing={listQuery.isRefetching}
               onRefresh={() => void listQuery.refetch()}
             />
           }
-          initialNumToRender={12}
-          windowSize={8}
-          maxToRenderPerBatch={10}
-          removeClippedSubviews
+          initialNumToRender={14}
+          windowSize={10}
+          maxToRenderPerBatch={12}
+          keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <EmptyState
               visual="helpdesk"
@@ -874,118 +879,98 @@ export default function AdminComplaintsScreen() {
             />
           }
           renderSectionHeader={({ section }) => {
+            if (categoryFilter !== 'all' && sections.length <= 1) return null;
             const cat = complaintCategoryMeta(section.title);
-            const CatIcon = cat.Icon;
             return (
-              <View className="mx-4 mb-2 mt-4">
-                <View
-                  className="flex-row items-center justify-between rounded-[18px] px-3.5 py-3"
-                  style={{ backgroundColor: cat.bg }}
-                >
-                  <View className="flex-row items-center gap-2.5">
-                    <View
-                      className="h-9 w-9 items-center justify-center rounded-2xl bg-white"
-                      style={{
-                        shadowColor: '#0F172A',
-                        shadowOpacity: 0.06,
-                        shadowRadius: 8,
-                        shadowOffset: { width: 0, height: 2 },
-                        elevation: 1,
-                      }}
-                    >
-                      <CatIcon color={cat.color} size={16} strokeWidth={1.5} />
-                    </View>
-                    <Text
-                      className="text-[13px] font-bold uppercase tracking-widest text-ink"
-                      style={{ fontFamily: FontFamily.heading }}
-                    >
-                      {section.title}
-                    </Text>
-                  </View>
-                  <View className="rounded-pill bg-white/80 px-2.5 py-1">
-                    <Text className="text-[11px] text-ink-muted" style={{ fontFamily: FontFamily.heading }}>
-                      {section.data.length} ticket{section.data.length === 1 ? '' : 's'}
-                    </Text>
-                  </View>
-                </View>
-              </View>
+              <ComplaintSectionLabel
+                title={section.title}
+                color={cat.color}
+                count={section.data.length}
+              />
             );
           }}
           renderItem={({ item, index, section }) => {
-            const unread = isComplaintUnread(item.id);
+            const unread = isComplaintUnread(item.id) && item.status !== 'resolved';
             const name = reporterName(item);
             const statusMeta = STATUS_STYLE[item.status] ?? STATUS_STYLE.open;
             const cat = complaintCategoryMeta(item.category);
             const CatIcon = cat.Icon;
             const isLast = index === section.data.length - 1;
             return (
-              <StaggeredListItem index={index} disabled={listQuery.isRefetching}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`${item.category} from ${name}`}
-                  onPress={() => {
-                    markComplaintSeen(item.id);
-                    setSelectedId(item.id);
-                  }}
-                  className="mx-4 mb-2 overflow-hidden rounded-[18px] bg-surface-card px-3.5 py-3.5"
-                  style={{
-                    shadowColor: '#0F172A',
-                    shadowOpacity: 0.06,
-                    shadowRadius: 12,
-                    shadowOffset: { width: 0, height: 4 },
-                    elevation: 2,
-                    marginBottom: isLast ? 8 : 8,
-                  }}
-                >
-                  <View className="flex-row items-start gap-3">
-                    <View
-                      className="h-11 w-11 items-center justify-center rounded-2xl"
-                      style={{ backgroundColor: cat.bg }}
-                    >
-                      <CatIcon color={cat.color} size={18} strokeWidth={1.5} />
-                      {unread ? (
-                        <View
-                          className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full"
-                          style={{ backgroundColor: Brand.primary }}
-                        />
-                      ) : null}
-                    </View>
-                    <View className="min-w-0 flex-1">
-                      <View className="flex-row items-start justify-between gap-2">
-                        <Text
-                          className="min-w-0 flex-1 text-[15px] text-ink"
-                          style={{ fontFamily: FontFamily.heading }}
-                          numberOfLines={1}
-                        >
-                          {name}
-                        </Text>
-                        <View
-                          className="rounded-pill px-2.5 py-1"
-                          style={{ backgroundColor: statusMeta.bg }}
-                        >
-                          <Text
-                            className="text-[11px]"
-                            style={{ color: statusMeta.text, fontFamily: FontFamily.heading }}
-                          >
-                            {complaintStatusTone(item.status).label}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text className="mt-1 text-[12px] text-ink-muted" numberOfLines={1}>
-                        {flatLabel(item)} · {new Date(item.created_at).toLocaleDateString()}
-                      </Text>
-                      <Text className="mt-1.5 text-[13px] leading-[18px] text-ink-soft" numberOfLines={2}>
-                        {item.description}
-                      </Text>
-                    </View>
-                    <ChevronRight color={Brand.inkMuted} size={16} strokeWidth={1.5} style={{ marginTop: 2 }} />
+              <ListRow
+                title={name}
+                subtitle={item.description}
+                meta={`${flatLabel(item)} · ${new Date(item.created_at).toLocaleDateString()}`}
+                accentColor={statusMeta.accent}
+                last={isLast}
+                accessibilityLabel={`${item.category} from ${name}`}
+                onPress={() => {
+                  markComplaintSeen(item.id);
+                  setSelectedId(item.id);
+                }}
+                leading={
+                  <View
+                    className="h-10 w-10 items-center justify-center rounded-full"
+                    style={{ backgroundColor: cat.bg }}
+                  >
+                    <CatIcon color={cat.color} size={16} strokeWidth={1.5} />
+                    {unread ? (
+                      <View
+                        className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: Brand.primary }}
+                      />
+                    ) : null}
                   </View>
-                </Pressable>
-              </StaggeredListItem>
+                }
+                trailing={
+                  <View className="items-end gap-1">
+                    <View className="rounded-pill px-2 py-0.5" style={{ backgroundColor: statusMeta.bg }}>
+                      <Text
+                        className="text-[10px]"
+                        style={{ color: statusMeta.text, fontFamily: FontFamily.heading }}
+                      >
+                        {complaintStatusTone(item.status).label}
+                      </Text>
+                    </View>
+                    <ChevronRight color={Brand.inkMuted} size={16} strokeWidth={1.5} />
+                  </View>
+                }
+              />
             );
           }}
         />
       )}
     </ScreenHeader>
+  );
+}
+
+function ComplaintSectionLabel({
+  title,
+  color,
+  count,
+}: {
+  title: string;
+  color: string;
+  count: number;
+}) {
+  const { surface, inkMuted } = useThemePalette();
+  return (
+    <View
+      className="flex-row items-center justify-between px-4 pb-1.5 pt-3"
+      style={{ backgroundColor: surface }}
+    >
+      <View className="flex-row items-center gap-2">
+        <View className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+        <Text
+          className="text-[12px] uppercase tracking-wider text-ink"
+          style={{ fontFamily: FontFamily.heading }}
+        >
+          {title}
+        </Text>
+      </View>
+      <Text className="text-[11px]" style={{ color: inkMuted, fontFamily: FontFamily.medium }}>
+        {count}
+      </Text>
+    </View>
   );
 }

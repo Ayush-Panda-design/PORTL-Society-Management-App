@@ -20,4 +20,6 @@ jest.mock('@/lib/push-notifications', () => ({
   registerForPushNotifications: jest.fn(),
   clearPushToken: jest.fn(),
   configurePushPresentation: jest.fn(),
+  invokeSendPush: jest.fn().mockResolvedValue(undefined),
+  loadNotifications: jest.fn().mockResolvedValue(null),
 }));

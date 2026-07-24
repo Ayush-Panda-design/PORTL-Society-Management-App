@@ -38,6 +38,7 @@ function buildTabOptions({
     tabBarActiveTintColor: activeTint,
     tabBarInactiveTintColor: inactiveTint,
     tabBarShowLabel: false,
+    tabBarHideOnKeyboard: true,
     tabBarStyle: {
       backgroundColor: tabBarBg,
       borderTopWidth: StyleSheet.hairlineWidth,
