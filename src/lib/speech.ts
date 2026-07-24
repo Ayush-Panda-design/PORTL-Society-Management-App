@@ -1,9 +1,16 @@
+import { hasNativeModule } from '@/lib/native-module';
+
 type SpeechModule = typeof import('expo-speech');
 
 let speechModule: SpeechModule | null | undefined;
 
 async function loadSpeech(): Promise<SpeechModule | null> {
   if (speechModule !== undefined) return speechModule;
+  if (!hasNativeModule('ExpoSpeech')) {
+    console.info('[speech] ExpoSpeech not in this build — run npx expo run:android');
+    speechModule = null;
+    return null;
+  }
   try {
     speechModule = await import('expo-speech');
     return speechModule;

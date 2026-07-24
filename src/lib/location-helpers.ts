@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 
+import { hasNativeModule } from '@/lib/native-module';
 import { supabase } from '@/lib/supabase';
 import type { Gate } from '@/types/database';
 
@@ -11,7 +12,10 @@ let locationModule: LocationModule | null | undefined;
 
 async function loadLocation(): Promise<LocationModule | null> {
   if (locationModule !== undefined) return locationModule;
-  if (Platform.OS === 'web') {
+  if (Platform.OS === 'web' || !hasNativeModule('ExpoLocation')) {
+    if (Platform.OS !== 'web') {
+      console.info('[location] ExpoLocation not in this build — run npx expo run:android');
+    }
     locationModule = null;
     return null;
   }
