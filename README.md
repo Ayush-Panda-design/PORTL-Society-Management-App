@@ -2,6 +2,26 @@
 
 Portl brings the everyday life of an apartment community — the security gate, resident communication, and society operations — into a single mobile app. Instead of gate calls, WhatsApp groups, and paper registers, residents, security guards, and society admins each get a purpose-built dashboard for the workflows that matter to them.
 
+## App screens
+
+### 1. Onboarding
+
+Welcome, sign up / sign in, profile photo, and create or join a society.
+
+![Onboarding flow — welcome, auth, profile, and society setup](docs/screenshots/onboarding-flow.png)
+
+### 2. Resident
+
+Dashboard, visitors, SOS, complaints, polls, amenities, notices, and profile.
+
+![Resident flow — home, visitors, helpdesk, amenities, and more](docs/screenshots/resident-flow.png)
+
+### 3. Admin
+
+Dashboard, residents, flats, invites, broadcasts, Ask Portl, gate partners, and complaints.
+
+![Admin flow — society ops, members, invites, and tools](docs/screenshots/admin-flow.png)
+
 ## Features
 
 ### For Residents

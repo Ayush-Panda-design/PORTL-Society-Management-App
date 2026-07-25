@@ -227,17 +227,12 @@ export default function WelcomeScreen() {
               <Pressable
                 onPress={goLogin}
                 style={({ pressed }) => [
-                  styles.secondaryBtn,
-                  pressed && { opacity: 0.88, transform: [{ scale: 0.985 }] },
+                  styles.signInBtn,
+                  pressed && { opacity: 0.7 },
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel="Sign in"
               >
-                {Platform.OS === 'ios' ? (
-                  <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-                ) : (
-                  <View style={[StyleSheet.absoluteFill, styles.secondaryBtnAndroid]} />
-                )}
                 <Text style={styles.signInText}>Sign in</Text>
               </Pressable>
 
@@ -346,18 +341,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 0.15,
   },
-  secondaryBtn: {
+  signInBtn: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing.lg + 2,
-    borderRadius: Radii.lg,
-    overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: 'rgba(255,255,255,0.28)',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  secondaryBtnAndroid: {
-    backgroundColor: 'rgba(255,255,255,0.10)',
+    paddingVertical: Spacing.md + 2,
   },
   signInText: {
     fontFamily: FontFamily.heading,
