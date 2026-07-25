@@ -74,8 +74,10 @@ export function needsProfileCompletion(profile: Profile | null): boolean {
 
 export function isEmailVerified(user: User | null | undefined): boolean {
   if (!user) return false;
-  // Confirmed accounts have email_confirmed_at; some local/dev projects skip confirm.
-  return Boolean(user.email_confirmed_at);
+  // Confirmed accounts have email_confirmed_at (or confirmed_at on some payloads).
+  if (user.email_confirmed_at) return true;
+  if ((user as { confirmed_at?: string | null }).confirmed_at) return true;
+  return false;
 }
 
 export function isMembershipPending(profile: Profile | null): boolean {

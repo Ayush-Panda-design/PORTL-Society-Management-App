@@ -27,7 +27,7 @@ import {
   isBiometricHardwareAvailable,
 } from '@/lib/biometric';
 import { supabase } from '@/lib/supabase';
-import { useAuthStore } from '@/stores/authStore';
+import { isEmailVerified, useAuthStore } from '@/stores/authStore';
 
 type AuthMethod = 'password' | 'otp';
 
@@ -58,14 +58,23 @@ export default function LoginScreen() {
   }, []);
 
   const finishSignIn = async (user: User) => {
-    if (!user.email_confirmed_at) {
+    // Refresh from server — signIn payload can lag email confirmation status.
+    const { data: fresh, error: userError } = await supabase.auth.getUser();
+    const resolved = !userError && fresh.user ? fresh.user : user;
+
+    if (!isEmailVerified(resolved)) {
+      Toast.show({
+        type: 'info',
+        text1: 'Verify your email first',
+        text2: 'Enter the 6-digit code from your inbox, then sign in again.',
+      });
       router.replace({
         pathname: '/(auth)/verify-email',
-        params: { email: trimmedEmail },
+        params: { email: resolved.email ?? trimmedEmail },
       });
       return;
     }
-    const profile = await fetchProfile(user.id);
+    const profile = await fetchProfile(resolved.id);
 
     if (bioAvailable) {
       const already = await isBiometricEnabled();
@@ -78,7 +87,7 @@ export default function LoginScreen() {
             {
               text: 'Enable',
               onPress: () => {
-                void enableBiometricLogin(user.email ?? trimmedEmail).catch(() => undefined);
+                void enableBiometricLogin(resolved.email ?? trimmedEmail).catch(() => undefined);
               },
             },
           ],
@@ -86,7 +95,9 @@ export default function LoginScreen() {
       }
     }
 
-    router.replace(destinationForProfile(profile, user, useAuthStore.getState().isPlatformAdmin));
+    router.replace(
+      destinationForProfile(profile, resolved, useAuthStore.getState().isPlatformAdmin),
+    );
   };
 
   const onPasswordLogin = async () => {
@@ -102,6 +113,11 @@ export default function LoginScreen() {
       if (signInError) {
         const msg = signInError.message.toLowerCase();
         if (msg.includes('email not confirmed') || msg.includes('confirm')) {
+          Toast.show({
+            type: 'info',
+            text1: 'Verify your email first',
+            text2: 'Send a code on the next screen and enter it to continue.',
+          });
           router.replace({
             pathname: '/(auth)/verify-email',
             params: { email: trimmedEmail },

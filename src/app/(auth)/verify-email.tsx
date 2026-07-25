@@ -1,3 +1,4 @@
+import type { EmailOtpType } from '@supabase/supabase-js';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Linking from 'expo-linking';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
@@ -7,8 +8,10 @@ import {
   AppState,
   Pressable,
   Text,
+  TextInput,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
@@ -19,6 +22,25 @@ import { destinationForProfile } from '@/lib/auth-routing';
 import { getAuthRedirectUrl } from '@/lib/auth-redirect';
 import { supabase } from '@/lib/supabase';
 import { isEmailVerified, useAuthStore } from '@/stores/authStore';
+
+async function verifyEmailCode(email: string, token: string) {
+  const types: EmailOtpType[] = ['signup', 'email', 'magiclink'];
+  let lastError: { message?: string; code?: string; status?: number } | null = null;
+
+  for (const type of types) {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type,
+    });
+    if (!error && data.session) {
+      return data.session;
+    }
+    lastError = error;
+  }
+
+  throw lastError ?? new Error('Invalid or expired code');
+}
 
 export default function VerifyEmailScreen() {
   const router = useRouter();
@@ -36,14 +58,31 @@ export default function VerifyEmailScreen() {
     session?.user?.email ||
     '';
 
+  const [code, setCode] = useState('');
   const [resending, setResending] = useState(false);
+  const [verifyingCode, setVerifyingCode] = useState(false);
   const [checking, setChecking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [codeSent, setCodeSent] = useState(false);
+
+  const goHomeWithSession = useCallback(
+    async (nextSession: NonNullable<typeof session>) => {
+      setSession(nextSession);
+      const nextProfile = await fetchProfile(nextSession.user.id);
+      router.replace(
+        destinationForProfile(
+          nextProfile,
+          nextSession.user,
+          useAuthStore.getState().isPlatformAdmin,
+        ),
+      );
+    },
+    [fetchProfile, router, setSession],
+  );
 
   const continueIfVerified = useCallback(
-    async (opts?: { fromAppState?: boolean; forceNavigateToLogin?: boolean }) => {
+    async (opts?: { fromAppState?: boolean }) => {
       const fromAppState = opts?.fromAppState === true;
-      const forceNavigateToLogin = opts?.forceNavigateToLogin === true;
 
       if (!fromAppState) {
         setChecking(true);
@@ -54,7 +93,6 @@ export default function VerifyEmailScreen() {
         const { data: sessionData } = await supabase.auth.getSession();
         let activeSession = sessionData.session;
 
-        // Only refresh when we already have a local session (avoids "Auth session missing").
         if (activeSession) {
           const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
           if (refreshError && !isAuthSessionMissingError(refreshError)) {
@@ -67,24 +105,10 @@ export default function VerifyEmailScreen() {
         }
 
         if (!activeSession) {
-          // Returning from the email app often fires AppState before the deep link
-          // finishes — never bounce to login from that path.
           if (fromAppState) return;
-
           setMessage(
-            'We still need you to tap the link in your email on this phone. That opens Portl and finishes setup.',
+            'Email not confirmed yet. Enter the 6-digit code from your email below, or request a new code.',
           );
-          if (forceNavigateToLogin) {
-            Toast.show({
-              type: 'info',
-              text1: 'Almost there',
-              text2: 'If you already confirmed, sign in with your email.',
-            });
-            router.replace({
-              pathname: '/(auth)/login',
-              params: email ? { email } : undefined,
-            });
-          }
           return;
         }
 
@@ -92,9 +116,7 @@ export default function VerifyEmailScreen() {
         if (error) {
           if (isAuthSessionMissingError(error)) {
             if (!fromAppState) {
-              setMessage(
-                'Please open the link from your email on this phone, or sign in after you’ve confirmed.',
-              );
+              setMessage('Enter the 6-digit code from your email to finish verifying.');
             }
             return;
           }
@@ -105,23 +127,17 @@ export default function VerifyEmailScreen() {
         if (!nextUser || !isEmailVerified(nextUser)) {
           if (!fromAppState) {
             setMessage(
-              'Your email isn’t confirmed yet. Open your inbox, tap the Portl link, then come back here.',
+              'Still waiting for confirmation. Use the 6-digit code from your email — it’s more reliable than the link on some phones.',
             );
           }
           return;
         }
 
-        setSession(activeSession);
-        const nextProfile = await fetchProfile(nextUser.id);
-        router.replace(
-          destinationForProfile(nextProfile, nextUser, useAuthStore.getState().isPlatformAdmin),
-        );
+        await goHomeWithSession(activeSession);
       } catch (e) {
         if (fromAppState) return;
         if (isAuthSessionMissingError(e)) {
-          setMessage(
-            'Please open the link from your email on this phone, or sign in after you’ve confirmed.',
-          );
+          setMessage('Enter the 6-digit code from your email to finish verifying.');
           return;
         }
         setMessage(e instanceof Error ? e.message : 'Couldn’t check your email yet. Try again.');
@@ -129,7 +145,7 @@ export default function VerifyEmailScreen() {
         if (!fromAppState) setChecking(false);
       }
     },
-    [email, fetchProfile, router, setSession],
+    [goHomeWithSession, setSession],
   );
 
   useEffect(() => {
@@ -140,10 +156,14 @@ export default function VerifyEmailScreen() {
     }
   }, [user, profile, router]);
 
-  // If the confirmation deep link opens while this screen is mounted, establish the session.
   useEffect(() => {
     const sub = Linking.addEventListener('url', ({ url }) => {
-      if (!url.includes('callback') && !url.includes('access_token') && !url.includes('token_hash')) {
+      if (
+        !url.includes('callback') &&
+        !url.includes('access_token') &&
+        !url.includes('token_hash') &&
+        !url.includes('code=')
+      ) {
         return;
       }
       void (async () => {
@@ -151,19 +171,16 @@ export default function VerifyEmailScreen() {
         if (!next) {
           if (errorMessage) {
             setMessage(
-              'That email link didn’t work. Request a new one below, or try again in a minute.',
+              'That email link didn’t open correctly. Enter the 6-digit code from your email instead.',
             );
           }
           return;
         }
-        setSession(next);
-        await fetchProfile(next.user.id);
-        const { profile: p, isPlatformAdmin } = useAuthStore.getState();
-        router.replace(destinationForProfile(p, next.user, isPlatformAdmin));
+        await goHomeWithSession(next);
       })();
     });
     return () => sub.remove();
-  }, [fetchProfile, router, setSession]);
+  }, [goHomeWithSession]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
@@ -174,7 +191,7 @@ export default function VerifyEmailScreen() {
     return () => sub.remove();
   }, [continueIfVerified]);
 
-  const onResend = async () => {
+  const onSendCode = async () => {
     if (!email.trim()) {
       setMessage('We don’t have your email. Go back and create your account again.');
       return;
@@ -183,45 +200,70 @@ export default function VerifyEmailScreen() {
     setMessage(null);
     try {
       const redirectTo = getAuthRedirectUrl();
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
+      // OTP email is the reliable path on Android APKs (deep links often fail in Gmail).
+      const { error: otpError } = await supabase.auth.signInWithOtp({
         email: email.trim(),
-        options: { emailRedirectTo: redirectTo },
+        options: {
+          shouldCreateUser: false,
+          emailRedirectTo: redirectTo,
+        },
       });
-      if (error) {
-        // Some projects throw session-missing on resend; fall back to magic link OTP.
-        if (isAuthSessionMissingError(error)) {
-          const { error: otpError } = await supabase.auth.signInWithOtp({
-            email: email.trim(),
-            options: {
-              shouldCreateUser: false,
-              emailRedirectTo: redirectTo,
-            },
-          });
-          if (otpError) throw otpError;
-        } else {
-          throw error;
-        }
+      if (otpError) {
+        // Fall back to classic signup confirmation email if OTP is blocked.
+        const { error: resendError } = await supabase.auth.resend({
+          type: 'signup',
+          email: email.trim(),
+          options: { emailRedirectTo: redirectTo },
+        });
+        if (resendError) throw otpError;
       }
+      setCodeSent(true);
       Toast.show({
         type: 'success',
-        text1: 'Email sent',
-        text2: 'Check your inbox and tap the link on this phone.',
+        text1: 'Code sent',
+        text2: 'Check your inbox for a 6-digit code (or confirmation link).',
       });
     } catch (e) {
       const authLike =
         e && typeof e === 'object' && 'message' in e
           ? (e as { message?: string; code?: string; status?: number })
           : null;
-      if (isAuthSessionMissingError(e)) {
-        setMessage('Couldn’t resend right now. Try signing in, or create your account again.');
-      } else {
-        setMessage(
-          authErrorMessage(authLike) || (e instanceof Error ? e.message : 'Couldn’t resend email'),
-        );
-      }
+      setMessage(
+        authErrorMessage(authLike) || (e instanceof Error ? e.message : 'Couldn’t send code'),
+      );
     } finally {
       setResending(false);
+    }
+  };
+
+  const onVerifyCode = async () => {
+    const token = code.replace(/\s/g, '');
+    if (!email.trim()) {
+      setMessage('We don’t have your email. Go back and create your account again.');
+      return;
+    }
+    if (token.length < 6) {
+      setMessage('Enter the 6-digit code from your email.');
+      return;
+    }
+
+    setVerifyingCode(true);
+    setMessage(null);
+    try {
+      const next = await verifyEmailCode(email.trim(), token);
+      Toast.show({ type: 'success', text1: 'Email verified' });
+      await goHomeWithSession(next);
+    } catch (e) {
+      const authLike =
+        e && typeof e === 'object' && 'message' in e
+          ? (e as { message?: string; code?: string; status?: number })
+          : null;
+      setMessage(
+        authErrorMessage(authLike) ||
+          (e instanceof Error ? e.message : 'That code didn’t work. Request a new one.'),
+      );
+    } finally {
+      setVerifyingCode(false);
     }
   };
 
@@ -246,77 +288,119 @@ export default function VerifyEmailScreen() {
         </SafeAreaView>
       </LinearGradient>
 
-      <View className="-mt-4 flex-1 rounded-t-[36px] bg-surface px-6 pb-10 pt-8">
-        <Text className="mb-2 text-2xl text-ink" style={{ fontFamily: FontFamily.display }}>
-          Check your email
-        </Text>
-        <Text className="mb-2 text-sm leading-5 text-ink-muted">
-          We sent a link
-          {email ? (
-            <>
-              {' '}
-              to <Text className="font-semibold text-ink">{email}</Text>
-            </>
+      <KeyboardAwareScrollView
+        className="flex-1"
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View className="-mt-4 flex-1 rounded-t-[36px] bg-surface px-6 pb-10 pt-8">
+          <Text className="mb-2 text-2xl text-ink" style={{ fontFamily: FontFamily.display }}>
+            Verify your email
+          </Text>
+          <Text className="mb-2 text-sm leading-5 text-ink-muted">
+            We need to confirm
+            {email ? (
+              <>
+                {' '}
+                <Text className="font-semibold text-ink">{email}</Text>
+              </>
+            ) : null}
+            .
+          </Text>
+          <Text className="mb-5 text-sm leading-5 text-ink-muted">
+            The easiest way: tap <Text className="font-semibold text-ink">Send code</Text>, then
+            enter the 6-digit code from your email. You can also open the confirmation link on this
+            phone.
+          </Text>
+
+          {message ? (
+            <Text className="mb-4 text-sm text-status-rejected">{message}</Text>
           ) : null}
-          .
-        </Text>
-        <Text className="mb-6 text-sm leading-5 text-ink-muted">
-          Open that email on this phone and tap the link — Portl will open and you’re all set. If
-          nothing happens, come back here and tap continue.
-        </Text>
 
-        {message ? (
-          <Text className="mb-4 text-sm text-status-rejected">{message}</Text>
-        ) : null}
-
-        <Pressable
-          className={`mb-3 items-center rounded-bubbly py-4 ${checking ? 'opacity-70' : ''}`}
-          disabled={checking}
-          onPress={() => void continueIfVerified({ forceNavigateToLogin: true })}
-          style={{
-            backgroundColor: Brand.primary,
-            shadowColor: Brand.primary,
-            shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: 0.28,
-            shadowRadius: 14,
-            elevation: 4,
-          }}
-        >
-          {checking ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text className="text-base text-white" style={{ fontFamily: FontFamily.heading }}>
-              I’ve confirmed — continue
-            </Text>
-          )}
-        </Pressable>
-
-        <Pressable
-          className={`mb-6 items-center rounded-xl border border-brand-700 py-3.5 ${
-            resending ? 'opacity-70' : ''
-          }`}
-          disabled={resending}
-          onPress={() => void onResend()}
-        >
-          {resending ? (
-            <ActivityIndicator color={Brand.primary} />
-          ) : (
-            <Text className="text-base font-semibold text-brand-800">Send the email again</Text>
-          )}
-        </Pressable>
-
-        <View className="mt-auto gap-3">
-          <Link href="/(auth)/login" className="text-center text-sm font-semibold text-brand-800">
-            Already confirmed? Sign in
-          </Link>
-          <Pressable
-            onPress={() => void signOut().then(() => router.replace('/(auth)/signup'))}
-            className="py-2"
+          <Text
+            className="mb-1.5 text-xs uppercase tracking-widest text-ink-soft"
+            style={{ fontFamily: FontFamily.heading }}
           >
-            <Text className="text-center text-sm text-ink-muted">Use a different email</Text>
+            6-digit code
+          </Text>
+          <TextInput
+            value={code}
+            onChangeText={setCode}
+            keyboardType="number-pad"
+            maxLength={8}
+            placeholder="123456"
+            placeholderTextColor="#94A3B8"
+            className="mb-3 rounded-xl border border-surface-border bg-surface-card px-4 py-3.5 text-center text-xl tracking-[6px] text-ink"
+            style={{ fontFamily: FontFamily.heading }}
+            autoComplete="one-time-code"
+            textContentType="oneTimeCode"
+          />
+
+          <Pressable
+            className={`mb-3 items-center rounded-bubbly py-4 ${verifyingCode ? 'opacity-70' : ''}`}
+            disabled={verifyingCode || resending}
+            onPress={() => void onVerifyCode()}
+            style={{
+              backgroundColor: Brand.primary,
+              shadowColor: Brand.primary,
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.28,
+              shadowRadius: 14,
+              elevation: 4,
+            }}
+          >
+            {verifyingCode ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text className="text-base text-white" style={{ fontFamily: FontFamily.heading }}>
+                Verify code
+              </Text>
+            )}
           </Pressable>
+
+          <Pressable
+            className={`mb-3 items-center rounded-xl border border-brand-700 py-3.5 ${
+              resending ? 'opacity-70' : ''
+            }`}
+            disabled={resending || verifyingCode}
+            onPress={() => void onSendCode()}
+          >
+            {resending ? (
+              <ActivityIndicator color={Brand.primary} />
+            ) : (
+              <Text className="text-base font-semibold text-brand-800">
+                {codeSent ? 'Send code again' : 'Send code'}
+              </Text>
+            )}
+          </Pressable>
+
+          <Pressable
+            className={`mb-6 items-center py-2 ${checking ? 'opacity-70' : ''}`}
+            disabled={checking}
+            onPress={() => void continueIfVerified()}
+          >
+            {checking ? (
+              <ActivityIndicator color={Brand.primary} />
+            ) : (
+              <Text className="text-sm font-semibold text-brand-800">
+                I opened the email link — continue
+              </Text>
+            )}
+          </Pressable>
+
+          <View className="mt-auto gap-3">
+            <Link href="/(auth)/login" className="text-center text-sm font-semibold text-brand-800">
+              Already verified? Sign in
+            </Link>
+            <Pressable
+              onPress={() => void signOut().then(() => router.replace('/(auth)/signup'))}
+              className="py-2"
+            >
+              <Text className="text-center text-sm text-ink-muted">Use a different email</Text>
+            </Pressable>
+          </View>
         </View>
-      </View>
+      </KeyboardAwareScrollView>
     </View>
   );
 }
