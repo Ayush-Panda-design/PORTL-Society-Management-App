@@ -43,11 +43,16 @@ Portl replaces WhatsApp groups, paper visitor registers, and scattered admin wor
 
 ### 1. Install the preview APK
 
-Download the latest Android preview build from Expo, then install it on your device:
+| Link | Use this for |
+|:-----|:-------------|
+| **[⬇ Download Portl APK](https://expo.dev/artifacts/eas/QNwbRYIBLyWgeJFiDwEyjvJfZkI5F8BuIUf9ZMGliUo.apk)** | **Install the app** — direct `.apk` file (recommended for judges) |
+| [Expo build details](https://expo.dev/accounts/ayushpandas-team/projects/portl/builds/ee7d467e-1eeb-480d-b41d-0d3ae9b613aa) | Build status / logs / metadata (may require an Expo account; not needed to install) |
 
-> **APK / build page:** [expo.dev — Portl preview build](https://expo.dev/accounts/ayushpandas-team/projects/portl/builds/ee7d467e-1eeb-480d-b41d-0d3ae9b613aa)
+1. Tap **Download Portl APK**.
+2. Open the downloaded file and install (allow unknown sources if Android asks).
+3. Open **Portl**.
 
-On the build page, use **Install** / download the `.apk`, allow installs from unknown sources if prompted, then open **Portl**.
+> Prefer the **APK download** link. The Expo build page is optional and can show an “internal distribution” message if you’re not logged into Expo — the APK still works.
 
 ### 2. Sign in with a demo account
 
@@ -62,7 +67,7 @@ On the build page, use **Install** / download the `.apk`, allow installs from un
 
 ### Suggested 5-minute walkthrough
 
-1. Install the [preview APK](https://expo.dev/accounts/ayushpandas-team/projects/portl/builds/ee7d467e-1eeb-480d-b41d-0d3ae9b613aa).
+1. Install the [preview APK](https://expo.dev/artifacts/eas/QNwbRYIBLyWgeJFiDwEyjvJfZkI5F8BuIUf9ZMGliUo.apk).
 2. Watch the matching [video short](#-video-walkthroughs) (optional, ~1 min each).
 3. **Admin** (`shanwwatson@gmail.com`) — open the society dashboard, notices, residents, and dues.
 4. **Sign out** → **Resident** (`msdhoni@gmail.com`) — check visitors, notices, amenities, and payments.
@@ -84,7 +89,7 @@ Prefer watching before tapping? These YouTube Shorts show the live app for each 
 
 ### How to use the videos with the app
 
-1. Install the [preview APK](https://expo.dev/accounts/ayushpandas-team/projects/portl/builds/ee7d467e-1eeb-480d-b41d-0d3ae9b613aa) and open Portl.
+1. Install the [preview APK](https://expo.dev/artifacts/eas/QNwbRYIBLyWgeJFiDwEyjvJfZkI5F8BuIUf9ZMGliUo.apk) and open Portl.
 2. Go to **Sign in** → **Password** tab.
 3. Pick a role from the [demo table](#-judge-demo--sign-in-here-first).
 4. Play the matching short in another window, then mirror the same taps in the app.
@@ -156,6 +161,14 @@ Home, visitors, SOS, complaints, polls, amenities, notices, payments, and profil
 Society ops: residents, flats, invites, broadcasts, Ask Portl, gate partners, complaints, dues.
 
 ![Admin flow — society ops, members, invites, and tools](docs/screenshots/admin-flow.png)
+
+### Branding
+
+Product overview creatives for Portl — what the app covers at a glance.
+
+![Portl branding — Your society simplified, with app UI mockups](docs/screenshots/branding-app-overview.png)
+
+![Portl branding — Complete society management solution](docs/screenshots/branding-society-solution.png)
 
 ---
 
@@ -358,8 +371,12 @@ For judge submissions, prefer an **EAS preview APK**:
 eas build -p android --profile preview
 ```
 
-Current preview build for evaluators:  
-[Download / install Portl APK (Expo build)](https://expo.dev/accounts/ayushpandas-team/projects/portl/builds/ee7d467e-1eeb-480d-b41d-0d3ae9b613aa)
+Current preview for evaluators:
+
+| Link | Purpose |
+|:-----|:--------|
+| [Download Portl APK](https://expo.dev/artifacts/eas/QNwbRYIBLyWgeJFiDwEyjvJfZkI5F8BuIUf9ZMGliUo.apk) | Install the app |
+| [Expo build details](https://expo.dev/accounts/ayushpandas-team/projects/portl/builds/ee7d467e-1eeb-480d-b41d-0d3ae9b613aa) | Build metadata (optional) |
 
 Demo credentials are at the [top of this README](#-judge-demo--sign-in-here-first).
 
