@@ -69,7 +69,7 @@ Portl replaces WhatsApp groups, paper visitor registers, and scattered admin wor
 
 1. Install the [preview APK](https://expo.dev/artifacts/eas/QNwbRYIBLyWgeJFiDwEyjvJfZkI5F8BuIUf9ZMGliUo.apk).
 2. Watch the matching [video short](#-video-walkthroughs) (optional, ~1 min each).
-3. **Admin** (`shanwwatson@gmail.com`) — open the society dashboard, notices, residents, and dues.
+3. **Admin** (`shanewatson@gmail.com`) — open the society dashboard, notices, residents, and dues.
 4. **Sign out** → **Resident** (`msdhoni@gmail.com`) — check visitors, notices, amenities, and payments.
 5. **Sign out** → **Guard** (`honeysingh@gmail.com`) — register a visitor and follow approval / entry flow.
 
