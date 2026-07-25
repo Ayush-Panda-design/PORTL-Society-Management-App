@@ -12,6 +12,7 @@ import {
   configurePushPresentation,
   registerForPushNotifications,
 } from '@/lib/push-notifications';
+import { destinationForProfile } from '@/lib/auth-routing';
 import {
   handleVisitorNotificationAction,
   VISITOR_ACTION_APPROVE,
@@ -23,21 +24,38 @@ import type { UserRole } from '@/types/database';
 function hrefForNotification(
   data: NotificationData,
   role: UserRole | null,
+  permissions: readonly string[] = [],
 ): Href | null {
   const type = data.type as NotificationType | undefined;
   if (!type || !role) return null;
 
   switch (type) {
     case 'visitor_pending':
-    case 'visitor_checked_in':
       return role === 'resident' ? ('/(resident)/visitors' as Href) : null;
+    case 'visitor_checked_in':
+    case 'visitor_auto_approved':
+    case 'visitor_checked_out':
+      return role === 'resident' ? ('/(resident)/visitor-history' as Href) : null;
+    case 'visitor_escalated':
+      if (role === 'admin' || permissions.includes('visitors.manage')) {
+        return '/(admin)/escalated-visitors' as Href;
+      }
+      if (role === 'resident') return '/(resident)/visitors' as Href;
+      if (role === 'guard') return '/(guard)/dashboard' as Href;
+      return null;
     case 'visitor_decision':
-      return role === 'guard' ? ('/(guard)/dashboard' as Href) : null;
+      return role === 'guard' ? ('/(guard)/verify' as Href) : null;
     case 'notice':
       return role === 'resident' ? ('/(resident)/notices' as Href) : null;
     case 'broadcast':
       if (role === 'resident') return '/(resident)/notices' as Href;
       if (role === 'admin') return '/(admin)/broadcasts' as Href;
+      if (role === 'guard') return '/(guard)/dashboard' as Href;
+      return null;
+    case 'complaint_new':
+      if (role === 'admin' || permissions.includes('complaints.manage')) {
+        return '/(admin)/complaints' as Href;
+      }
       return null;
     case 'poll_new':
     case 'poll_results':
@@ -46,7 +64,10 @@ function hrefForNotification(
         ? (`/(resident)/polls/${data.pollId}` as Href)
         : ('/(resident)/polls' as Href);
     case 'join_request':
-      return role === 'admin' ? ('/(admin)/join-requests' as Href) : null;
+      if (role === 'admin' || permissions.includes('members.review')) {
+        return '/(admin)/join-requests' as Href;
+      }
+      return null;
     case 'join_reviewed':
       if (data.status === 'active') {
         if (role === 'resident') return '/(resident)' as Href;
@@ -54,10 +75,22 @@ function hrefForNotification(
         return '/(admin)' as Href;
       }
       return '/(onboarding)' as Href;
-    case 'complaint_new':
-      return role === 'admin' ? ('/(admin)/complaints' as Href) : null;
     case 'complaint_updated':
       return role === 'resident' ? ('/(resident)/helpdesk' as Href) : null;
+    case 'payment_due':
+    case 'payment_confirmed':
+      return role === 'resident'
+        ? ('/(resident)/payments' as Href)
+        : role === 'admin'
+          ? ('/(admin)/payments' as Href)
+          : null;
+    case 'amenity_booked':
+    case 'amenity_waitlist':
+      return role === 'resident'
+        ? ('/(resident)/amenities' as Href)
+        : role === 'admin'
+          ? ('/(admin)/amenities' as Href)
+          : null;
     default:
       return null;
   }
@@ -77,7 +110,10 @@ function parseData(raw: unknown): NotificationData | null {
 export function useNotificationRouting() {
   const router = useRouter();
   const role = useAuthStore((s) => s.profile?.role ?? null);
+  const permissions = useAuthStore((s) => s.permissions);
   const session = useAuthStore((s) => s.session);
+  const fetchProfile = useAuthStore((s) => s.fetchProfile);
+  const isPlatformAdmin = useAuthStore((s) => s.isPlatformAdmin);
   const userId = session?.user?.id;
   const handledColdStart = useRef(false);
 
@@ -105,9 +141,22 @@ export function useNotificationRouting() {
         await configurePushPresentation();
         const Notifications = await import('expo-notifications');
 
-        const navigate = (data: NotificationData | null) => {
+        const navigate = async (data: NotificationData | null) => {
           if (!data) return;
-          const href = hrefForNotification(data, role);
+
+          // Join approval must refresh profile or AuthGate keeps bouncing to pending.
+          if (data.type === 'join_reviewed' && userId) {
+            const nextProfile = await fetchProfile(userId);
+            const dest = destinationForProfile(
+              nextProfile,
+              useAuthStore.getState().user,
+              useAuthStore.getState().isPlatformAdmin,
+            );
+            router.replace(dest);
+            return;
+          }
+
+          const href = hrefForNotification(data, role, permissions);
           if (href) router.push(href);
         };
 
@@ -127,6 +176,7 @@ export function useNotificationRouting() {
               visitorId: data?.visitorId,
               flatId: data?.flatId,
               visitorName: data?.visitorName,
+              createdBy: data?.createdBy,
             });
             if (result.handled) {
               Toast.show({
@@ -147,7 +197,7 @@ export function useNotificationRouting() {
             actionId === Notifications.DEFAULT_ACTION_IDENTIFIER ||
             actionId === 'expo.modules.notifications.actions.DEFAULT'
           ) {
-            navigate(data);
+            void navigate(data);
           }
         };
 
@@ -172,5 +222,5 @@ export function useNotificationRouting() {
     return () => {
       subscription?.remove();
     };
-  }, [session, role, router]);
+  }, [session, role, permissions, router, fetchProfile, userId, isPlatformAdmin]);
 }

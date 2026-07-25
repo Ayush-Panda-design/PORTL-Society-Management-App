@@ -117,7 +117,13 @@ export default function CompleteProfileScreen() {
       setProfile(updated);
       const refreshed = await fetchProfile(user.id);
       Toast.show({ type: 'success', text1: 'Profile ready' });
-      router.replace(destinationForProfile(refreshed ?? updated, user));
+      router.replace(
+        destinationForProfile(
+          refreshed ?? updated,
+          user,
+          useAuthStore.getState().isPlatformAdmin,
+        ),
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save profile');
     } finally {

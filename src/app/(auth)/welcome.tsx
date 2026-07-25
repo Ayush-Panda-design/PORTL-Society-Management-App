@@ -1,24 +1,26 @@
+import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { MotiView } from 'moti';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 import { FontFamily, Radii, Spacing } from '@/constants/theme';
 import { appStorage } from '@/lib/app-storage';
 
-/** Brand red sampled for welcome CTAs — matches Portl primary. */
-const HERO_GOLD = '#E11D48';
-const HERO_GOLD_DEEP = '#BE123C';
+/** Brand rose — matches Portl primary CTAs and app icon. */
+const BRAND = '#E11D48';
+const BRAND_DEEP = '#BE123C';
+const INK = '#0B141A';
 
 const WELCOME_SEEN_KEY = 'portl_welcome_seen';
 
-function PortlGateMark({ size = 36, color = HERO_GOLD }: { size?: number; color?: string }) {
-  // Simplified gate: twin pillars + arch — reads as “portal / gate,” not a generic blob.
+function PortlGateMark({ size = 36, color = BRAND }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 36 36" fill="none">
       <Rect x="4" y="10" width="5" height="22" rx="1.5" fill={color} />
@@ -40,22 +42,28 @@ function PortlGateMark({ size = 36, color = HERO_GOLD }: { size?: number; color?
 }
 
 type EnterMotion = {
-  from: { opacity: number; translateY: number };
-  animate: { opacity: number; translateY: number };
+  from: { opacity: number; translateY: number; scale?: number };
+  animate: { opacity: number; translateY: number; scale?: number };
   transition: { type: 'timing'; duration: number; delay?: number };
 };
 
-function enterMotion(skip: boolean, translateY: number, duration: number, delay = 0): EnterMotion {
+function enterMotion(
+  skip: boolean,
+  translateY: number,
+  duration: number,
+  delay = 0,
+  scaleFrom = 1,
+): EnterMotion {
   if (skip) {
     return {
-      from: { opacity: 1, translateY: 0 },
-      animate: { opacity: 1, translateY: 0 },
+      from: { opacity: 1, translateY: 0, scale: 1 },
+      animate: { opacity: 1, translateY: 0, scale: 1 },
       transition: { type: 'timing', duration: 0 },
     };
   }
   return {
-    from: { opacity: 0, translateY },
-    animate: { opacity: 1, translateY: 0 },
+    from: { opacity: 0, translateY, scale: scaleFrom },
+    animate: { opacity: 1, translateY: 0, scale: 1 },
     transition: { type: 'timing', duration, delay },
   };
 }
@@ -82,32 +90,65 @@ export default function WelcomeScreen() {
     };
   }, []);
 
-  const brandMotion = enterMotion(skipMotion === true, -8, 700);
-  const copyMotion = enterMotion(skipMotion === true, 24, 760, 140);
-  const ctaMotion = enterMotion(skipMotion === true, 18, 700, 300);
+  const heroMotion = enterMotion(skipMotion === true, 0, 1400, 0, 1.08);
+  const brandMotion = enterMotion(skipMotion === true, -10, 720);
+  const copyMotion = enterMotion(skipMotion === true, 28, 780, 160);
+  const ctaMotion = enterMotion(skipMotion === true, 22, 720, 320);
+
+  const goSignup = () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push('/(auth)/signup' as Href);
+  };
+
+  const goLogin = () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/(auth)/login' as Href);
+  };
 
   return (
     <View style={styles.root}>
       <StatusBar style="light" />
-      <Image
-        source={require('@/assets/images/welcome-hero.jpg')}
-        style={StyleSheet.absoluteFillObject}
-        contentFit="cover"
-        transition={400}
-        accessibilityIgnoresInvertColors
-      />
 
-      {/* Top scrim — keeps status bar / notch icons legible over bright sky */}
+      {skipMotion !== null ? (
+        <MotiView
+          from={heroMotion.from}
+          animate={heroMotion.animate}
+          transition={heroMotion.transition}
+          style={StyleSheet.absoluteFill}
+        >
+          <Image
+            source={require('@/assets/images/welcome-hero.jpg')}
+            style={StyleSheet.absoluteFillObject}
+            contentFit="cover"
+            transition={500}
+            accessibilityIgnoresInvertColors
+          />
+        </MotiView>
+      ) : (
+        <Image
+          source={require('@/assets/images/welcome-hero.jpg')}
+          style={StyleSheet.absoluteFillObject}
+          contentFit="cover"
+          accessibilityIgnoresInvertColors
+        />
+      )}
+
+      {/* Soft top veil — status bar + brand stay readable over bright sky */}
       <LinearGradient
-        colors={['rgba(15, 23, 42, 0.72)', 'rgba(15, 23, 42, 0.28)', 'transparent']}
+        colors={['rgba(11, 20, 26, 0.55)', 'rgba(11, 20, 26, 0.18)', 'transparent']}
         locations={[0, 0.55, 1]}
         style={styles.topScrim}
       />
 
-      {/* Bottom scrim — full dark plane under headline + both CTAs for ≥4.5:1 text */}
+      {/* Deep bottom plane — Airbnb/Spotify pattern: photo breathes, copy sits on ink */}
       <LinearGradient
-        colors={['transparent', 'rgba(15, 23, 42, 0.55)', 'rgba(15, 23, 42, 0.92)', 'rgba(15, 23, 42, 0.98)']}
-        locations={[0, 0.22, 0.55, 1]}
+        colors={[
+          'transparent',
+          'rgba(11, 20, 26, 0.25)',
+          'rgba(11, 20, 26, 0.78)',
+          'rgba(11, 20, 26, 0.96)',
+        ]}
+        locations={[0, 0.18, 0.52, 1]}
         style={styles.bottomScrim}
       />
 
@@ -116,7 +157,7 @@ export default function WelcomeScreen() {
           styles.content,
           {
             paddingTop: insets.top + Spacing.xl,
-            paddingBottom: Math.max(insets.bottom, Spacing.lg) + Spacing.lg,
+            paddingBottom: Math.max(insets.bottom, Spacing.lg) + Spacing.md,
           },
         ]}
       >
@@ -128,12 +169,16 @@ export default function WelcomeScreen() {
             style={styles.brandBlock}
           >
             <View style={styles.brandRow}>
-              <PortlGateMark size={34} />
+              <View style={styles.markDisc}>
+                {Platform.OS === 'ios' ? (
+                  <BlurView intensity={28} tint="dark" style={StyleSheet.absoluteFill} />
+                ) : (
+                  <View style={[StyleSheet.absoluteFill, styles.markDiscAndroid]} />
+                )}
+                <PortlGateMark size={28} color="#FFFFFF" />
+              </View>
               <Text style={styles.brandWord}>Portl</Text>
             </View>
-            {/* Secondary cues — half the weight of headline/CTA */}
-            <Text style={styles.rolesLine}>Resident · Guard · Admin</Text>
-            <Text style={styles.trustLine}>Your data stays private to your society</Text>
           </MotiView>
         ) : (
           <View style={styles.brandBlock} />
@@ -161,7 +206,7 @@ export default function WelcomeScreen() {
               style={styles.ctaBlock}
             >
               <Pressable
-                onPress={() => router.push('/(auth)/signup' as Href)}
+                onPress={goSignup}
                 style={({ pressed }) => [
                   styles.primaryBtn,
                   pressed && { opacity: 0.92, transform: [{ scale: 0.985 }] },
@@ -170,7 +215,7 @@ export default function WelcomeScreen() {
                 accessibilityLabel="Set up your society"
               >
                 <LinearGradient
-                  colors={[HERO_GOLD, HERO_GOLD_DEEP]}
+                  colors={[BRAND, BRAND_DEEP]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.primaryBtnFill}
@@ -180,16 +225,23 @@ export default function WelcomeScreen() {
               </Pressable>
 
               <Pressable
-                onPress={() => router.push('/(auth)/login' as Href)}
+                onPress={goLogin}
                 style={({ pressed }) => [
-                  styles.signInBtn,
-                  pressed && { opacity: 0.78, backgroundColor: 'rgba(255,255,255,0.06)' },
+                  styles.secondaryBtn,
+                  pressed && { opacity: 0.88, transform: [{ scale: 0.985 }] },
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel="Sign in"
               >
+                {Platform.OS === 'ios' ? (
+                  <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
+                ) : (
+                  <View style={[StyleSheet.absoluteFill, styles.secondaryBtnAndroid]} />
+                )}
                 <Text style={styles.signInText}>Sign in</Text>
               </Pressable>
+
+              <Text style={styles.trustLine}>Private to your society · Resident · Guard · Admin</Text>
             </MotiView>
           </View>
         ) : null}
@@ -201,66 +253,64 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: INK,
+    overflow: 'hidden',
   },
   topScrim: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 140,
+    height: 160,
   },
   bottomScrim: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    height: '58%',
+    height: '62%',
   },
   content: {
     flex: 1,
-    paddingHorizontal: Spacing.xl + Spacing.sm, // 32
+    paddingHorizontal: Spacing.xl + Spacing.sm,
     justifyContent: 'space-between',
   },
   brandBlock: {
-    gap: Spacing.sm,
+    minHeight: 56,
   },
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
   },
+  markDisc: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: 'rgba(225, 29, 72, 0.55)',
+  },
+  markDiscAndroid: {
+    backgroundColor: 'rgba(225, 29, 72, 0.72)',
+  },
   brandWord: {
     fontFamily: FontFamily.wordmark,
-    fontSize: 38,
-    letterSpacing: -1.6,
+    fontSize: 42,
+    letterSpacing: -1.8,
     color: '#FFFFFF',
-  },
-  rolesLine: {
-    fontFamily: FontFamily.medium,
-    fontSize: 12,
-    lineHeight: 16,
-    color: 'rgba(255,255,255,0.58)',
-    letterSpacing: 0.4,
-    paddingLeft: 34 + Spacing.md, // align under wordmark
-  },
-  trustLine: {
-    fontFamily: FontFamily.body,
-    fontSize: 12,
-    lineHeight: 16,
-    color: 'rgba(255,255,255,0.72)',
-    letterSpacing: 0.15,
-    paddingLeft: 34 + Spacing.md,
-    marginTop: -2,
   },
   spacer: {
     flex: 1,
   },
   headline: {
     fontFamily: FontFamily.display,
-    fontSize: 30,
-    lineHeight: 36,
-    letterSpacing: -0.5,
+    fontSize: 34,
+    lineHeight: 40,
+    letterSpacing: -0.8,
     color: '#FFFFFF',
     marginBottom: Spacing.md,
   },
@@ -268,26 +318,26 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.body,
     fontSize: 16,
     lineHeight: 24,
-    color: 'rgba(255,255,255,0.86)',
-    maxWidth: 320,
+    color: 'rgba(255,255,255,0.82)',
+    maxWidth: 340,
   },
   ctaBlock: {
     marginTop: Spacing.xxl,
-    gap: Spacing.lg,
+    gap: Spacing.md,
   },
   primaryBtn: {
-    borderRadius: Radii.pill,
+    borderRadius: Radii.lg,
     overflow: 'hidden',
-    shadowColor: HERO_GOLD,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.32,
-    shadowRadius: 18,
-    elevation: 8,
+    shadowColor: BRAND,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.38,
+    shadowRadius: 20,
+    elevation: 10,
   },
   primaryBtnFill: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing.lg + 2,
+    paddingVertical: Spacing.lg + 4,
     paddingHorizontal: Spacing.xl,
   },
   primaryBtnText: {
@@ -296,18 +346,32 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 0.15,
   },
-  signInBtn: {
+  secondaryBtn: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing.md + 2,
-    borderRadius: Radii.pill,
+    paddingVertical: Spacing.lg + 2,
+    borderRadius: Radii.lg,
+    overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: 'rgba(255,255,255,0.42)',
+    borderColor: 'rgba(255,255,255,0.28)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  secondaryBtnAndroid: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
   },
   signInText: {
     fontFamily: FontFamily.heading,
     fontSize: 16,
     color: 'rgba(255,255,255,0.96)',
     letterSpacing: 0.2,
+  },
+  trustLine: {
+    marginTop: Spacing.sm,
+    fontFamily: FontFamily.medium,
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 0.2,
+    color: 'rgba(255,255,255,0.48)',
+    textAlign: 'center',
   },
 });

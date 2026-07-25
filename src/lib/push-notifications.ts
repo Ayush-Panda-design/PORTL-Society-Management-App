@@ -402,14 +402,26 @@ export type SendPushPayload = {
   categoryId?: string;
 };
 
-/** Invokes the send-push Edge Function. Failures are logged, never thrown. */
-export async function invokeSendPush(payload: SendPushPayload): Promise<void> {
+export type SendPushResult = {
+  ok: boolean;
+  sent?: number;
+  skipped?: number;
+  error?: string;
+};
+
+/**
+ * Invokes the send-push Edge Function.
+ * Returns a structured result so callers can surface failures (Toast / UI).
+ */
+export async function invokeSendPush(payload: SendPushPayload): Promise<SendPushResult> {
   const ids = [
     ...(payload.userId ? [payload.userId] : []),
     ...(payload.userIds ?? []),
   ].filter(Boolean);
 
-  if (ids.length === 0) return;
+  if (ids.length === 0) {
+    return { ok: false, error: 'No recipients', skipped: 0, sent: 0 };
+  }
 
   try {
     const { data, error } = await supabase.functions.invoke('send-push', {
@@ -426,25 +438,45 @@ export async function invokeSendPush(payload: SendPushPayload): Promise<void> {
 
     if (error) {
       console.warn('[push] send-push invoke failed:', error.message, error);
-      return;
+      return { ok: false, error: error.message, sent: 0 };
     }
 
-    const result = data as { sent?: number; skipped?: number; detail?: string; error?: string } | null;
+    const result = data as {
+      sent?: number;
+      skipped?: number;
+      detail?: string;
+      error?: string;
+    } | null;
+
     if (result?.error) {
       console.warn('[push] send-push error:', result.error);
-      return;
+      return { ok: false, error: result.error, sent: result.sent ?? 0, skipped: result.skipped };
     }
+
     if (result && (result.sent === 0 || (result.skipped ?? 0) > 0)) {
       console.warn(
         '[push] send-push delivered to 0 devices — recipients need a saved push_token (open the Portl development build and allow notifications).',
         result,
       );
-      return;
+      return {
+        ok: (result.sent ?? 0) > 0,
+        sent: result.sent ?? 0,
+        skipped: result.skipped,
+        error:
+          (result.sent ?? 0) > 0
+            ? undefined
+            : result.detail ?? 'No devices registered for push',
+      };
     }
+
     if (result?.sent) {
       console.info('[push] send-push sent', result.sent, 'message(s)');
     }
+
+    return { ok: true, sent: result?.sent ?? 0, skipped: result?.skipped };
   } catch (e) {
+    const message = e instanceof Error ? e.message : 'Push invoke failed';
     console.warn('[push] send-push invoke error:', e);
+    return { ok: false, error: message, sent: 0 };
   }
 }

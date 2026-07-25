@@ -11,11 +11,14 @@ Portl brings the everyday life of an apartment community — the security gate, 
 - Browse the society notice board
 - Vote in community polls
 - Book amenities (with live slot availability)
-- Browse the staff and service provider directory
+- Browse the staff and service provider directory (Services tab)
+- Pay outstanding maintenance dues and fines from Payments
+- Committee members with granted permissions can open matching admin tools from More
 
 ### For Security Guards
 - Register new visitors at the gate
-- Search residents and raise approval requests
+- Search residents by name or flat number and raise approval requests
+- Auto-approve whitelisted delivery / cab / service partners
 - Scan QR passes for pre-approved visitors (with strict expiry enforcement)
 - Verify approval status in real time
 - Mark visitor entry and exit
@@ -30,6 +33,7 @@ Portl brings the everyday life of an apartment community — the security gate, 
 - Track and resolve complaints (with full photo and comment thread visibility)
 - Configure amenities and booking slots
 - Oversee all society operations from a central dashboard
+- Issue maintenance dues and manage gate partner whitelist (delivery / cab / service)
 
 ### Platform-wide
 - Secure, role-based authentication (Resident / Guard / Admin), each restricted to their own dashboard and workflows
@@ -37,7 +41,7 @@ Portl brings the everyday life of an apartment community — the security gate, 
 - Push notifications for approvals, notices, and status updates
 - Society onboarding flow — create a new society or join an existing one via invite code
 - Dark mode support
-- **Production-Ready Observability:** Global React error boundaries and crash reporting integration ready
+- Global React error boundaries (optional Sentry DSN via env)
 
 ## Tech Stack
 
@@ -51,7 +55,7 @@ Portl brings the everyday life of an apartment community — the security gate, 
 | Server state / data fetching | TanStack Query |
 | Backend | [Supabase](https://supabase.com) (Postgres, Auth, Realtime, Storage, Edge Functions) |
 | Push notifications | Expo Notifications + Supabase Edge Function |
-| Quality Assurance | **Jest** (Unit/Integration), **Maestro** (E2E), **pgTAP** (Database/RLS) |
+| Quality Assurance | Jest (helpers + RTL), Maestro smoke/login flows, pgTAP RLS/schema checks |
 | CI/CD | GitHub Actions |
 | Animations | Moti, Lottie, React Native Reanimated |
 
@@ -86,11 +90,11 @@ supabase/
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org) 18 or later
+- [Node.js](https://nodejs.org) 20 or later
 - npm
 - A [Supabase](https://supabase.com) project (free tier is sufficient)
-- [Expo Go](https://expo.dev/go) app on your phone, or an Android/iOS simulator
-- (Optional) [Supabase CLI](https://supabase.com/docs/guides/cli) if you want to deploy the push notification Edge Function or run migrations/tests locally
+- Android emulator / device or iOS simulator with a **development build** (`npx expo run:android` / `run:ios`). Expo Go alone is not enough for Razorpay, camera, or NetInfo.
+- (Optional) [Supabase CLI](https://supabase.com/docs/guides/cli) for migrations, Edge Functions, and `npm run test:db`
 
 ## Getting Started
 
@@ -127,47 +131,60 @@ EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
 ```
 
-### 4. Run the app
+### 4. Run the app (development build required)
+
+Portl uses native modules (Razorpay, camera, NetInfo, push). **Expo Go is not enough** for the full product — use a development build or emulator:
+
+```bash
+npx expo run:android
+# or
+npx expo run:ios
+```
+
+Then start Metro if needed:
 
 ```bash
 npx expo start --dev-client
 ```
 
-Scan the QR code with a development build or press `a` / `i` in the terminal to launch an Android/iOS simulator.
+For judge demos, prefer an **EAS preview APK** (`eas build --profile preview`) and link it in your submission.
 
 ### 5. (Optional) Run Automated Tests
 
-This project includes a comprehensive suite of tests to ensure production readiness.
-
-**Run Frontend Unit Tests (Jest):**
 ```bash
-npm test
+npm test                      # Jest: helpers + RTL component tests
+npm run typecheck             # App TypeScript
+npm run typecheck:functions   # Deno check for Edge Functions (skips if Deno missing)
+npm run test:db               # pgTAP: schema, privileges, RLS policy presence
+maestro test .maestro/        # E2E smoke + login nav (dev/preview build required)
 ```
 
-**Run Database RLS Tests (pgTAP):**
-```bash
-supabase test db
-```
+Deploy Edge Functions (push, payments, Ask Portl, outbox dispatcher):
 
-**Run End-to-End Tests (Maestro):**
-(Requires Maestro CLI and a running simulator)
 ```bash
-maestro test .maestro/
+supabase functions deploy send-push
+supabase functions deploy dispatch-push-outbox
+# Schedule dispatch-push-outbox every 1–2 minutes (Dashboard Cron or pg_net)
+# Auth: Authorization: Bearer <SERVICE_ROLE_KEY>  or  x-cron-secret: <CRON_SECRET>
 ```
 
 ## Authentication & Roles
 
-Portl uses Supabase Auth for sign-up/login. Every account has a `role` (`resident`, `guard`, or `admin`) stored in the `profiles` table, and every table is protected by row-level security (RLS) policies scoped to the signed-in user's role and society. On first launch, new users go through an onboarding flow to either create a new society (becoming its admin) or join an existing one via an invite code.
+Portl uses Supabase Auth for sign-up/login (password, email OTP, and forgot-password reset). Every account has a `role` (`resident`, `guard`, or `admin`) on `profiles`, plus optional committee permissions. RLS policies scope data to the signed-in user's society. On first launch, users create a society (admin) or join via invite code.
+
+Forgot password: **Login → Forgot password?** → email link → **Choose a new password**.
 
 ## Available Scripts
 
 | Command | Description |
 |---|---|
 | `npm start` | Start the Expo dev server |
-| `npm test` | Run Jest unit and integration tests |
-| `npm run lint` | Run ESLint and check for code/security issues |
-| `npm run android` | Build and run on a connected Android device/emulator |
-| `npm run ios` | Build and run on an iOS simulator |
+| `npm test` | Run Jest unit + RTL tests |
+| `npm run typecheck` | Typecheck the Expo app |
+| `npm run typecheck:functions` | Deno-check Edge Functions (optional) |
+| `npm run lint` | Run ESLint (app + Edge Functions) |
+| `npm run android` | Build and run on Android (dev client) |
+| `npm run ios` | Build and run on iOS simulator |
 
 ## License
 

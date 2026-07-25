@@ -49,7 +49,9 @@ export default function SignupScreen() {
       });
       if (user.email_confirmed_at) {
         const profile = await fetchProfile(user.id);
-        router.replace(destinationForProfile(profile, user));
+        router.replace(
+          destinationForProfile(profile, user, useAuthStore.getState().isPlatformAdmin),
+        );
         return;
       }
     }
@@ -168,7 +170,9 @@ export default function SignupScreen() {
           status: 'active',
         });
         const profile = await fetchProfile(data.user.id);
-        router.replace(destinationForProfile(profile, data.user));
+        router.replace(
+          destinationForProfile(profile, data.user, useAuthStore.getState().isPlatformAdmin),
+        );
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to verify code');

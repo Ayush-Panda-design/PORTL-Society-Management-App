@@ -40,6 +40,8 @@ export type PaymentSheetProps = {
   purpose: PaymentPurpose;
   amountPaise: number;
   referenceId?: string | null;
+  /** Pay an existing due/hold instead of calling initiate_payment. */
+  existingPaymentId?: string | null;
   /** Shown in the sheet and Razorpay checkout. */
   title?: string;
   description?: string;
@@ -66,6 +68,7 @@ export function PaymentSheet({
   purpose,
   amountPaise,
   referenceId = null,
+  existingPaymentId = null,
   title = 'Complete payment',
   description,
   onConfirmed,
@@ -121,6 +124,16 @@ export function PaymentSheet({
       clearWait();
       setPayment(row);
       setPhase('confirmed');
+      if (row.payer_id && row.society_id) {
+        void import('@/lib/notifications').then(({ notifyPaymentConfirmed }) =>
+          notifyPaymentConfirmed({
+            payerId: row.payer_id,
+            societyId: row.society_id,
+            paymentId: row.id,
+            amountLabel: formatRupees(row.amount_paise),
+          }),
+        );
+      }
       onConfirmed(row);
     },
     [clearWait, onConfirmed],
@@ -235,18 +248,34 @@ export function PaymentSheet({
     let paymentId: string | null = null;
 
     try {
-      const { data, error: rpcError } = await supabase.rpc('initiate_payment', {
-        p_society_id: societyId,
-        p_purpose: purpose,
-        p_reference_id: referenceId,
-        p_amount_paise: amountPaise,
-      });
+      let row: Payment | null = null;
 
-      if (rpcError) {
-        throw new Error(rpcError.message);
+      if (existingPaymentId) {
+        const { data, error: fetchError } = await supabase
+          .from('payments')
+          .select('*')
+          .eq('id', existingPaymentId)
+          .maybeSingle();
+        if (fetchError) throw new Error(fetchError.message);
+        row = data as Payment | null;
+        if (!row?.id) throw new Error('Payment not found.');
+        if (row.status !== 'pending_payment' && row.status !== 'failed') {
+          throw new Error('This payment is no longer payable.');
+        }
+      } else {
+        const { data, error: rpcError } = await supabase.rpc('initiate_payment', {
+          p_society_id: societyId,
+          p_purpose: purpose,
+          p_reference_id: referenceId,
+          p_amount_paise: amountPaise,
+        });
+
+        if (rpcError) {
+          throw new Error(rpcError.message);
+        }
+        row = data as Payment | null;
       }
 
-      const row = data as Payment | null;
       if (!row?.id) {
         throw new Error('Could not start payment.');
       }
@@ -347,6 +376,7 @@ export function PaymentSheet({
     showPaymentError,
     amountPaise,
     description,
+    existingPaymentId,
     profile?.full_name,
     profile?.phone,
     purpose,

@@ -129,3 +129,26 @@ export async function deleteProfileNote(noteId: string): Promise<void> {
   const { error } = await supabase.from('profile_notes').delete().eq('id', noteId);
   if (error) throw new Error(error.message);
 }
+
+/** Human-readable residence for a linked flat (tower · Flat N). */
+export async function fetchFlatResidenceLabel(flatId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('flats')
+    .select(
+      `
+      number,
+      towers (
+        name
+      )
+    `,
+    )
+    .eq('id', flatId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+
+  const towers = data.towers as { name: string } | { name: string }[] | null;
+  const tower = Array.isArray(towers) ? towers[0]?.name : towers?.name;
+  return tower ? `${tower} · Flat ${data.number}` : `Flat ${data.number}`;
+}

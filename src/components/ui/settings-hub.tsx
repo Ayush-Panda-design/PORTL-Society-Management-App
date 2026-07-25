@@ -7,6 +7,7 @@ import Toast from 'react-native-toast-message';
 
 import { DrawerMenuButton } from '@/components/navigation/drawer-menu-button';
 import { InitialsAvatar } from '@/components/ui/brand';
+import { CountBadge } from '@/components/ui/count-badge';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Brand, FontFamily, type PastelTone } from '@/constants/theme';
 import {
@@ -25,6 +26,8 @@ export type SettingsLink = {
   title: string;
   subtitle: string;
   Icon: LucideIcon;
+  /** Red unread / action count — same style as Notices tab badges. */
+  badge?: number;
   /** @deprecated Ignored — icons use a single neutral treatment. Kept for call-site compat. */
   tone?: PastelTone;
   /** @deprecated Ignored — icons use a single neutral treatment. Kept for call-site compat. */
@@ -59,6 +62,7 @@ function LinkRow({
   title,
   subtitle,
   Icon,
+  badge = 0,
   onPress,
 }: SettingsLink & { onPress: () => void }) {
   const { pastels, isDark } = useThemePalette();
@@ -66,6 +70,7 @@ function LinkRow({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
+      accessibilityLabel={badge > 0 ? `${title}, ${badge} new` : title}
       className={
         isDark
           ? 'flex-row items-center gap-3.5 px-4 py-3.5'
@@ -97,6 +102,7 @@ function LinkRow({
           {subtitle}
         </Text>
       </View>
+      <CountBadge count={badge} size="sm" />
       <ChevronRight color={Brand.inkMuted} size={16} strokeWidth={1.5} />
     </Pressable>
   );

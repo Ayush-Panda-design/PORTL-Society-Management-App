@@ -1,9 +1,11 @@
+import { useMemo } from 'react';
 import {
   BarChart3,
   Building2,
   ClipboardList,
   Phone,
   Receipt,
+  Shield,
   Sparkles,
   User,
   Users,
@@ -11,84 +13,106 @@ import {
 import { type Href } from 'expo-router';
 
 import { SettingsHub, type SettingsLink } from '@/components/ui/settings-hub';
+import { attachBadgesToSections, useFeatureBadges } from '@/hooks/use-feature-badges';
+import { committeeManageLinks } from '@/lib/auth-routing';
 import { useAuthStore } from '@/stores/authStore';
-
-const SECTIONS: { title: string; links: SettingsLink[] }[] = [
-  {
-    title: 'Account',
-    links: [
-      {
-        href: '/(resident)/profile' as Href,
-        title: 'My profile',
-        subtitle: 'Bio, personal details, and private notes',
-        Icon: User,
-      },
-    ],
-  },
-  {
-    title: 'Society',
-    links: [
-      {
-        href: '/(resident)/ask-portl' as Href,
-        title: 'Ask Portl',
-        subtitle: 'Natural-language society assistant',
-        Icon: Sparkles,
-      },
-      {
-        href: '/(resident)/polls' as Href,
-        title: 'Polls',
-        subtitle: 'Vote on society questions',
-        Icon: BarChart3,
-      },
-      {
-        href: '/(resident)/helpdesk' as Href,
-        title: 'Helpdesk',
-        subtitle: 'File and track complaints',
-        Icon: ClipboardList,
-      },
-      {
-        href: '/(resident)/amenities' as Href,
-        title: 'Amenities',
-        subtitle: 'Book gym, clubhouse, and more',
-        Icon: Building2,
-      },
-      {
-        href: '/(resident)/payments' as Href,
-        title: 'Payments',
-        subtitle: 'Ledger, dues, and statement',
-        Icon: Receipt,
-      },
-      {
-        href: '/(resident)/directory' as Href,
-        title: 'Directory',
-        subtitle: 'Staff & service contacts',
-        Icon: Phone,
-      },
-      {
-        href: '/(resident)/visitor-history' as Href,
-        title: 'Visitor history',
-        subtitle: 'Past guests for your flat',
-        Icon: Users,
-      },
-    ],
-  },
-];
 
 export default function ResidentMore() {
   const profile = useAuthStore((s) => s.profile);
+  const permissions = useAuthStore((s) => s.permissions);
+  const badges = useFeatureBadges();
+
+  const sections = useMemo(() => {
+    const base: { title: string; links: SettingsLink[] }[] = [
+      {
+        title: 'Account',
+        links: [
+          {
+            href: '/(resident)/profile' as Href,
+            title: 'My profile',
+            subtitle: 'Bio, personal details, and private notes',
+            Icon: User,
+          },
+        ],
+      },
+      {
+        title: 'Society',
+        links: [
+          {
+            href: '/(resident)/ask-portl' as Href,
+            title: 'Ask Portl',
+            subtitle: 'Natural-language society assistant',
+            Icon: Sparkles,
+          },
+          {
+            href: '/(resident)/polls' as Href,
+            title: 'Polls',
+            subtitle: 'Vote on society questions',
+            Icon: BarChart3,
+          },
+          {
+            href: '/(resident)/helpdesk' as Href,
+            title: 'Helpdesk',
+            subtitle: 'File and track complaints',
+            Icon: ClipboardList,
+          },
+          {
+            href: '/(resident)/amenities' as Href,
+            title: 'Amenities',
+            subtitle: 'Book gym, clubhouse, and more',
+            Icon: Building2,
+          },
+          {
+            href: '/(resident)/payments' as Href,
+            title: 'Payments',
+            subtitle: 'Ledger, dues, and pay online',
+            Icon: Receipt,
+          },
+          {
+            href: '/(resident)/directory' as Href,
+            title: 'Directory',
+            subtitle: 'Staff & service contacts',
+            Icon: Phone,
+          },
+          {
+            href: '/(resident)/visitor-history' as Href,
+            title: 'Visitor history',
+            subtitle: 'Past guests for your flat',
+            Icon: Users,
+          },
+        ],
+      },
+    ];
+
+    const committee = committeeManageLinks(permissions ?? []);
+    if (committee.length > 0) {
+      base.push({
+        title: 'Committee tools',
+        links: committee.map((link) => ({
+          ...link,
+          Icon: Shield,
+        })),
+      });
+    }
+
+    return attachBadgesToSections(base, badges);
+  }, [badges, permissions]);
+
   const roleLabel =
     profile?.role === 'admin'
       ? 'admin'
       : profile?.role === 'guard'
         ? 'security'
-        : 'resident';
+        : (permissions?.length ?? 0) > 0
+          ? 'committee'
+          : 'resident';
 
   return (
     <SettingsHub
       title="More"
       subtitle={`${profile?.full_name ?? 'Resident'} · ${roleLabel}`}
       links={[]}
-      sections={SECTIONS}
+      sections={sections}
     />
   );
 }

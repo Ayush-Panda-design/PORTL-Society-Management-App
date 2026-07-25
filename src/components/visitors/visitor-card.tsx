@@ -3,7 +3,7 @@ import { Check, CheckCircle2, Clock3, LogIn, LogOut, X, XCircle, QrCode } from '
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { VisitorSilhouette } from '@/components/illustrations';
-import { Brand, FontFamily } from '@/constants/theme';
+import { Brand, FontFamily, StatusColors } from '@/constants/theme';
 import { useThemePalette } from '@/hooks/use-theme';
 import {
   flatLabel,
@@ -17,7 +17,7 @@ import type { VisitorStatus, VisitorWithFlat } from '@/types/database';
 type Action = {
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'danger' | 'secondary';
+  variant?: 'primary' | 'danger' | 'secondary' | 'success';
   loading?: boolean;
   icon?: 'check' | 'x' | 'qr-code';
 };
@@ -122,6 +122,20 @@ export function VisitorCard({ visitor, actions, showStatus = true }: Props) {
             {formatRelativeTime(visitor.created_at)}
             {visitor.phone ? ` · ${visitor.phone}` : ''}
           </Text>
+          {visitor.entry_time || visitor.exit_time ? (
+            <Text className="mt-1 text-xs text-ink-muted">
+              {visitor.entry_time
+                ? `In ${new Date(visitor.entry_time).toLocaleString()}${
+                    visitor.entry_gate_name ? ` · ${visitor.entry_gate_name}` : ''
+                  }`
+                : 'Not checked in'}
+              {visitor.exit_time
+                ? `\nOut ${new Date(visitor.exit_time).toLocaleString()}${
+                    visitor.exit_gate_name ? ` · ${visitor.exit_gate_name}` : ''
+                  }`
+                : ''}
+            </Text>
+          ) : null}
           {visitor.status === 'pending' && (visitor.escalation_level ?? 0) > 0 ? (
             <Text className="mt-1 text-xs font-medium text-amber-700">
               {(visitor.escalation_level ?? 0) >= 2
@@ -137,12 +151,17 @@ export function VisitorCard({ visitor, actions, showStatus = true }: Props) {
           {actions.map((action) => {
             const isPrimary = action.variant === 'primary' || !action.variant;
             const isDanger = action.variant === 'danger';
+            const isSuccess = action.variant === 'success';
+            const filled = isDanger || isPrimary || isSuccess;
             const bg = isDanger
               ? 'bg-status-rejected'
-              : isPrimary
-                ? ''
-                : 'bg-surface-muted';
-            const text = isDanger || isPrimary ? 'text-white' : 'text-ink';
+              : isSuccess
+                ? 'bg-status-approved'
+                : isPrimary
+                  ? ''
+                  : 'bg-surface-muted';
+            const text = filled ? 'text-white' : 'text-ink';
+            const iconColor = filled ? '#fff' : Brand.primary;
 
             return (
               <Pressable
@@ -152,20 +171,26 @@ export function VisitorCard({ visitor, actions, showStatus = true }: Props) {
                 className={`flex-1 flex-row items-center justify-center gap-1.5 rounded-xl py-2.5 ${bg} ${
                   action.loading ? 'opacity-70' : ''
                 }`}
-                style={isPrimary && !isDanger ? { backgroundColor: Brand.primary } : undefined}
+                style={
+                  isPrimary && !isDanger && !isSuccess
+                    ? { backgroundColor: Brand.primary }
+                    : isSuccess
+                      ? { backgroundColor: StatusColors.approved.solid }
+                      : undefined
+                }
               >
                 {action.loading ? (
-                  <ActivityIndicator color={isDanger || isPrimary ? '#fff' : Brand.primary} />
+                  <ActivityIndicator color={iconColor} />
                 ) : (
                   <>
                     {action.icon === 'check' ? (
-                      <Check color={isDanger || isPrimary ? '#fff' : Brand.primary} size={16} />
+                      <Check color={iconColor} size={16} />
                     ) : null}
                     {action.icon === 'x' ? (
-                      <X color={isDanger || isPrimary ? '#fff' : Brand.primary} size={16} />
+                      <X color={iconColor} size={16} />
                     ) : null}
                     {action.icon === 'qr-code' ? (
-                      <QrCode color={isDanger || isPrimary ? '#fff' : Brand.primary} size={16} />
+                      <QrCode color={iconColor} size={16} />
                     ) : null}
                     <Text className={`text-sm font-semibold ${text}`}>{action.label}</Text>
                   </>

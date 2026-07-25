@@ -1,7 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { FileDown, Receipt } from 'lucide-react-native';
+import { useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
+import Toast from 'react-native-toast-message';
 
+import { PaymentSheet } from '@/components/payments/payment-sheet';
+import { ContentContainer } from '@/components/ui/content-container';
 import { GlassCard } from '@/components/ui/glass-card';
 import { ListRow } from '@/components/ui/list-row';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -11,11 +15,15 @@ import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand, FontFamily, Pastels } from '@/constants/theme';
-import { fetchMyPaymentStatement, formatPaise } from '@/lib/ops-api';
+import {
+  fetchMyPaymentStatement,
+  formatPaise,
+  initiatePartialPayment,
+} from '@/lib/ops-api';
 import { sharePaymentReceiptPdf } from '@/lib/print-docs';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
-import type { PaymentLedgerEntry } from '@/types/database';
+import type { PaymentLedgerEntry, PaymentPurpose } from '@/types/database';
 
 function statusLabel(status: string): string {
   switch (status) {
@@ -64,49 +72,25 @@ function statusAccent(status: string): string {
   }
 }
 
-function LedgerRow({ item, index }: { item: PaymentLedgerEntry; index: number }) {
+function isPayable(item: PaymentLedgerEntry): boolean {
   const outstanding = item.outstanding_paise ?? 0;
-  const canReceipt =
-    item.status === 'confirmed' || item.status === 'partially_paid';
+  if (outstanding <= 0) return false;
   return (
-    <StaggeredListItem index={index}>
-      <ListRow
-        title={purposeLabel(String(item.purpose))}
-        subtitle={`${new Date(item.created_at).toLocaleString()} · ${statusLabel(String(item.status))}`}
-        meta={item.notes ?? undefined}
-        accentColor={statusAccent(String(item.status))}
-        onPress={canReceipt ? () => void sharePaymentReceiptPdf(item) : undefined}
-        trailing={
-          <View className="items-end">
-            <Text className="text-base text-ink" style={{ fontFamily: FontFamily.heading }}>
-              {formatPaise(item.amount_paise)}
-            </Text>
-            {outstanding > 0 ? (
-              <Text className="mt-0.5 text-xs" style={{ color: '#E11D48' }}>
-                Due {formatPaise(outstanding)}
-              </Text>
-            ) : (
-              <Text className="mt-0.5 text-xs text-brand-700">Settled</Text>
-            )}
-            {canReceipt ? (
-              <Pressable
-                onPress={() => void sharePaymentReceiptPdf(item)}
-                className="mt-1.5 flex-row items-center gap-1"
-                hitSlop={8}
-              >
-                <FileDown color={Brand.primary} size={12} />
-                <Text className="text-[11px] font-semibold text-brand-700">PDF</Text>
-              </Pressable>
-            ) : null}
-          </View>
-        }
-      />
-    </StaggeredListItem>
+    item.status === 'pending_payment' ||
+    item.status === 'partially_paid' ||
+    item.status === 'failed'
   );
 }
 
 export default function PaymentStatementScreen() {
   const userId = useAuthStore((s) => s.user?.id);
+  const societyId = useAuthStore((s) => s.profile?.society_id);
+  const [paying, setPaying] = useState<PaymentLedgerEntry | null>(null);
+  const [checkoutPaymentId, setCheckoutPaymentId] = useState<string | null>(null);
+  const [checkoutAmount, setCheckoutAmount] = useState(0);
+  const [checkoutPurpose, setCheckoutPurpose] = useState<PaymentPurpose>('maintenance_due');
+  const [sheetVisible, setSheetVisible] = useState(false);
+  const [preparing, setPreparing] = useState(false);
 
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: queryKeys.paymentStatement(userId ?? 'none'),
@@ -119,8 +103,44 @@ export default function PaymentStatementScreen() {
     0,
   );
 
+  const startPay = async (item: PaymentLedgerEntry) => {
+    if (!societyId) return;
+    const outstanding = item.outstanding_paise ?? 0;
+    if (outstanding <= 0) return;
+
+    setPreparing(true);
+    setPaying(item);
+    try {
+      if (item.status === 'partially_paid') {
+        const child = await initiatePartialPayment(item.id, outstanding);
+        const childId =
+          typeof child === 'object' && child && 'id' in child
+            ? String((child as { id: string }).id)
+            : null;
+        if (!childId) throw new Error('Could not start partial payment.');
+        setCheckoutPaymentId(childId);
+        setCheckoutAmount(outstanding);
+        setCheckoutPurpose(item.purpose as PaymentPurpose);
+      } else {
+        setCheckoutPaymentId(item.id);
+        setCheckoutAmount(outstanding || item.amount_paise);
+        setCheckoutPurpose(item.purpose as PaymentPurpose);
+      }
+      setSheetVisible(true);
+    } catch (e) {
+      Toast.show({
+        type: 'error',
+        text1: e instanceof Error ? e.message : 'Could not start payment',
+      });
+      setPaying(null);
+    } finally {
+      setPreparing(false);
+    }
+  };
+
   return (
-    <ScreenHeader title="Payments" subtitle="Ledger & statement" showBack>
+    <ScreenHeader title="Payments" subtitle="Ledger, dues & pay online" showBack>
+      <ContentContainer>
       {error ? (
         <ErrorBanner message={error.message} onRetry={() => void refetch()} />
       ) : null}
@@ -164,9 +184,88 @@ export default function PaymentStatementScreen() {
               ]}
             />
           }
-          renderItem={({ item, index }) => <LedgerRow item={item} index={index} />}
+          renderItem={({ item, index }) => {
+            const outstanding = item.outstanding_paise ?? 0;
+            const canReceipt =
+              item.status === 'confirmed' || item.status === 'partially_paid';
+            const payable = isPayable(item);
+            return (
+              <StaggeredListItem index={index}>
+                <ListRow
+                  title={purposeLabel(String(item.purpose))}
+                  subtitle={`${new Date(item.created_at).toLocaleString()} · ${statusLabel(String(item.status))}`}
+                  meta={item.notes ?? undefined}
+                  accentColor={statusAccent(String(item.status))}
+                  onPress={
+                    payable
+                      ? () => void startPay(item)
+                      : canReceipt
+                        ? () => void sharePaymentReceiptPdf(item)
+                        : undefined
+                  }
+                  trailing={
+                    <View className="items-end">
+                      <Text className="text-base text-ink" style={{ fontFamily: FontFamily.heading }}>
+                        {formatPaise(item.amount_paise)}
+                      </Text>
+                      {outstanding > 0 ? (
+                        <Text className="mt-0.5 text-xs" style={{ color: '#E11D48' }}>
+                          Due {formatPaise(outstanding)}
+                        </Text>
+                      ) : (
+                        <Text className="mt-0.5 text-xs text-brand-700">Settled</Text>
+                      )}
+                      {payable ? (
+                        <Pressable
+                          onPress={() => void startPay(item)}
+                          className="mt-1.5 rounded-full bg-brand-700 px-2.5 py-1"
+                          disabled={preparing && paying?.id === item.id}
+                        >
+                          <Text className="text-[11px] font-semibold text-white">Pay</Text>
+                        </Pressable>
+                      ) : canReceipt ? (
+                        <Pressable
+                          onPress={() => void sharePaymentReceiptPdf(item)}
+                          className="mt-1.5 flex-row items-center gap-1"
+                          hitSlop={8}
+                        >
+                          <FileDown color={Brand.primary} size={12} />
+                          <Text className="text-[11px] font-semibold text-brand-700">PDF</Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  }
+                />
+              </StaggeredListItem>
+            );
+          }}
         />
       )}
+      </ContentContainer>
+
+      {societyId && checkoutPaymentId ? (
+        <PaymentSheet
+          visible={sheetVisible}
+          societyId={societyId}
+          purpose={checkoutPurpose}
+          amountPaise={checkoutAmount}
+          existingPaymentId={checkoutPaymentId}
+          title={`Pay ${purposeLabel(checkoutPurpose)}`}
+          description={paying?.notes ?? undefined}
+          onConfirmed={() => {
+            setSheetVisible(false);
+            setPaying(null);
+            setCheckoutPaymentId(null);
+            void refetch();
+            Toast.show({ type: 'success', text1: 'Payment confirmed' });
+          }}
+          onClose={() => {
+            setSheetVisible(false);
+            setPaying(null);
+            setCheckoutPaymentId(null);
+          }}
+        />
+      ) : null}
     </ScreenHeader>
   );
 }

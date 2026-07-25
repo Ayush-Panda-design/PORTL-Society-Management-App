@@ -134,6 +134,8 @@ export async function authenticateWithBiometrics(
       promptMessage: promptMessage ?? `Unlock with ${label}`,
       cancelLabel: 'Cancel',
       disableDeviceFallback: false,
+      // Avoid hanging forever when the system prompt never returns on some OEMs.
+      requireConfirmation: false,
     });
     return result.success;
   } catch {

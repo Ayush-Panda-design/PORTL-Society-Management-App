@@ -200,6 +200,24 @@ export type VisitorWithFlat = Visitor & {
       | { id: string; name: string; society_id: string }[]
       | null;
   } | null;
+  /** Optional gate log times joined on history screens. */
+  entry_time?: string | null;
+  exit_time?: string | null;
+  entry_gate_name?: string | null;
+  exit_gate_name?: string | null;
+};
+
+export type SocietyPartner = {
+  id: string;
+  society_id: string;
+  name: string;
+  phone: string | null;
+  type: Extract<VisitorType, 'delivery' | 'cab' | 'service'>;
+  company_name: string | null;
+  auto_approve: boolean;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
 };
 
 export type Gate = {

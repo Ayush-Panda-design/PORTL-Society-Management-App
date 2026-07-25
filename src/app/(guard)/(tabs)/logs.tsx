@@ -15,7 +15,7 @@ import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Brand, FontFamily } from '@/constants/theme';
 import { useModalBack } from '@/hooks/use-modal-back';
 import { useVisitorsRealtime } from '@/hooks/use-visitors-realtime';
-import { formatDateTime, flatTowerName } from '@/lib/visitors';
+import { formatDateTime, flatTowerName, notifyFlatOfVisitorExit } from '@/lib/visitors';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import type { VisitorStatus, VisitorWithFlat } from '@/types/database';
@@ -182,6 +182,13 @@ export default function GuardLogsScreen() {
 
       if (statusError) {
         setActionError(statusError.message);
+      } else if (profile?.society_id && visitor.flat_id) {
+        void notifyFlatOfVisitorExit({
+          flatId: visitor.flat_id,
+          societyId: profile.society_id,
+          visitorName: visitor.name,
+          visitorId: visitor.id,
+        });
       }
     } catch (e) {
       setActionError(e instanceof Error ? e.message : 'Failed to mark exit');

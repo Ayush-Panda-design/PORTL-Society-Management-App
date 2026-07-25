@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "lib": ["deno.window", "deno.unstable"],
+    "strict": true,
+    "noImplicitAny": false,
+    "allowJs": false
+  },
+  "include": ["./**/*.ts"]
+}

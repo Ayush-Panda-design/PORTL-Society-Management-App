@@ -15,11 +15,12 @@ import { Brand, FontFamily, type PastelTone } from '@/constants/theme';
 import { useThemePalette } from '@/hooks/use-theme';
 import { formatNoticeDate } from '@/lib/community';
 import { fetchNotices } from '@/lib/community-api';
+import { fetchBroadcasts } from '@/lib/broadcasts-api';
 import { acknowledgeNotice, fetchMyNoticeAcks } from '@/lib/ops-api';
 import { queryKeys } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/authStore';
 import { useReadStateStore } from '@/stores/readStateStore';
-import type { Notice, NoticeCategory } from '@/types/database';
+import type { Broadcast, Notice, NoticeCategory } from '@/types/database';
 
 const CATEGORY_META: Record<
   NoticeCategory,
@@ -55,8 +56,14 @@ export default function ResidentNoticesScreen() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
-    queryKey: queryKeys.notices(societyId ?? 'none'),
-    queryFn: () => fetchNotices(societyId!),
+    queryKey: [...queryKeys.notices(societyId ?? 'none'), 'published'],
+    queryFn: () => fetchNotices(societyId!, { publishedOnly: true }),
+    enabled: Boolean(societyId),
+  });
+
+  const broadcastsQuery = useQuery({
+    queryKey: queryKeys.broadcasts(societyId ?? 'none'),
+    queryFn: () => fetchBroadcasts(societyId!),
     enabled: Boolean(societyId),
   });
 
@@ -87,7 +94,27 @@ export default function ResidentNoticesScreen() {
     [data, search],
   );
 
+  const broadcasts = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const list = broadcastsQuery.data ?? [];
+    if (!q) return list;
+    return list.filter((b) =>
+      [b.title, b.body, b.severity].join(' ').toLowerCase().includes(q),
+    );
+  }, [broadcastsQuery.data, search]);
+
   const selected = notices.find((n) => n.id === selectedId) ?? data?.find((n) => n.id === selectedId) ?? null;
+
+  const severityColor = (severity: Broadcast['severity']) => {
+    if (severity === 'critical') return '#E11D48';
+    if (severity === 'urgent') return '#EA580C';
+    return Brand.primary;
+  };
+
+  const onRefreshAll = () => {
+    void refetch();
+    void broadcastsQuery.refetch();
+  };
 
   if (!societyId) {
     return (
@@ -201,7 +228,7 @@ export default function ResidentNoticesScreen() {
       </View>
 
       {error ? (
-        <ErrorBanner message={error.message} onRetry={() => void refetch()} />
+        <ErrorBanner message={error.message} onRetry={onRefreshAll} />
       ) : null}
 
       {isLoading && !data ? (
@@ -214,18 +241,71 @@ export default function ResidentNoticesScreen() {
           ItemSeparatorComponent={() => <View className={isDark ? 'h-0' : 'h-2'} />}
           refreshControl={
             <ThemedRefreshControl
-              refreshing={isRefetching}
-              onRefresh={() => void refetch()}
+              refreshing={isRefetching || broadcastsQuery.isRefetching}
+              onRefresh={onRefreshAll}
             />
+          }
+          ListHeaderComponent={
+            broadcasts.length > 0 ? (
+              <View className="mb-4">
+                <Text
+                  className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-muted"
+                  style={{ fontFamily: FontFamily.heading }}
+                >
+                  Alerts
+                </Text>
+                {broadcasts.map((item) => (
+                  <AppCard key={item.id} className="mb-2 p-4">
+                    <View className="mb-1 flex-row items-center gap-2">
+                      <View
+                        className="rounded-pill px-2 py-0.5"
+                        style={{ backgroundColor: `${severityColor(item.severity)}22` }}
+                      >
+                        <Text
+                          className="text-[10px] font-bold uppercase"
+                          style={{ color: severityColor(item.severity) }}
+                        >
+                          {item.severity}
+                        </Text>
+                      </View>
+                      <Text className="text-[11px] text-ink-faint">
+                        {formatNoticeDate(item.created_at)}
+                      </Text>
+                    </View>
+                    <Text
+                      className="mb-1 text-base text-ink"
+                      style={{ fontFamily: FontFamily.heading }}
+                    >
+                      {item.title}
+                    </Text>
+                    <Text className="text-sm leading-5 text-ink-muted">{item.body}</Text>
+                  </AppCard>
+                ))}
+                <Text
+                  className="mb-1 mt-2 text-xs font-semibold uppercase tracking-wider text-ink-muted"
+                  style={{ fontFamily: FontFamily.heading }}
+                >
+                  Notices
+                </Text>
+              </View>
+            ) : null
           }
           ListEmptyComponent={
             <EmptyState
               visual="notices"
-              title={search.trim() ? 'No matches' : 'No notices yet'}
+              title={
+                search.trim()
+                  ? 'No matches'
+                  : broadcasts.length > 0
+                    ? 'No notices yet'
+                    : 'No notices yet'
+              }
               subtitle={
                 search.trim()
                   ? 'Try a different title or keyword.'
-                  : 'When the society posts an update, it will appear here.'
+                  : broadcasts.length > 0
+                    ? 'Alerts are above — notices will appear here when posted.'
+                    : 'When the society posts an update, it will appear here.'
               }
               tips={
                 search.trim()

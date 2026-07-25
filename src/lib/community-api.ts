@@ -33,12 +33,36 @@ import type {
   Tower,
 } from '@/types/database';
 
-export async function fetchNotices(societyId: string): Promise<Notice[]> {
-  const { data, error } = await supabase
+export async function fetchNotices(
+  societyId: string,
+  opts?: { publishedOnly?: boolean },
+): Promise<Notice[]> {
+  // Resident visibility: published window + tower targeting (migration 040).
+  if (opts?.publishedOnly) {
+    const { data, error } = await supabase.rpc('fetch_visible_notices', {
+      p_society_id: societyId,
+    });
+    if (!error) {
+      return (data as Notice[]) ?? [];
+    }
+    // Fallback before migration is applied.
+    console.warn('[notices] fetch_visible_notices unavailable:', error.message);
+  }
+
+  let query = supabase
     .from('notices')
     .select('*')
     .eq('society_id', societyId)
     .order('created_at', { ascending: false });
+
+  if (opts?.publishedOnly) {
+    const now = new Date().toISOString();
+    query = query
+      .or(`publish_at.is.null,publish_at.lte."${now}"`)
+      .or(`expires_at.is.null,expires_at.gt."${now}"`);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw new Error(error.message);
   return (data as Notice[]) ?? [];
@@ -58,12 +82,12 @@ export async function upsertNotice(input: {
   expiresAt?: string | null;
   category?: 'urgent' | 'general' | 'event';
   requiresAck?: boolean;
-}): Promise<void> {
+}): Promise<Notice> {
   const category = input.category ?? 'general';
   const requiresAck = input.requiresAck ?? category === 'urgent';
 
   if (input.id) {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('notices')
       .update({
         title: input.title,
@@ -77,9 +101,12 @@ export async function upsertNotice(input: {
         category,
         requires_ack: requiresAck,
       })
-      .eq('id', input.id);
+      .eq('id', input.id)
+      .select('*')
+      .maybeSingle();
     if (error) throw new Error(error.message);
-    return;
+    if (!data) throw new Error('Notice not found or you cannot edit it.');
+    return data as Notice;
   }
 
   const { data, error } = await supabase
@@ -98,7 +125,7 @@ export async function upsertNotice(input: {
       category,
       requires_ack: requiresAck,
     })
-    .select('id')
+    .select('*')
     .single();
   if (error) throw new Error(error.message);
 
@@ -106,8 +133,12 @@ export async function upsertNotice(input: {
     societyId: input.societyId,
     title: input.title,
     body: input.body,
-    noticeId: data?.id,
+    noticeId: data.id,
+    targetAudience: input.targetAudience ?? 'all',
+    targetTowerId: input.targetTowerId ?? null,
   });
+
+  return data as Notice;
 }
 
 export async function deleteNotice(id: string): Promise<void> {
@@ -776,6 +807,8 @@ export async function bookAmenitySlot(input: {
   flatId: string;
   date: string;
   slot: string;
+  amenityName?: string;
+  societyId?: string;
 }): Promise<AmenityBooking> {
   const { data, error } = await supabase.rpc('book_amenity_slot', {
     p_amenity_id: input.amenityId,
@@ -784,7 +817,25 @@ export async function bookAmenitySlot(input: {
     p_slot: input.slot,
   });
   if (error) throw new Error(error.message);
-  return data as AmenityBooking;
+  const booking = data as AmenityBooking;
+
+  if (input.societyId) {
+    const { notifyAmenityBooked } = await import('@/lib/notifications');
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    void notifyAmenityBooked({
+      flatId: input.flatId,
+      societyId: input.societyId,
+      amenityName: input.amenityName ?? 'Amenity',
+      date: input.date,
+      slot: input.slot,
+      amenityId: input.amenityId,
+      excludeUserId: user?.id,
+    });
+  }
+
+  return booking;
 }
 
 export async function cancelAmenityBooking(bookingId: string): Promise<void> {
@@ -1101,8 +1152,15 @@ async function uploadPublicImage(
   bucket: string,
   societyId: string,
   uri: string,
+  opts?: { mimeType?: string | null; base64?: string | null },
 ): Promise<string | null> {
-  const { publicUrl, error } = await uploadLocalImage({ bucket, societyId, uri });
+  const { publicUrl, error } = await uploadLocalImage({
+    bucket,
+    societyId,
+    uri,
+    mimeType: opts?.mimeType,
+    base64: opts?.base64,
+  });
   if (error) {
     console.warn(`${bucket} upload failed:`, error);
     return null;
@@ -1113,20 +1171,23 @@ async function uploadPublicImage(
 export async function uploadStaffPhoto(
   societyId: string,
   uri: string,
+  opts?: { mimeType?: string | null; base64?: string | null },
 ): Promise<string | null> {
-  return uploadPublicImage('staff-photos', societyId, uri);
+  return uploadPublicImage('staff-photos', societyId, uri, opts);
 }
 
 export async function uploadNoticeCover(
   societyId: string,
   uri: string,
+  opts?: { mimeType?: string | null; base64?: string | null },
 ): Promise<string | null> {
-  return uploadPublicImage('notice-covers', societyId, uri);
+  return uploadPublicImage('notice-covers', societyId, uri, opts);
 }
 
 export async function uploadAmenityCover(
   societyId: string,
   uri: string,
+  opts?: { mimeType?: string | null; base64?: string | null },
 ): Promise<string | null> {
-  return uploadPublicImage('amenity-covers', societyId, uri);
+  return uploadPublicImage('amenity-covers', societyId, uri, opts);
 }

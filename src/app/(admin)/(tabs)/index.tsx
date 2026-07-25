@@ -45,6 +45,9 @@ import { EmptyState } from '@/components/visitors/empty-state';
 import { ErrorBanner } from '@/components/visitors/error-banner';
 import { SkeletonList } from '@/components/visitors/loading-state';
 import { Brand, FontFamily, SocietyImages, type PastelTone } from '@/constants/theme';
+import { CountBadge } from '@/components/ui/count-badge';
+import { useFeatureBadges } from '@/hooks/use-feature-badges';
+import { adminRouteNameFromHref, canAccessAdminRoute } from '@/lib/admin-access';
 import { fetchAdminDashboardStats, fetchResidents } from '@/lib/community-api';
 import { queryKeys } from '@/lib/query-client';
 import { href } from '@/lib/href';
@@ -129,9 +132,12 @@ const MORE_TILES: MoreTile[] = [
 export default function AdminHome() {
   const router = useRouter();
   const profile = useAuthStore((s) => s.profile);
+  const permissions = useAuthStore((s) => s.permissions);
+  const role = profile?.role;
   const societyId = profile?.society_id;
   const name = profile?.full_name?.split(' ')[0] ?? 'Admin';
   const { pastels, isDark, inkMuted } = useThemePalette();
+  const badges = useFeatureBadges();
 
   const statsQuery = useQuery({
     queryKey: queryKeys.adminDashboard(societyId ?? 'none'),
@@ -146,7 +152,7 @@ export default function AdminHome() {
   const residentsQuery = useQuery({
     queryKey: queryKeys.residents(societyId ?? 'none'),
     queryFn: () => fetchResidents(societyId!),
-    enabled: Boolean(societyId),
+    enabled: Boolean(societyId) && canAccessAdminRoute('residents', role, permissions),
   });
 
   const onRefresh = useCallback(async () => {
@@ -170,12 +176,32 @@ export default function AdminHome() {
 
   const query = search.trim().toLowerCase();
 
+  const services = useMemo(
+    () =>
+      SERVICES.filter((item) =>
+        canAccessAdminRoute(adminRouteNameFromHref(item.path), role, permissions),
+      ),
+    [permissions, role],
+  );
+
+  const moreTiles = useMemo(
+    () =>
+      MORE_TILES.filter((item) =>
+        canAccessAdminRoute(adminRouteNameFromHref(item.path), role, permissions),
+      ),
+    [permissions, role],
+  );
+
   const toolHits = useMemo(() => {
     if (!query) return [];
     return SEARCHABLE_TOOLS.filter((tool) =>
-      `${tool.title} ${tool.subtitle} ${tool.keywords}`.toLowerCase().includes(query),
-    ).slice(0, 6);
-  }, [query]);
+      canAccessAdminRoute(adminRouteNameFromHref(tool.path), role, permissions),
+    )
+      .filter((tool) =>
+        `${tool.title} ${tool.subtitle} ${tool.keywords}`.toLowerCase().includes(query),
+      )
+      .slice(0, 6);
+  }, [permissions, query, role]);
 
   const residentHits = useMemo(() => {
     if (!query) return [];
@@ -201,8 +227,9 @@ export default function AdminHome() {
 
   const stats = statsQuery.data;
   const go = (path: string) => router.push(href(path));
-  const pending = stats?.pendingVisitorsToday ?? 0;
-  const complaints = stats?.openComplaints ?? 0;
+  const pendingJoins = badges.joinRequests;
+  const unreadComplaints = badges.complaints;
+  const openComplaints = stats?.openComplaints ?? 0;
   const residents = stats?.totalResidents ?? 0;
   const showSearchResults = query.length > 0;
 
@@ -463,7 +490,7 @@ export default function AdminHome() {
             contentContainerStyle={{ gap: 14, paddingRight: 8, paddingBottom: 4 }}
             className="mb-2"
           >
-            {SERVICES.map((item) => (
+            {services.map((item) => (
               <Pressable
                 key={item.label}
                 onPress={() => go(item.path)}
@@ -501,25 +528,31 @@ export default function AdminHome() {
                 onPress={() => go('/(admin)/residents')}
               />
               <StatMini
-                value={pending}
-                label="Pending"
+                value={pendingJoins}
+                label="Joins"
                 icon={<Clock color="#D97706" size={14} strokeWidth={1.5} />}
                 onPress={() => go('/(admin)/join-requests')}
-                badge={pending > 0}
+                badgeCount={pendingJoins}
               />
               <StatMini
-                value={complaints}
+                value={openComplaints}
                 label="Open"
                 icon={<AlertCircle color={Brand.primary} size={14} strokeWidth={1.5} />}
                 onPress={() => go('/(admin)/complaints')}
-                badge={complaints > 0}
+                badgeCount={unreadComplaints}
               />
             </View>
           )}
 
-          {stats && (pending > 0 || complaints > 0) ? (
+          {stats && (pendingJoins > 0 || unreadComplaints > 0 || openComplaints > 0) ? (
             <Pressable
-              onPress={() => go(complaints > 0 ? '/(admin)/complaints' : '/(admin)/join-requests')}
+              onPress={() =>
+                go(
+                  unreadComplaints > 0 || openComplaints > 0
+                    ? '/(admin)/complaints'
+                    : '/(admin)/join-requests',
+                )
+              }
               className="mb-4 flex-row items-center gap-3 rounded-[18px] bg-surface-card px-3.5 py-3"
               style={{
                 shadowColor: '#0F172A',
@@ -541,8 +574,12 @@ export default function AdminHome() {
                 </Text>
                 <Text className="mt-0.5 text-[12px] text-ink-muted" numberOfLines={1}>
                   {[
-                    pending > 0 ? `${pending} pending today` : null,
-                    complaints > 0 ? `${complaints} open complaints` : null,
+                    pendingJoins > 0 ? `${pendingJoins} join request${pendingJoins === 1 ? '' : 's'}` : null,
+                    unreadComplaints > 0
+                      ? `${unreadComplaints} unread complaint${unreadComplaints === 1 ? '' : 's'}`
+                      : openComplaints > 0
+                        ? `${openComplaints} open complaint${openComplaints === 1 ? '' : 's'}`
+                        : null,
                   ]
                     .filter(Boolean)
                     .join(' · ')}
@@ -634,7 +671,7 @@ export default function AdminHome() {
             More tools
           </Text>
           <View className="mb-2 flex-row flex-wrap justify-between gap-y-2.5">
-            {MORE_TILES.map((tile) => (
+            {moreTiles.map((tile) => (
               <Pressable
                 key={tile.title}
                 onPress={() => go(tile.path)}
@@ -668,19 +705,21 @@ function StatMini({
   label,
   icon,
   onPress,
-  badge,
+  badgeCount = 0,
 }: {
   value: number;
   label: string;
   icon: ReactNode;
   onPress: () => void;
-  badge?: boolean;
+  badgeCount?: number;
 }) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${label}: ${value}`}
+      accessibilityLabel={
+        badgeCount > 0 ? `${label}: ${value}, ${badgeCount} new` : `${label}: ${value}`
+      }
       className="flex-1 rounded-[16px] bg-surface-card px-2.5 py-3"
       style={{
         shadowColor: '#0F172A',
@@ -693,11 +732,10 @@ function StatMini({
       <View className="mb-1.5 flex-row items-center justify-between">
         <View className="relative">
           {icon}
-          {badge ? (
-            <View
-              className="absolute -right-1.5 -top-1 h-2 w-2 rounded-full"
-              style={{ backgroundColor: Brand.primary }}
-            />
+          {badgeCount > 0 ? (
+            <View className="absolute -right-2.5 -top-2">
+              <CountBadge count={badgeCount} size="sm" />
+            </View>
           ) : null}
         </View>
         <Text className="text-[18px] text-ink" style={{ fontFamily: FontFamily.display }}>

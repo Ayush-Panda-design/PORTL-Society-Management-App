@@ -4,6 +4,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TabBarIcon } from '@/components/ui/tab-bar-icon';
 import { useResolvedColorScheme } from '@/hooks/use-resolved-color-scheme';
+import {
+  formatTabBadge,
+  TAB_BADGE_STYLE,
+  useFeatureBadges,
+} from '@/hooks/use-feature-badges';
 import { getGuardTabOptions, TAB_ICON_SIZE } from '@/constants/navigation';
 
 /** Consistent 1.5px stroke weight per design spec (Lucide icon family), with a spring focus bounce. */
@@ -18,6 +23,7 @@ function tabIcon(
 export default function GuardLayout() {
   const scheme = useResolvedColorScheme();
   const insets = useSafeAreaInsets();
+  const badges = useFeatureBadges();
 
   return (
     <Tabs
@@ -30,6 +36,12 @@ export default function GuardLayout() {
           title: 'Pending',
           tabBarIcon: ({ color, focused }) =>
             tabIcon(ShieldCheck, color, focused),
+          tabBarBadge: formatTabBadge(badges.visitors),
+          tabBarBadgeStyle: TAB_BADGE_STYLE,
+          tabBarAccessibilityLabel:
+            badges.visitors > 0
+              ? `Pending, ${badges.visitors} visitors`
+              : 'Pending',
         }}
       />
       <Tabs.Screen
@@ -58,10 +70,15 @@ export default function GuardLayout() {
           title: 'More',
           tabBarIcon: ({ color, focused }) =>
             tabIcon(MoreHorizontal, color, focused),
+          tabBarBadge: formatTabBadge(badges.more),
+          tabBarBadgeStyle: TAB_BADGE_STYLE,
+          tabBarAccessibilityLabel:
+            badges.more > 0 ? `More, ${badges.more} awaiting` : 'More',
         }}
       />
       <Tabs.Screen name="index" options={{ href: null }} />
       <Tabs.Screen name="ask-portl" options={{ href: null }} />
+      <Tabs.Screen name="scan-pass" options={{ href: null }} />
     </Tabs>
   );
 }

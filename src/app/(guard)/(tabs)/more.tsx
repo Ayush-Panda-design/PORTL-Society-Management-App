@@ -1,7 +1,9 @@
-import { ClipboardList, ScanLine, ShieldCheck, Sparkles, User, UserPlus } from 'lucide-react-native';
+import { useMemo } from 'react';
+import { ClipboardList, Megaphone, ScanLine, ShieldCheck, Sparkles, User, UserPlus } from 'lucide-react-native';
 import { type Href } from 'expo-router';
 
 import { SettingsHub, type SettingsLink } from '@/components/ui/settings-hub';
+import { attachBadgesToSections, useFeatureBadges } from '@/hooks/use-feature-badges';
 import { useAuthStore } from '@/stores/authStore';
 
 const SECTIONS: { title: string; links: SettingsLink[] }[] = [
@@ -25,6 +27,12 @@ const SECTIONS: { title: string; links: SettingsLink[] }[] = [
   {
     title: 'Gate',
     links: [
+      {
+        href: '/(guard)/notices' as Href,
+        title: 'Notices',
+        subtitle: 'Society announcements for the desk',
+        Icon: Megaphone,
+      },
       {
         href: '/(guard)/dashboard' as Href,
         title: 'Pending queue',
@@ -55,13 +63,18 @@ const SECTIONS: { title: string; links: SettingsLink[] }[] = [
 
 export default function GuardMore() {
   const profile = useAuthStore((s) => s.profile);
+  const badges = useFeatureBadges();
+  const sections = useMemo(
+    () => attachBadgesToSections(SECTIONS, badges),
+    [badges],
+  );
 
   return (
     <SettingsHub
       title="More"
       subtitle={`${profile?.full_name ?? 'Guard'} · gate desk tools`}
       links={[]}
-      sections={SECTIONS}
+      sections={sections}
     />
   );
 }

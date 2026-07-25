@@ -3,8 +3,9 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "expo start",
-    "start:clear": "expo start -c",
+    "start": "expo start --dev-client",
+    "start:clear": "expo start --dev-client -c",
+    "start:go": "expo start",
     "start:shots": "expo start --no-dev",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
@@ -12,6 +13,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
+    "typecheck:functions": "node ./scripts/typecheck-functions.js",
     "test": "jest",
     "test:db": "supabase test db"
   },

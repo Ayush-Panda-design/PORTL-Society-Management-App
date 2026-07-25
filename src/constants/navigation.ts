@@ -84,6 +84,11 @@ export function getGuardTabOptions(opts: Omit<RoleTabOptionsInput, 'roleTint' | 
   return buildTabOptions({ ...opts, roleTint: RoleTints.guard, lightTabBar: false });
 }
 
+/** Platform operator tab options — deepest rose active tint. */
+export function getPlatformTabOptions(opts: Omit<RoleTabOptionsInput, 'roleTint' | 'lightTabBar'> = {}) {
+  return buildTabOptions({ ...opts, roleTint: RoleTints.platform, lightTabBar: false });
+}
+
 /** Shared generic options (fallback / legacy). */
 export function getRoleTabScreenOptions(opts: RoleTabOptionsInput = {}) {
   return buildTabOptions(opts);

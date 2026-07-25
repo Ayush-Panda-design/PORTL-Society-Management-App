@@ -42,6 +42,7 @@ export const RoleTints = {
   resident: '#E11D48',
   admin: '#BE123C',
   guard: '#F43F5E',
+  platform: '#9F1239',
 } as const;
 
 // ─── Pastels ────────────────────────────────────────────────────────────────

@@ -1,3 +1,5 @@
+import * as FileSystem from 'expo-file-system/legacy';
+
 import { supabase } from '@/lib/supabase';
 
 const IMAGE_EXT = new Set(['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif']);
@@ -42,9 +44,8 @@ export function base64ToArrayBuffer(base64: string): ArrayBuffer {
 
 async function readLocalImageBase64(uri: string): Promise<string> {
   // Prefer expo-file-system — fetch(file://) / fetch(content://) often fails on Android
-  // with "Network request failed".
+  // with "Network request failed". Static import avoids Metro lazy-rebundle mid-upload.
   try {
-    const FileSystem = await import('expo-file-system/legacy');
     const base64 = await FileSystem.readAsStringAsync(uri, {
       encoding: FileSystem.EncodingType.Base64,
     });

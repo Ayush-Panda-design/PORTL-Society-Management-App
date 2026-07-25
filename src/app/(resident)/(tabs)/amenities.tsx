@@ -212,6 +212,8 @@ export default function ResidentAmenitiesScreen() {
         flatId,
         date,
         slot,
+        amenityName: selected.name,
+        societyId: societyId ?? undefined,
       });
       return { booking, slot, feePaise: selected.fee_paise ?? 0 };
     },
@@ -465,6 +467,8 @@ export default function ResidentAmenitiesScreen() {
                                     flatId: flatId!,
                                     date,
                                     slot: item,
+                                    amenityName: selected.name,
+                                    societyId: societyId ?? undefined,
                                   })
                                     .then(() =>
                                       Alert.alert('Waitlisted', 'You’re in line for this slot.'),

@@ -225,7 +225,7 @@ export default function ResidentVisitorsScreen() {
                 },
                 {
                   label: 'Approve',
-                  variant: 'primary',
+                  variant: 'success',
                   icon: 'check',
                   loading: actionId === item.id,
                   onPress: () => updateStatus(item.id, 'approved'),

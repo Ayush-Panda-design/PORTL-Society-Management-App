@@ -16,7 +16,11 @@ export function authErrorMessage(error: { message?: string; code?: string; statu
     error.status === 500;
 
   if (looksLikeServerDump || code === 'unexpected_failure') {
-    return 'Could not send email. Check Supabase SMTP settings (sender address, host, and API key), then try again.';
+    return 'We couldn’t send the email right now. Please try again in a minute.';
+  }
+
+  if (lower.includes('auth session missing') || code === 'session_not_found') {
+    return 'Please open the link from your email on this phone, or sign in after you’ve confirmed.';
   }
 
   if (lower.includes('signups not allowed') || lower.includes('user not found')) {
@@ -29,7 +33,20 @@ export function authErrorMessage(error: { message?: string; code?: string; statu
 
   // Keep normal Auth messages (invalid login, wrong OTP, etc.)
   if (raw.length > 180) {
-    return 'Something went wrong sending the email. Check SMTP in Supabase and try again.';
+    return 'Something went wrong sending the email. Please try again.';
+  }
+
+  // Hide developer / infra wording from end users.
+  if (
+    lower.includes('localhost') ||
+    lower.includes('redirect') ||
+    lower.includes('supabase') ||
+    lower.includes('smtp') ||
+    lower.includes('exp://') ||
+    lower.includes('http://') ||
+    lower.includes('https://')
+  ) {
+    return 'Something went wrong with email confirmation. Please try again or request a new email.';
   }
 
   return raw;
