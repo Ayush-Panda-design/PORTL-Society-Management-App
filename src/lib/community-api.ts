@@ -82,12 +82,12 @@ export async function upsertNotice(input: {
   expiresAt?: string | null;
   category?: 'urgent' | 'general' | 'event';
   requiresAck?: boolean;
-}): Promise<void> {
+}): Promise<Notice> {
   const category = input.category ?? 'general';
   const requiresAck = input.requiresAck ?? category === 'urgent';
 
   if (input.id) {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('notices')
       .update({
         title: input.title,
@@ -101,9 +101,12 @@ export async function upsertNotice(input: {
         category,
         requires_ack: requiresAck,
       })
-      .eq('id', input.id);
+      .eq('id', input.id)
+      .select('*')
+      .maybeSingle();
     if (error) throw new Error(error.message);
-    return;
+    if (!data) throw new Error('Notice not found or you cannot edit it.');
+    return data as Notice;
   }
 
   const { data, error } = await supabase
@@ -122,7 +125,7 @@ export async function upsertNotice(input: {
       category,
       requires_ack: requiresAck,
     })
-    .select('id')
+    .select('*')
     .single();
   if (error) throw new Error(error.message);
 
@@ -130,10 +133,12 @@ export async function upsertNotice(input: {
     societyId: input.societyId,
     title: input.title,
     body: input.body,
-    noticeId: data?.id,
+    noticeId: data.id,
     targetAudience: input.targetAudience ?? 'all',
     targetTowerId: input.targetTowerId ?? null,
   });
+
+  return data as Notice;
 }
 
 export async function deleteNotice(id: string): Promise<void> {
@@ -1147,8 +1152,15 @@ async function uploadPublicImage(
   bucket: string,
   societyId: string,
   uri: string,
+  opts?: { mimeType?: string | null; base64?: string | null },
 ): Promise<string | null> {
-  const { publicUrl, error } = await uploadLocalImage({ bucket, societyId, uri });
+  const { publicUrl, error } = await uploadLocalImage({
+    bucket,
+    societyId,
+    uri,
+    mimeType: opts?.mimeType,
+    base64: opts?.base64,
+  });
   if (error) {
     console.warn(`${bucket} upload failed:`, error);
     return null;
@@ -1159,20 +1171,23 @@ async function uploadPublicImage(
 export async function uploadStaffPhoto(
   societyId: string,
   uri: string,
+  opts?: { mimeType?: string | null; base64?: string | null },
 ): Promise<string | null> {
-  return uploadPublicImage('staff-photos', societyId, uri);
+  return uploadPublicImage('staff-photos', societyId, uri, opts);
 }
 
 export async function uploadNoticeCover(
   societyId: string,
   uri: string,
+  opts?: { mimeType?: string | null; base64?: string | null },
 ): Promise<string | null> {
-  return uploadPublicImage('notice-covers', societyId, uri);
+  return uploadPublicImage('notice-covers', societyId, uri, opts);
 }
 
 export async function uploadAmenityCover(
   societyId: string,
   uri: string,
+  opts?: { mimeType?: string | null; base64?: string | null },
 ): Promise<string | null> {
-  return uploadPublicImage('amenity-covers', societyId, uri);
+  return uploadPublicImage('amenity-covers', societyId, uri, opts);
 }

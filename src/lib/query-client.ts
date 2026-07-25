@@ -101,6 +101,7 @@ export const queryKeys = {
   adminDashboard: (societyId: string) => ['admin-dashboard', societyId] as const,
   profilePrivate: (userId: string) => ['profile-private', userId] as const,
   profileNotes: (userId: string) => ['profile-notes', userId] as const,
+  flatResidence: (flatId: string) => ['flat-residence', flatId] as const,
   frequentVisitors: (flatId: string) => ['frequent-visitors', flatId] as const,
   paymentStatement: (userId: string) => ['payment-statement', userId] as const,
   societyPaymentStatement: (societyId: string, purpose?: string) =>

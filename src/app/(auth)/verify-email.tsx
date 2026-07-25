@@ -39,7 +39,6 @@ export default function VerifyEmailScreen() {
   const [resending, setResending] = useState(false);
   const [checking, setChecking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const redirectHint = getAuthRedirectUrl();
 
   const continueIfVerified = useCallback(
     async (opts?: { fromAppState?: boolean; forceNavigateToLogin?: boolean }) => {
@@ -73,13 +72,13 @@ export default function VerifyEmailScreen() {
           if (fromAppState) return;
 
           setMessage(
-            'No signed-in session on this device. Open the confirmation link so Portl launches, or sign in after confirming in the browser.',
+            'We still need you to tap the link in your email on this phone. That opens Portl and finishes setup.',
           );
           if (forceNavigateToLogin) {
             Toast.show({
               type: 'info',
-              text1: 'Sign in to continue',
-              text2: 'Confirmation may have completed in the browser.',
+              text1: 'Almost there',
+              text2: 'If you already confirmed, sign in with your email.',
             });
             router.replace({
               pathname: '/(auth)/login',
@@ -94,7 +93,7 @@ export default function VerifyEmailScreen() {
           if (isAuthSessionMissingError(error)) {
             if (!fromAppState) {
               setMessage(
-                'Session expired on this device. Open the email link in Portl, or sign in after confirming.',
+                'Please open the link from your email on this phone, or sign in after you’ve confirmed.',
               );
             }
             return;
@@ -106,7 +105,7 @@ export default function VerifyEmailScreen() {
         if (!nextUser || !isEmailVerified(nextUser)) {
           if (!fromAppState) {
             setMessage(
-              'Email not confirmed yet. Open the link in the Portl app (not only in the browser), then tap continue.',
+              'Your email isn’t confirmed yet. Open your inbox, tap the Portl link, then come back here.',
             );
           }
           return;
@@ -121,11 +120,11 @@ export default function VerifyEmailScreen() {
         if (fromAppState) return;
         if (isAuthSessionMissingError(e)) {
           setMessage(
-            'Session expired on this device. Sign in after confirming your email — or open the email link so it launches Portl.',
+            'Please open the link from your email on this phone, or sign in after you’ve confirmed.',
           );
           return;
         }
-        setMessage(e instanceof Error ? e.message : 'Could not check confirmation status');
+        setMessage(e instanceof Error ? e.message : 'Couldn’t check your email yet. Try again.');
       } finally {
         if (!fromAppState) setChecking(false);
       }
@@ -150,7 +149,11 @@ export default function VerifyEmailScreen() {
       void (async () => {
         const { session: next, errorMessage } = await createSessionFromUrl(url);
         if (!next) {
-          if (errorMessage) setMessage(errorMessage);
+          if (errorMessage) {
+            setMessage(
+              'That email link didn’t work. Request a new one below, or try again in a minute.',
+            );
+          }
           return;
         }
         setSession(next);
@@ -165,7 +168,6 @@ export default function VerifyEmailScreen() {
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
-        // Quiet check only — do not redirect away while waiting for the deep link.
         void continueIfVerified({ fromAppState: true });
       }
     });
@@ -174,7 +176,7 @@ export default function VerifyEmailScreen() {
 
   const onResend = async () => {
     if (!email.trim()) {
-      setMessage('Missing email address. Go back and sign up again.');
+      setMessage('We don’t have your email. Go back and create your account again.');
       return;
     }
     setResending(true);
@@ -203,8 +205,8 @@ export default function VerifyEmailScreen() {
       }
       Toast.show({
         type: 'success',
-        text1: 'Confirmation email sent',
-        text2: `Open the link on this phone so Portl opens (${redirectTo}).`,
+        text1: 'Email sent',
+        text2: 'Check your inbox and tap the link on this phone.',
       });
     } catch (e) {
       const authLike =
@@ -212,12 +214,10 @@ export default function VerifyEmailScreen() {
           ? (e as { message?: string; code?: string; status?: number })
           : null;
       if (isAuthSessionMissingError(e)) {
-        setMessage(
-          'Could not resend while signed out. Go to Sign in and use “Forgot password” or OTP, or sign up again.',
-        );
+        setMessage('Couldn’t resend right now. Try signing in, or create your account again.');
       } else {
         setMessage(
-          authErrorMessage(authLike) || (e instanceof Error ? e.message : 'Could not resend email'),
+          authErrorMessage(authLike) || (e instanceof Error ? e.message : 'Couldn’t resend email'),
         );
       }
     } finally {
@@ -241,33 +241,28 @@ export default function VerifyEmailScreen() {
             >
               Portl
             </Text>
-            <Text className="text-sm text-white/85">
-              Confirm your email before joining a society
-            </Text>
+            <Text className="text-sm text-white/85">One quick step before you join your society</Text>
           </View>
         </SafeAreaView>
       </LinearGradient>
 
       <View className="-mt-4 flex-1 rounded-t-[36px] bg-surface px-6 pb-10 pt-8">
         <Text className="mb-2 text-2xl text-ink" style={{ fontFamily: FontFamily.display }}>
-          Verify your email
+          Check your email
         </Text>
-        <Text className="mb-4 text-sm leading-5 text-ink-muted">
-          We sent a confirmation link
+        <Text className="mb-2 text-sm leading-5 text-ink-muted">
+          We sent a link
           {email ? (
             <>
               {' '}
               to <Text className="font-semibold text-ink">{email}</Text>
             </>
           ) : null}
-          . Open it on this phone so Portl launches — confirming only in the browser leaves this
-          screen without a session.
+          .
         </Text>
-
-        <Text className="mb-6 text-xs leading-4 text-ink-faint">
-          Redirect used for links: {redirectHint}
-          {'\n'}
-          Add this exact URL under Supabase → Authentication → URL Configuration → Redirect URLs.
+        <Text className="mb-6 text-sm leading-5 text-ink-muted">
+          Open that email on this phone and tap the link — Portl will open and you’re all set. If
+          nothing happens, come back here and tap continue.
         </Text>
 
         {message ? (
@@ -306,7 +301,7 @@ export default function VerifyEmailScreen() {
           {resending ? (
             <ActivityIndicator color={Brand.primary} />
           ) : (
-            <Text className="text-base font-semibold text-brand-800">Resend confirmation email</Text>
+            <Text className="text-base font-semibold text-brand-800">Send the email again</Text>
           )}
         </Pressable>
 

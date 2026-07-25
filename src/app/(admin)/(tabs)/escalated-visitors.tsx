@@ -157,7 +157,7 @@ export default function EscalatedVisitorsScreen() {
               actions={[
                 {
                   label: 'Approve',
-                  variant: 'primary',
+                  variant: 'success',
                   icon: 'check',
                   loading: actionId === item.id && resolveMutation.isPending,
                   onPress: () => {

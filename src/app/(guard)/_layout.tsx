@@ -26,6 +26,7 @@ export default function GuardDrawerLayout() {
       >
         <Drawer.Screen name="(tabs)" options={{ drawerItemStyle: { display: 'none' } }} />
         <Drawer.Screen name="profile" options={{ drawerItemStyle: { display: 'none' } }} />
+        <Drawer.Screen name="notices" options={{ drawerItemStyle: { display: 'none' } }} />
       </Drawer>
     </RoleGate>
   );

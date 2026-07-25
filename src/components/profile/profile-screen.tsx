@@ -33,6 +33,7 @@ import {
 import {
   addProfileNote,
   deleteProfileNote,
+  fetchFlatResidenceLabel,
   fetchPrivateProfile,
   fetchProfileNotes,
   updatePublicProfile,
@@ -86,16 +87,18 @@ function Field({
   important,
   error,
   helper,
+  editable = true,
 }: {
   label: string;
   value: string;
-  onChangeText: (v: string) => void;
+  onChangeText?: (v: string) => void;
   placeholder?: string;
   multiline?: boolean;
   keyboardType?: 'default' | 'email-address' | 'phone-pad';
   important?: boolean;
   error?: string | null;
   helper?: string;
+  editable?: boolean;
 }) {
   const { isDark, muted, border, inkMuted, inkSoft, pastels } = useThemePalette();
 
@@ -131,7 +134,8 @@ function Field({
       </View>
       <TextInput
         value={value}
-        onChangeText={onChangeText}
+        onChangeText={editable ? onChangeText : undefined}
+        editable={editable}
         placeholder={placeholder}
         placeholderTextColor={isDark ? inkMuted : Brand.inkMuted}
         multiline={multiline}
@@ -150,7 +154,16 @@ function Field({
               : multiline
                 ? '#E5E7EB'
                 : 'transparent',
-          backgroundColor: error ? '#FEF2F2' : isDark ? muted : Pastels.sage,
+          backgroundColor: error
+            ? '#FEF2F2'
+            : !editable
+              ? isDark
+                ? muted
+                : Pastels.mint
+              : isDark
+                ? muted
+                : Pastels.sage,
+          opacity: editable ? 1 : 0.95,
         }}
       />
       {error ? (
@@ -278,6 +291,7 @@ export function ProfileScreen() {
   const setProfile = useAuthStore((s) => s.setProfile);
   const queryClient = useQueryClient();
   const userId = profile?.id;
+  const flatId = profile?.flat_id ?? null;
   const insets = useSafeAreaInsets();
   const { isDark, muted, border, inkMuted, inkSoft, primaryAccent } = useThemePalette();
 
@@ -319,6 +333,12 @@ export function ProfileScreen() {
     queryKey: queryKeys.profileNotes(userId ?? 'none'),
     queryFn: () => fetchProfileNotes(userId!),
     enabled: Boolean(userId),
+  });
+
+  const flatQuery = useQuery({
+    queryKey: queryKeys.flatResidence(flatId ?? 'none'),
+    queryFn: () => fetchFlatResidenceLabel(flatId!),
+    enabled: Boolean(flatId),
   });
 
   useEffect(() => {
@@ -543,6 +563,17 @@ export function ProfileScreen() {
         ? 'Security'
         : 'Resident';
 
+  const flatLabel = flatId
+    ? (flatQuery.data ?? (flatQuery.isLoading ? 'Loading flat…' : 'Flat linked'))
+    : profile.role === 'resident'
+      ? 'No flat assigned yet'
+      : null;
+  const flatHelper = flatId
+    ? 'Assigned by your society admin — not editable here.'
+    : profile.role === 'resident'
+      ? 'Ask your society admin to link your profile to a flat.'
+      : undefined;
+
   const notes = notesQuery.data ?? [];
 
   return (
@@ -594,6 +625,17 @@ export function ProfileScreen() {
             {fullName.trim() || 'Your name'}
           </Text>
           <Text className="mt-0.5 text-sm text-ink-muted">{roleLabel}</Text>
+          {flatLabel ? (
+            <Text
+              className="mt-1 text-sm"
+              style={{
+                fontFamily: FontFamily.heading,
+                color: isDark ? primaryAccent : Brand.primary,
+              }}
+            >
+              {flatLabel}
+            </Text>
+          ) : null}
           <View className="mt-3 flex-row items-center gap-3">
             <Pressable
               accessibilityRole="button"
@@ -655,7 +697,7 @@ export function ProfileScreen() {
 
         <ProfileCard
           title="Basic info"
-          subtitle="Name, phone, bio, and occupation — visible to society admins."
+          subtitle="Name, flat, phone, bio, and occupation — visible to society admins."
           open={openBasic}
           onToggle={() => toggle('basic')}
         >
@@ -666,6 +708,14 @@ export function ProfileScreen() {
             placeholder="Your name"
             important
           />
+          {profile.role === 'resident' || flatId ? (
+            <Field
+              label="Flat"
+              value={flatLabel ?? '—'}
+              editable={false}
+              helper={flatHelper}
+            />
+          ) : null}
           <Field
             label="Phone"
             value={phone}
@@ -683,6 +733,11 @@ export function ProfileScreen() {
             onChangeText={setBio}
             placeholder="A short intro about yourself"
             multiline
+            helper={
+              flatId && flatQuery.data
+                ? `You live at ${flatQuery.data}. Add a personal intro below if you like.`
+                : undefined
+            }
           />
           <Field
             label="Occupation"

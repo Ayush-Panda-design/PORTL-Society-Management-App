@@ -98,9 +98,10 @@ export function VisitorSwipeDeck({ visitors, busy = false, onDecision }: Props) 
         <Pressable
           disabled={busy}
           onPress={() => void handleDecision('approved')}
-          className={`flex-1 flex-row items-center justify-center gap-2 rounded-bubbly bg-charcoal py-3 ${
+          className={`flex-1 flex-row items-center justify-center gap-2 rounded-bubbly py-3 ${
             busy ? 'opacity-60' : ''
           }`}
+          style={{ backgroundColor: StatusColors.approved.solid }}
         >
           <Check color="#fff" size={18} />
           <Text className="text-sm text-white" style={{ fontFamily: FontFamily.heading }}>

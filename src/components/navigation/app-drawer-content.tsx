@@ -11,6 +11,7 @@ import {
   KeyRound,
   Layers,
   LogOut,
+  Megaphone,
   Phone,
   User,
   UserPlus,
@@ -55,6 +56,7 @@ const RESIDENT_LINKS: DrawerLink[] = [
 
 const GUARD_LINKS: DrawerLink[] = [
   { href: '/(guard)/profile' as Href, title: 'My profile', Icon: User },
+  { href: '/(guard)/notices' as Href, title: 'Notices', Icon: Megaphone },
   { href: '/(guard)/dashboard' as Href, title: 'Pending queue', Icon: ClipboardList },
   { href: '/(guard)/logs' as Href, title: 'Visitor logs', Icon: Layers },
 ];

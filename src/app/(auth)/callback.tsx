@@ -33,8 +33,9 @@ export default function AuthCallbackScreen() {
         if (!session) {
           setIsError(true);
           setMessage(
-            errorMessage ||
-              'This confirmation link is invalid or has expired. Resend from the verify screen.',
+            errorMessage
+              ? 'This link has expired or already been used. Go back and request a new email.'
+              : 'This confirmation link is invalid or has expired. Go back and request a new email.',
           );
           return;
         }

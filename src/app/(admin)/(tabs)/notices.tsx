@@ -89,11 +89,12 @@ export default function AdminNoticesScreen() {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  useModalBack(modalOpen, () => setModalOpen(false));
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [coverUri, setCoverUri] = useState<string | null>(null);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [coverBase64, setCoverBase64] = useState<string | null>(null);
+  const [coverMimeType, setCoverMimeType] = useState<string | null>(null);
   const [targetAudience, setTargetAudience] = useState<'all' | 'tower'>('all');
   const [targetTowerId, setTargetTowerId] = useState<string>('');
   const [isPinned, setIsPinned] = useState(false);
@@ -133,13 +134,20 @@ export default function AdminNoticesScreen() {
     mutationFn: async () => {
       if (!societyId || !userId) throw new Error('Admin profile missing society.');
       if (!title.trim() || !body.trim()) throw new Error('Title and body are required.');
+      if (targetAudience === 'tower' && !targetTowerId.trim()) {
+        throw new Error('Select a tower for tower-targeted notices.');
+      }
 
       let nextCover = coverUrl;
       if (coverUri && !coverUri.startsWith('http')) {
-        nextCover = (await uploadNoticeCover(societyId, coverUri)) ?? coverUrl;
+        nextCover =
+          (await uploadNoticeCover(societyId, coverUri, {
+            base64: coverBase64,
+            mimeType: coverMimeType,
+          })) ?? coverUrl;
       }
 
-      await upsertNotice({
+      return upsertNotice({
         id: editingNoticeId ?? undefined,
         societyId,
         title: title.trim(),
@@ -180,8 +188,17 @@ export default function AdminNoticesScreen() {
       if (context?.previous) queryClient.setQueryData(noticesKey, context.previous);
       setFormError(e.message);
     },
-    onSuccess: async () => {
+    onSuccess: async (notice) => {
       const wasCreate = !editingNoticeId;
+      queryClient.setQueryData<Notice[]>(noticesKey, (old = []) => {
+        const without = old.filter((n) => n.id !== notice.id);
+        return [notice, ...without].sort((a, b) => {
+          const pin = Number(Boolean(b.is_pinned)) - Number(Boolean(a.is_pinned));
+          if (pin !== 0) return pin;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+      });
+      // Refresh admin + resident published caches (prefix match).
       await queryClient.invalidateQueries({ queryKey: noticesKey });
       closeModal();
       hapticConfirm();
@@ -219,6 +236,8 @@ export default function AdminNoticesScreen() {
     setBody('');
     setCoverUri(null);
     setCoverUrl(null);
+    setCoverBase64(null);
+    setCoverMimeType(null);
     setTargetAudience('all');
     setTargetTowerId('');
     setIsPinned(false);
@@ -235,6 +254,8 @@ export default function AdminNoticesScreen() {
     setBody(notice.body);
     setCoverUri(notice.cover_url ?? null);
     setCoverUrl(notice.cover_url ?? null);
+    setCoverBase64(null);
+    setCoverMimeType(null);
     setTargetAudience((notice.target_audience as any) ?? 'all');
     setTargetTowerId(notice.target_tower_id ?? '');
     setIsPinned(notice.is_pinned ?? false);
@@ -249,6 +270,7 @@ export default function AdminNoticesScreen() {
     setEditingNoticeId(null);
     setFormError(null);
   };
+  useModalBack(modalOpen, closeModal);
 
   const confirmDelete = (item: Notice) => {
     Alert.alert('Delete notice?', `“${item.title}” will be permanently removed.`, [
@@ -275,9 +297,13 @@ export default function AdminNoticesScreen() {
       quality: 0.75,
       allowsEditing: true,
       aspect: [16, 9],
+      base64: true,
     });
     if (!result.canceled && result.assets[0]) {
-      setCoverUri(result.assets[0].uri);
+      const asset = result.assets[0];
+      setCoverUri(asset.uri);
+      setCoverBase64(asset.base64 ?? null);
+      setCoverMimeType(asset.mimeType ?? null);
     }
   };
 
@@ -298,7 +324,7 @@ export default function AdminNoticesScreen() {
       visible={modalOpen}
       animationType="slide"
       transparent
-      onRequestClose={() => setModalOpen(false)}
+      onRequestClose={closeModal}
     >
       <KeyboardAvoidingView behavior="padding" className="flex-1 justify-end bg-black/40">
         <View className="max-h-[90%] rounded-t-3xl bg-surface-card px-5 pb-10 pt-5">
@@ -327,6 +353,8 @@ export default function AdminNoticesScreen() {
                     onPress={() => {
                       setCoverUri(null);
                       setCoverUrl(null);
+                      setCoverBase64(null);
+                      setCoverMimeType(null);
                     }}
                     className="absolute right-2 top-2 h-8 w-8 items-center justify-center rounded-full bg-black/50"
                   >

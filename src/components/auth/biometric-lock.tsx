@@ -13,6 +13,8 @@ import {
 } from '@/lib/biometric';
 import { isEmailVerified, useAuthStore } from '@/stores/authStore';
 
+const AUTH_TIMEOUT_MS = 25_000;
+
 /**
  * Soft app lock: when biometrics are enabled and a session exists,
  * require fingerprint / Face ID / face unlock before showing the signed-in shell.
@@ -38,6 +40,8 @@ export function BiometricLock({ children }: { children: ReactNode }) {
 
   const authenticatingRef = useRef(false);
   const unlockedThisSessionRef = useRef(false);
+  const autoPromptedRef = useRef(false);
+  const unlockGenerationRef = useRef(0);
 
   const root = segments[0];
   const inAuthOrOnboarding = root === '(auth)' || root === '(onboarding)';
@@ -80,15 +84,22 @@ export function BiometricLock({ children }: { children: ReactNode }) {
       if (state === 'background') {
         wentToBackground = true;
         unlockedThisSessionRef.current = false;
+        autoPromptedRef.current = false;
         return;
       }
       if (state === 'active' && wentToBackground) {
         wentToBackground = false;
-        if (authenticatingRef.current) return;
+        // If a prompt was left hanging after background, clear the spinner.
+        unlockGenerationRef.current += 1;
+        authenticatingRef.current = false;
+        setBusy(false);
         void (async () => {
           if (!session || inAuthOrOnboarding || !emailOk) return;
           const enabled = await isBiometricEnabled();
-          if (enabled) setLocked(true);
+          if (enabled) {
+            unlockedThisSessionRef.current = false;
+            setLocked(true);
+          }
         })();
       }
     });
@@ -98,37 +109,52 @@ export function BiometricLock({ children }: { children: ReactNode }) {
   const unlock = useCallback(async () => {
     if (authenticatingRef.current) return;
     authenticatingRef.current = true;
+    const generation = ++unlockGenerationRef.current;
     setBusy(true);
     setError(null);
     try {
-      const ok = await authenticateWithBiometrics(`Unlock with ${label}`);
+      const ok = await Promise.race([
+        authenticateWithBiometrics(`Unlock with ${label}`),
+        new Promise<boolean>((resolve) => {
+          setTimeout(() => resolve(false), AUTH_TIMEOUT_MS);
+        }),
+      ]);
+      if (generation !== unlockGenerationRef.current) return;
       if (ok) {
         unlockedThisSessionRef.current = true;
         setLocked(false);
+        setError(null);
       } else {
-        setError('Authentication cancelled or failed. Try again, or sign out.');
+        setError('Authentication timed out or failed. Tap Unlock to try again, or sign out.');
       }
     } catch (e) {
+      if (generation !== unlockGenerationRef.current) return;
       setError(e instanceof Error ? e.message : 'Unlock failed');
     } finally {
-      authenticatingRef.current = false;
-      setBusy(false);
+      if (generation === unlockGenerationRef.current) {
+        authenticatingRef.current = false;
+        setBusy(false);
+      }
     }
   }, [label]);
 
   useEffect(() => {
-    if (locked && !checking) {
+    if (locked && !checking && !autoPromptedRef.current) {
+      autoPromptedRef.current = true;
       void unlock();
     }
-    // Auto-prompt once when lock engages
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [locked, checking]);
+  }, [locked, checking, unlock]);
 
   const onSignOut = async () => {
+    // Always allow escape even if biometric prompt is stuck.
+    unlockGenerationRef.current += 1;
+    authenticatingRef.current = false;
+    setBusy(false);
     setSigningOut(true);
     setError(null);
     try {
       unlockedThisSessionRef.current = false;
+      autoPromptedRef.current = false;
       setLocked(false);
       await signOut();
     } catch (e) {
@@ -173,7 +199,11 @@ export function BiometricLock({ children }: { children: ReactNode }) {
           </Text>
           {error ? <Text className="mb-4 text-center text-sm text-red-500">{error}</Text> : null}
           <Pressable
-            onPress={() => void unlock()}
+            onPress={() => {
+              // Force a fresh attempt if a previous prompt hung.
+              authenticatingRef.current = false;
+              void unlock();
+            }}
             disabled={busy || signingOut}
             className="mb-3 min-w-[220px] items-center rounded-bubbly px-8 py-3.5"
             style={{ backgroundColor: Brand.primary, opacity: busy ? 0.7 : 1 }}
@@ -188,7 +218,7 @@ export function BiometricLock({ children }: { children: ReactNode }) {
           </Pressable>
           <Pressable
             onPress={() => void onSignOut()}
-            disabled={busy || signingOut}
+            disabled={signingOut}
             className="py-3"
           >
             {signingOut ? (
