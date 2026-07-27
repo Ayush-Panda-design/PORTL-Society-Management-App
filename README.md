@@ -406,6 +406,4 @@ supabase functions deploy dispatch-push-outbox
 
 ---
 
-## License
 
-This project is provided as-is for personal and educational use.
